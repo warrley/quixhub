@@ -47,3 +47,39 @@ export interface FeedbackStat {
   percent: number;
   tone: string;
 }
+
+export interface IraEntry {
+  id: string;
+  disciplineName: string;
+  disciplineId?: string;
+  grade: number;
+  workload: number;
+  situacao?: 'aprovado' | 'reprovado' | 'em_andamento' | 'outro';
+  source: 'manual' | 'pdf';
+}
+
+export interface IraState {
+  entries: IraEntry[];
+  updatedAt: string;
+}
+
+export interface FluxogramaNode {
+  id: string;
+  kind: 'catalog' | 'custom';
+  disciplineId?: string;
+  label: string;
+  position: { x: number; y: number };
+}
+
+export interface FluxogramaEdge {
+  id: string;
+  source: string;
+  target: string;
+  origin: 'catalog' | 'manual';
+}
+
+export interface FluxogramaState {
+  nodes: FluxogramaNode[];
+  edges: FluxogramaEdge[];
+  updatedAt: string;
+}
