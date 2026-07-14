@@ -4,16 +4,10 @@ import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { EventChip } from '@/components/EventChip';
+import { Greeting } from '@/components/Greeting';
 import { MaterialCard } from '@/components/MaterialCard';
 import { calendarEvents, currentUser, disciplineById, disciplines, materials } from '@/data/mock';
 import styles from './Home.module.css';
-
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Bom dia,';
-  if (hour < 18) return 'Boa tarde,';
-  return 'Boa noite,';
-}
 
 export default function Home() {
   const trackedIds = disciplines.filter((d) => d.tracked).map((d) => d.id);
@@ -27,7 +21,7 @@ export default function Home() {
       <div className={styles.greetingRow}>
         <Avatar name={currentUser.name} size="lg" />
         <div>
-          <div className={styles.greetingText}>{greeting()}</div>
+          <div className={styles.greetingText}><Greeting /></div>
           <div className={styles.greetingName}>{currentUser.name.split(' ')[0]}</div>
         </div>
       </div>
