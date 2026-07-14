@@ -70,7 +70,7 @@ export default function Upload() {
         </div>
 
         <div className={styles.dropzoneWrap}>
-          <UploadDropzone fileName={fileName} onFile={setFileName} />
+          <UploadDropzone fileName={fileName} onFile={(f) => setFileName(f.name)} />
         </div>
 
         <TextareaField label="Nota (opcional)" placeholder="Algum contexto sobre o material?" rows={3} />
