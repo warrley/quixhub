@@ -1,5 +1,5 @@
 import { CircleCheck, CircleDashed } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import type { CalendarEvent, Discipline } from '../data/types';
 import styles from './EventChip.module.css';
 
@@ -18,7 +18,7 @@ function formatDate(iso: string) {
 
 export function EventChip({ event, discipline }: { event: CalendarEvent; discipline?: Discipline }) {
   return (
-    <Link to={`/calendario/${event.id}`} className={styles.chip}>
+    <Link href={`/calendario/${event.id}`} className={styles.chip}>
       <span className={styles.bar} style={{ background: KIND_GRADIENT[event.kind] }} />
       <div className={styles.info}>
         <div className={styles.title}>{event.title}</div>

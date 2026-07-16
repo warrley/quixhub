@@ -1,3 +1,5 @@
+'use client';
+
 import { CheckCircle2 } from 'lucide-react';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import styles from './Toast.module.css';

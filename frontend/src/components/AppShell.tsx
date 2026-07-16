@@ -1,6 +1,9 @@
+'use client';
+
 import { Bell, CalendarDays, FolderOpen, Home, LayoutGrid, Moon, Search, Sun, User } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
 import { Avatar } from './Avatar';
 import { useTheme } from '../lib/theme';
 import styles from './AppShell.module.css';
@@ -13,8 +16,14 @@ const NAV_ITEMS = [
   { to: '/perfil', label: 'Perfil', icon: User },
 ];
 
+function isActivePath(pathname: string, to: string, end?: boolean) {
+  if (end) return pathname === to;
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
+  const pathname = usePathname();
 
   return (
     <div className={styles.shell}>
@@ -25,15 +34,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav className={styles.navList}>
           {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
+            <Link
               key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) => [styles.navItem, isActive ? styles.navItemActive : ''].filter(Boolean).join(' ')}
+              href={to}
+              className={[styles.navItem, isActivePath(pathname, to, end) ? styles.navItemActive : ''].filter(Boolean).join(' ')}
             >
               <Icon size={18} strokeWidth={2.25} />
               {label}
-            </NavLink>
+            </Link>
           ))}
         </nav>
         <div className={styles.sidebarFooter}>
@@ -65,15 +73,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <nav className={styles.bottomNav}>
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
+          <Link
             key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) => [styles.bottomItem, isActive ? styles.bottomItemActive : ''].filter(Boolean).join(' ')}
+            href={to}
+            className={[styles.bottomItem, isActivePath(pathname, to, end) ? styles.bottomItemActive : ''].filter(Boolean).join(' ')}
           >
             <Icon size={19} strokeWidth={2.25} />
             <span>{label}</span>
-          </NavLink>
+          </Link>
         ))}
       </nav>
     </div>
