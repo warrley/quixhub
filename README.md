@@ -4,7 +4,7 @@ A platform for the UFC Quixadá student community: centralized study materials, 
 
 ## Stack
 
-- `frontend/` — React, deployed on Vercel. Not yet built.
+- `frontend/` — React + Vite + TypeScript, deployed on Vercel. Auth, Home, Catalog, Materials, Feedback, Calendar and Profile screens are scaffolded with mock data (no backend wired up yet).
 - `backend/` — Node + Express + TypeScript, PostgreSQL via Drizzle ORM, S3-compatible object storage (MinIO locally). Not yet built.
 
 ## Local development
@@ -15,7 +15,15 @@ Infrastructure (Postgres + MinIO):
 docker compose up -d
 ```
 
-Backend and frontend setup instructions will be added here once those directories are scaffolded.
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Backend setup instructions will be added here once that directory is scaffolded.
 
 ## Docs
 

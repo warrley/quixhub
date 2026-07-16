@@ -2,13 +2,13 @@
 
 ## Shipped
 
-_Nothing yet — QuixHub is starting from scratch. See `docs/vision.md` for the rationale._
+- **Frontend UI for the three core features, against mock data (no backend yet)** — Auth (login/register), Home dashboard, discipline catalog + detail, materials browse/detail/upload + admin moderation queue, structured feedback submission, collaborative calendar, and profile/settings. See `docs/architecture.md` → Frontend structure.
 
 ## Backlog — Core (build first)
 
-- **Study materials** — upload, browse, and download past exams, summaries, assignments, and code samples, organized by course/discipline.
-- **Course/professor feedback** — structured, anonymous signal on discipline difficulty, exam format, group work, and teaching style. Identity policy (discipline-only vs. professor-identifying) is an **open decision** — see `docs/vision.md`.
-- **Collaborative calendar** — shared agenda for exam dates, assignment deadlines, and review sessions, with materials linkable to specific events.
+- **Study materials backend** — upload, browse, and download past exams, summaries, assignments, and code samples, organized by course/discipline. Frontend UI is built (see Shipped); needs the Express/Drizzle/MinIO backend wired up.
+- **Course/professor feedback backend** — structured, anonymous signal on discipline difficulty, exam format, group work, and teaching style. Identity policy (discipline-only vs. professor-identifying) is an **open decision** — see `docs/vision.md`; the frontend renders both variants side by side until it's resolved.
+- **Collaborative calendar backend** — shared agenda for exam dates, assignment deadlines, and review sessions, with materials linkable to specific events. Frontend UI is built; needs persistence.
 
 ## Backlog — Later phases
 

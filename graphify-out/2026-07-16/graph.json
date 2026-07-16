@@ -1,0 +1,631 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "docs-sync-reminder.sh",
+      "file_type": "code",
+      "source_file": ".claude/hooks/docs-sync-reminder.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "claude_hooks_docs_sync_reminder",
+      "community": 5,
+      "community_name": "docs-sync-reminder.sh",
+      "norm_label": "docs-sync-reminder.sh"
+    },
+    {
+      "label": "docs-sync-reminder.sh script",
+      "file_type": "code",
+      "source_file": ".claude/hooks/docs-sync-reminder.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "_origin": "ast",
+      "id": "claude_hooks_docs_sync_reminder_sh__entry",
+      "community": 5,
+      "community_name": "docs-sync-reminder.sh",
+      "norm_label": "docs-sync-reminder.sh script"
+    },
+    {
+      "label": "graphify-auto-update.sh",
+      "file_type": "code",
+      "source_file": ".claude/hooks/graphify-auto-update.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "claude_hooks_graphify_auto_update",
+      "community": 6,
+      "community_name": "graphify-auto-update.sh",
+      "norm_label": "graphify-auto-update.sh"
+    },
+    {
+      "label": "graphify-auto-update.sh script",
+      "file_type": "code",
+      "source_file": ".claude/hooks/graphify-auto-update.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "_origin": "ast",
+      "id": "claude_hooks_graphify_auto_update_sh__entry",
+      "community": 6,
+      "community_name": "graphify-auto-update.sh",
+      "norm_label": "graphify-auto-update.sh script"
+    },
+    {
+      "label": "CLAUDE.md",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "claude",
+      "community": 4,
+      "community_name": "CLAUDE.md",
+      "norm_label": "claude.md"
+    },
+    {
+      "label": "QuixHub",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "claude_quixhub",
+      "community": 4,
+      "community_name": "CLAUDE.md",
+      "norm_label": "quixhub"
+    },
+    {
+      "label": "graphify",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "claude_graphify",
+      "community": 4,
+      "community_name": "CLAUDE.md",
+      "norm_label": "graphify"
+    },
+    {
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "readme",
+      "community": 3,
+      "community_name": "QuixHub",
+      "norm_label": "readme.md"
+    },
+    {
+      "label": "QuixHub",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "readme_quixhub",
+      "community": 3,
+      "community_name": "QuixHub",
+      "norm_label": "quixhub"
+    },
+    {
+      "label": "Stack",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "readme_stack",
+      "community": 3,
+      "community_name": "QuixHub",
+      "norm_label": "stack"
+    },
+    {
+      "label": "Local development",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "readme_local_development",
+      "community": 3,
+      "community_name": "QuixHub",
+      "norm_label": "local development"
+    },
+    {
+      "label": "Docs",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "readme_docs",
+      "community": 3,
+      "community_name": "QuixHub",
+      "norm_label": "docs"
+    },
+    {
+      "label": "architecture.md",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_architecture",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "architecture.md"
+    },
+    {
+      "label": "Architecture",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_architecture_architecture",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "architecture"
+    },
+    {
+      "label": "Stack",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "docs_architecture_stack",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "stack"
+    },
+    {
+      "label": "Module pattern",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "docs_architecture_module_pattern",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "module pattern"
+    },
+    {
+      "label": "Data model",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "docs_architecture_data_model",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "data model"
+    },
+    {
+      "label": "Local dev infra",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L17",
+      "_origin": "ast",
+      "id": "docs_architecture_local_dev_infra",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "local dev infra"
+    },
+    {
+      "label": "Privacy model",
+      "file_type": "document",
+      "source_file": "docs/architecture.md",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "docs_architecture_privacy_model",
+      "community": 0,
+      "community_name": "Architecture",
+      "norm_label": "privacy model"
+    },
+    {
+      "label": "features.md",
+      "file_type": "document",
+      "source_file": "docs/features.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_features",
+      "community": 1,
+      "community_name": "Features",
+      "norm_label": "features.md"
+    },
+    {
+      "label": "Features",
+      "file_type": "document",
+      "source_file": "docs/features.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_features_features",
+      "community": 1,
+      "community_name": "Features",
+      "norm_label": "features"
+    },
+    {
+      "label": "Shipped",
+      "file_type": "document",
+      "source_file": "docs/features.md",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "docs_features_shipped",
+      "community": 1,
+      "community_name": "Features",
+      "norm_label": "shipped"
+    },
+    {
+      "label": "Backlog \u2014 Core (build first)",
+      "file_type": "document",
+      "source_file": "docs/features.md",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "docs_features_backlog_core_build_first",
+      "community": 1,
+      "community_name": "Features",
+      "norm_label": "backlog \u2014 core (build first)"
+    },
+    {
+      "label": "Backlog \u2014 Later phases",
+      "file_type": "document",
+      "source_file": "docs/features.md",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "docs_features_backlog_later_phases",
+      "community": 1,
+      "community_name": "Features",
+      "norm_label": "backlog \u2014 later phases"
+    },
+    {
+      "label": "Decisions carried from the prior iteration (Academy)",
+      "file_type": "document",
+      "source_file": "docs/features.md",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "docs_features_decisions_carried_from_the_prior_iteration_academy",
+      "community": 1,
+      "community_name": "Features",
+      "norm_label": "decisions carried from the prior iteration (academy)"
+    },
+    {
+      "label": "vision.md",
+      "file_type": "document",
+      "source_file": "docs/vision.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_vision",
+      "community": 2,
+      "community_name": "Vision",
+      "norm_label": "vision.md"
+    },
+    {
+      "label": "Vision",
+      "file_type": "document",
+      "source_file": "docs/vision.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_vision_vision",
+      "community": 2,
+      "community_name": "Vision",
+      "norm_label": "vision"
+    },
+    {
+      "label": "Core problem",
+      "file_type": "document",
+      "source_file": "docs/vision.md",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "docs_vision_core_problem",
+      "community": 2,
+      "community_name": "Vision",
+      "norm_label": "core problem"
+    },
+    {
+      "label": "Scope",
+      "file_type": "document",
+      "source_file": "docs/vision.md",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "docs_vision_scope",
+      "community": 2,
+      "community_name": "Vision",
+      "norm_label": "scope"
+    },
+    {
+      "label": "Open decisions",
+      "file_type": "document",
+      "source_file": "docs/vision.md",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "docs_vision_open_decisions",
+      "community": 2,
+      "community_name": "Vision",
+      "norm_label": "open decisions"
+    },
+    {
+      "label": "Constraints carried forward",
+      "file_type": "document",
+      "source_file": "docs/vision.md",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "docs_vision_constraints_carried_forward",
+      "community": 2,
+      "community_name": "Vision",
+      "norm_label": "constraints carried forward"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/hooks/docs-sync-reminder.sh",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude_hooks_docs_sync_reminder",
+      "target": "claude_hooks_docs_sync_reminder_sh__entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/hooks/graphify-auto-update.sh",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude_hooks_graphify_auto_update",
+      "target": "claude_hooks_graphify_auto_update_sh__entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude",
+      "target": "claude_graphify",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CLAUDE.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "claude",
+      "target": "claude_quixhub",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "readme",
+      "target": "readme_quixhub",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "readme_quixhub",
+      "target": "readme_docs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "readme_quixhub",
+      "target": "readme_local_development",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "readme_quixhub",
+      "target": "readme_stack",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/architecture.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_architecture",
+      "target": "docs_architecture_architecture",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/architecture.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_architecture_architecture",
+      "target": "docs_architecture_data_model",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/architecture.md",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_architecture_architecture",
+      "target": "docs_architecture_local_dev_infra",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/architecture.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_architecture_architecture",
+      "target": "docs_architecture_module_pattern",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/architecture.md",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_architecture_architecture",
+      "target": "docs_architecture_privacy_model",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/architecture.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_architecture_architecture",
+      "target": "docs_architecture_stack",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/features.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_features",
+      "target": "docs_features_features",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/features.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_features_features",
+      "target": "docs_features_backlog_core_build_first",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/features.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_features_features",
+      "target": "docs_features_backlog_later_phases",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/features.md",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_features_features",
+      "target": "docs_features_decisions_carried_from_the_prior_iteration_academy",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/features.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_features_features",
+      "target": "docs_features_shipped",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/vision.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_vision",
+      "target": "docs_vision_vision",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/vision.md",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_vision_vision",
+      "target": "docs_vision_constraints_carried_forward",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/vision.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_vision_vision",
+      "target": "docs_vision_core_problem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/vision.md",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_vision_vision",
+      "target": "docs_vision_open_decisions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/vision.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_vision_vision",
+      "target": "docs_vision_scope",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": []
+}
