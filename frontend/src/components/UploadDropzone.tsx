@@ -1,3 +1,5 @@
+'use client';
+
 import { UploadCloud } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 import styles from './UploadDropzone.module.css';

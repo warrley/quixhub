@@ -1,5 +1,5 @@
 import { Code2, Download, FileText, ThumbsUp } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Card } from './Card';
 import type { Material } from '../data/types';
 import styles from './MaterialCard.module.css';
@@ -23,7 +23,7 @@ export function MaterialCard({ material }: { material: Material }) {
   const Icon = material.type === 'codigo' ? Code2 : FileText;
   return (
     <Card interactive padding="none">
-      <Link to={`/materiais/${material.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <Link href={`/materiais/${material.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
         <div className={styles.wrap}>
           <div className={styles.thumb} style={{ background: tone.bg }}>
             <Icon size={18} />

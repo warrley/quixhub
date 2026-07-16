@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { calendarEvents as seedEvents } from '../data/mock';
 import type { CalendarEvent } from '../data/types';

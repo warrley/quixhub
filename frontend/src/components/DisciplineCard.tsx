@@ -1,5 +1,5 @@
 import { BookOpen, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Card } from './Card';
 import type { Discipline } from '../data/types';
 import styles from './DisciplineCard.module.css';
@@ -20,7 +20,7 @@ const RATING_TONE: Record<Discipline['accent'], string> = {
 
 export function DisciplineCard({ discipline }: { discipline: Discipline }) {
   return (
-    <Link to={`/catalogo/${discipline.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link href={`/catalogo/${discipline.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <Card interactive padding="none" accent={ACCENT_VAR[discipline.accent]}>
         <div className={styles.wrap}>
           <div className={styles.top}>
