@@ -1,0 +1,49 @@
+export interface Discipline {
+  id: string;
+  code: string;
+  name: string;
+  professor: string;
+  workload: number;
+  semester: string;
+  description: string;
+  prerequisites: string[];
+  materialsCount: number;
+  ratingLevel: 1 | 2 | 3 | 4 | 5;
+  rating: number;
+  responses: number;
+  tracked: boolean;
+  accent: 'accent' | 'accent2' | 'accent3' | 'accent4';
+}
+
+export type MaterialType = 'prova' | 'resumo' | 'codigo' | 'trabalho';
+
+export interface Material {
+  id: string;
+  disciplineId: string;
+  type: MaterialType;
+  title: string;
+  fileKind: string;
+  helpfulCount: number;
+  addedAt: string;
+  anonymous: boolean;
+  uploader?: string;
+  status: 'published' | 'pending' | 'rejected';
+}
+
+export interface CalendarEvent {
+  id: string;
+  disciplineId: string;
+  title: string;
+  date: string;
+  kind: 'prova' | 'entrega' | 'seminario';
+  confirmations: number;
+  confirmed: boolean;
+  linkedMaterialId?: string;
+}
+
+export interface FeedbackStat {
+  label: string;
+  value: string;
+  percent: number;
+  tone: string;
+}
