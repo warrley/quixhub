@@ -1,0 +1,57 @@
+{
+  ".claude/hooks/docs-sync-reminder.sh": {
+    "mtime": 1784146144.738948,
+    "ast_hash": "bbaaf1a369c1dd7bf16002ac82a73e10",
+    "semantic_hash": ""
+  },
+  ".claude/hooks/graphify-auto-update.sh": {
+    "mtime": 1784224881.702995,
+    "ast_hash": "e2420a3c22aa0630daec00dde1d9c61c",
+    "semantic_hash": ""
+  },
+  ".claude/settings.json": {
+    "mtime": 1784224914.1326003,
+    "ast_hash": "fb33d7e0e9daac0c7983699e84f86b4c",
+    "semantic_hash": ""
+  },
+  ".claude/settings.local.json": {
+    "mtime": 1784224510.5111995,
+    "ast_hash": "8aba4f71e229cda315c1473dac0b9e19",
+    "semantic_hash": ""
+  },
+  "skills-lock.json": {
+    "mtime": 1784224682.9206848,
+    "ast_hash": "42abe320f8e8e09727e02df7f153247a",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1784225467.6584911,
+    "ast_hash": "e7fc4db2ceda00eab898cb02326b6e81",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1784225305.1686327,
+    "ast_hash": "49e07361649981b275443ce84282eb4f",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1784138112.3892813,
+    "ast_hash": "581168157f5d53e180161a6f88b46a44",
+    "semantic_hash": ""
+  },
+  "docs/architecture.md": {
+    "mtime": 1784225195.3090599,
+    "ast_hash": "e094510c43fdbefaca7462eb2c271e87",
+    "semantic_hash": ""
+  },
+  "docs/features.md": {
+    "mtime": 1784225185.7131834,
+    "ast_hash": "77d2af98a21040545df8c5669d0a00c3",
+    "semantic_hash": ""
+  },
+  "docs/vision.md": {
+    "mtime": 1784225166.4994307,
+    "ast_hash": "9d801fe492bb460281f875347cf3542a",
+    "semantic_hash": ""
+  }
+}
