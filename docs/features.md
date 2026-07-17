@@ -6,9 +6,8 @@
 
 ## Backlog — Core (build first)
 
-- **Study materials backend** — upload, browse, and download past exams, summaries, assignments, and code samples, organized by course/discipline. Frontend UI is built (see Shipped); needs the Express/Drizzle/MinIO backend wired up.
-- **Course/professor feedback backend** — structured, anonymous signal on discipline difficulty, exam format, group work, and teaching style. Identity policy (discipline-only vs. professor-identifying) is an **open decision** — see `docs/vision.md`; the frontend renders both variants side by side until it's resolved.
-- **Collaborative calendar backend** — shared agenda for exam dates, assignment deadlines, and review sessions, with materials linkable to specific events. Frontend UI is built; needs persistence.
+- **Wire frontend to the backend API** — the Express/Drizzle/MinIO backend (auth, disciplines, materials, feedback, calendar) is built and verified end-to-end (see `docs/architecture.md` → Data model), but `frontend/` still runs entirely against `src/data/mock.ts`. Remaining work is replacing the mock-data calls with real `fetch`/API-client calls per screen.
+- **Course/professor feedback identity policy** — the feedback backend stays discipline-scoped and anonymous (no professor field) per the still-**open decision** in `docs/vision.md`; the frontend renders both variants side by side until it's resolved.
 
 ## Backlog — Later phases
 
@@ -22,3 +21,7 @@
 
 - **Professor/teacher ratings were previously rejected** — reputational-abuse and relationship-friction risk from publicly rating identifiable staff. QuixHub's course/professor feedback feature needs to explicitly revisit this before shipping (see `docs/vision.md` → Open decisions).
 - **Grade privacy** — grade-related data should stay local-first by default with opt-in sync, not required auth, per the prior privacy model.
+
+## if the historic not have a grade, it will placeholder
+## when up another historic, exclude the existente
+## normal curve, percentil 

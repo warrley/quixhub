@@ -4,8 +4,8 @@ A platform for the UFC Quixadá student community: centralized study materials, 
 
 ## Stack
 
-- `frontend/` — React + Vite + TypeScript, deployed on Vercel. Auth, Home, Catalog, Materials, Feedback, Calendar and Profile screens are scaffolded with mock data (no backend wired up yet).
-- `backend/` — Node + Express + TypeScript, PostgreSQL via Drizzle ORM, S3-compatible object storage (MinIO locally). Not yet built.
+- `frontend/` — Next.js (App Router) + TypeScript, Tailwind CSS v4. Auth, Home, Catalog, Materials, Feedback, Calendar and Profile screens are built against mock data (not yet wired to the backend).
+- `backend/` — Node + Express + TypeScript, PostgreSQL via Drizzle ORM, S3-compatible object storage (MinIO locally).
 
 ## Local development
 
@@ -23,7 +23,20 @@ npm install
 npm run dev
 ```
 
-Backend setup instructions will be added here once that directory is scaffolded.
+Backend:
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run db:generate   # only needed after schema.ts changes
+npm run db:migrate
+npm run seed:admin
+npm run seed:disciplines
+npm run dev
+```
+
+The API listens on `http://localhost:4000` (see `/api/health` and `/api/docs`).
 
 ## Docs
 
