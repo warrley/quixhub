@@ -56,11 +56,11 @@ function reconstructLines(items: { str: string; transform: number[] }[]): string
  */
 export async function parseHistoricoPdf(file: File): Promise<ParsedHistorico> {
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjsLib.getDocument({
     data,
     useWorkerFetch: false,
-    isEvalSupported: false,
     disableFontFace: true,
   }).promise;
 
