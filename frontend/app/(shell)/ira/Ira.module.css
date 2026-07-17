@@ -55,6 +55,20 @@
   align-items: end;
 }
 
+.buttonField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-4);
+}
+
+.buttonFieldLabel {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12px;
+  visibility: hidden;
+}
+
 .table {
   display: flex;
   flex-direction: column;
