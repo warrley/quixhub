@@ -40,7 +40,7 @@ export function UploadDropzone({
         ref={inputRef}
         type="file"
         accept={accept}
-        hidden
+        className={styles.hiddenInput}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onFile(file);
