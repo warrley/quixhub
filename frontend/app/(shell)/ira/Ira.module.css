@@ -55,6 +55,14 @@
   align-items: end;
 }
 
+.semesterRow {
+  display: grid;
+  grid-template-columns: 2fr auto;
+  gap: var(--space-3);
+  align-items: end;
+  max-width: 480px;
+}
+
 .buttonField {
   display: flex;
   flex-direction: column;
@@ -76,12 +84,48 @@
   margin-top: var(--space-3);
 }
 
+.groupTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: var(--space-4) 0 var(--space-2);
+}
+
 .groupTitle {
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 12.5px;
   color: var(--ink-2);
-  margin: var(--space-4) 0 var(--space-2);
+}
+
+.semesterChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.semesterChip {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.semesterChip:hover {
+  border-color: var(--line-strong);
+}
+
+.semesterChipActive {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent-dark);
 }
 
 .entryRow {
