@@ -6,14 +6,10 @@ const CONTROL =
 
 function Wrapper({ label, hint, error, children }: { label?: string; hint?: string; error?: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5 mb-4">
+    <label className="flex flex-col gap-1.5 mb-4 min-w-0">
       {label && <span className="font-heading font-semibold text-xs text-ink-2">{label}</span>}
       {children}
-      {error ? (
-        <span className="text-xs text-danger font-semibold">{error}</span>
-      ) : hint ? (
-        <span className="text-xs text-ink-3">{hint}</span>
-      ) : null}
+      <span className={`text-xs min-h-[16px] ${error ? 'text-danger font-semibold' : 'text-ink-3'}`}>{error || hint || ''}</span>
     </label>
   );
 }
@@ -56,7 +52,7 @@ export function SelectField({ label, hint, error, className, children, ...rest }
   return (
     <Wrapper label={label} hint={hint} error={error}>
       <div className="relative">
-        <select className={[CONTROL, 'appearance-none pr-9', className].filter(Boolean).join(' ')} {...rest}>
+        <select className={[CONTROL, 'appearance-none pr-9 w-full', className].filter(Boolean).join(' ')} {...rest}>
           {children}
         </select>
         <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-3" />
