@@ -8,7 +8,6 @@ import { MaterialCard } from '@/components/MaterialCard';
 import { TagButton } from '@/components/Tag';
 import { disciplineById, materials } from '@/data/mock';
 import type { MaterialType } from '@/data/types';
-import styles from './Materials.module.css';
 
 const TYPE_FILTERS: { value: MaterialType | 'todos'; label: string }[] = [
   { value: 'todos', label: 'Todos' },
@@ -38,10 +37,10 @@ export default function Materials() {
 
   return (
     <div>
-      <div className={styles.header}>
+      <div className="flex justify-between items-start gap-4 my-2 mb-5 flex-wrap">
         <div>
-          <h1 className={styles.title}>Materiais</h1>
-          <p className={styles.subtitle}>Provas, resumos e código enviados pela turma.</p>
+          <h1 className="font-heading font-bold text-22 mb-1">Materiais</h1>
+          <p className="text-13 text-ink-2">Provas, resumos e código enviados pela turma.</p>
         </div>
         <Link href="/materiais/enviar">
           <Button>
@@ -50,21 +49,21 @@ export default function Materials() {
         </Link>
       </div>
 
-      <div className={styles.filters}>
+      <div className="flex gap-1.5 flex-wrap mb-3">
         {TYPE_FILTERS.map((f) => (
           <TagButton key={f.value} tone={type === f.value ? 'selected' : 'outline'} onClick={() => setType(f.value)}>
             {f.label}
           </TagButton>
         ))}
       </div>
-      <div className={styles.sortRow}>Ordenar por: mais úteis</div>
+      <div className="text-xs font-medium text-ink-3 mb-5">Ordenar por: mais úteis</div>
 
       {grouped.map(([disciplineId, items]) => {
         const discipline = disciplineById(disciplineId);
         return (
           <div key={disciplineId}>
-            <div className={styles.groupTitle}>{discipline?.name ?? disciplineId}</div>
-            <div className={styles.list}>
+            <div className="font-heading font-bold text-12-5 text-ink-2 my-5 mb-2">{discipline?.name ?? disciplineId}</div>
+            <div className="flex flex-col gap-9px">
               {items.map((m) => (
                 <MaterialCard key={m.id} material={m} />
               ))}

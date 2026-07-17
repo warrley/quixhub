@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/Button';
 import { SelectField, TextField } from '@/components/Field';
-import styles from '@/components/AuthLayout.module.css';
 
 export default function Register() {
   const router = useRouter();
@@ -15,8 +14,8 @@ export default function Register() {
 
   return (
     <>
-      <h1 className={styles.formTitle}>Criar sua conta</h1>
-      <p className={styles.formDesc}>Só alunos e professores da UFC Quixadá.</p>
+      <h1 className="font-heading font-bold text-25 mb-1.5">Criar sua conta</h1>
+      <p className="text-13-5 text-ink-2 mb-6 leading-[1.5]">Só alunos e professores da UFC Quixadá.</p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -33,7 +32,7 @@ export default function Register() {
           required
         />
         {verified && (
-          <div className={styles.verifiedRow}>
+          <div className="flex items-center gap-1.5 text-11-5 font-semibold text-good -mt-2.5 mb-4">
             <BadgeCheck size={14} />
             domínio @ufc.br verificado
           </div>
@@ -49,8 +48,8 @@ export default function Register() {
           Criar conta
         </Button>
       </form>
-      <p className={styles.switchLine}>
-        Já tem conta? <Link href="/login">Entrar</Link>
+      <p className="text-center mt-5 text-13 text-ink-2">
+        Já tem conta? <Link href="/login" className="font-semibold no-underline">Entrar</Link>
       </p>
     </>
   );

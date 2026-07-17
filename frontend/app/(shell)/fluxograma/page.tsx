@@ -22,14 +22,16 @@ import { useToast } from '@/components/Toast';
 import { disciplines } from '@/data/mock';
 import type { FluxogramaEdge, FluxogramaNode } from '@/data/types';
 import { useFluxograma } from '@/lib/fluxogramaStore';
-import styles from './Fluxograma.module.css';
 
 const RATING_TONE: Record<string, string> = {
-  accent: 'var(--accent)',
-  accent2: 'var(--accent-2-ink)',
-  accent3: 'var(--accent-3)',
-  accent4: 'var(--accent-4)',
+  accent: 'var(--color-accent)',
+  accent2: 'var(--color-accent-2-ink)',
+  accent3: 'var(--color-accent-3)',
+  accent4: 'var(--color-accent-4)',
 };
+
+const NODE_CATALOG = 'border-l-4 border-l-[var(--node-accent,var(--color-accent))]';
+const NODE_CUSTOM = 'border-dashed text-ink-2';
 
 function toFlowNode(n: FluxogramaNode): Node {
   const discipline = n.disciplineId ? disciplines.find((d) => d.id === n.disciplineId) : undefined;
@@ -38,7 +40,7 @@ function toFlowNode(n: FluxogramaNode): Node {
     position: n.position,
     data: { label: n.label },
     type: 'default',
-    className: n.kind === 'catalog' ? styles.nodeCatalog : styles.nodeCustom,
+    className: n.kind === 'catalog' ? NODE_CATALOG : NODE_CUSTOM,
     style: discipline ? ({ '--node-accent': RATING_TONE[discipline.accent] } as CSSProperties) : undefined,
   };
 }
@@ -158,16 +160,16 @@ function FluxogramaCanvas() {
 
   return (
     <div>
-      <div className={styles.header}>
+      <div className="flex justify-between items-start gap-4 my-2 mb-4 flex-wrap">
         <div>
-          <h1 className={styles.title}>Fluxograma</h1>
-          <p className={styles.subtitle}>Monte sua trilha de disciplinas e conecte pré-requisitos. Salvo apenas no seu navegador.</p>
+          <h1 className="font-heading font-bold text-22 mb-1">Fluxograma</h1>
+          <p className="text-13 text-ink-2">Monte sua trilha de disciplinas e conecte pré-requisitos. Salvo apenas no seu navegador.</p>
         </div>
         <Button onClick={handleSave}>Salvar</Button>
       </div>
 
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarField}>
+      <div className="flex gap-3 items-end flex-wrap mb-4">
+        <div className="min-w-[220px]">
           <SelectField
             label="Adicionar disciplina do catálogo"
             value={selectedDiscipline}
@@ -187,7 +189,7 @@ function FluxogramaCanvas() {
           Adicionar nó
         </Button>
 
-        <div className={styles.toolbarField}>
+        <div className="min-w-[220px]">
           <TextField label="Nó personalizado" placeholder="Ex: Eletiva livre" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} />
         </div>
         <Button variant="secondary" onClick={addCustomNode} disabled={!customLabel.trim()}>
@@ -201,9 +203,9 @@ function FluxogramaCanvas() {
         )}
       </div>
 
-      <div className={styles.canvasWrap}>
+      <div className="h-[62vh] min-h-[420px] rounded-lg border border-line overflow-hidden bg-surface-sunken">
         {!hydrated ? null : nodes.length === 0 ? (
-          <div className={styles.emptyState}>
+          <div className="flex flex-col items-center justify-center gap-3 h-full text-ink-3 text-13">
             <span>Nenhum nó ainda — adicione uma disciplina do catálogo ou um nó personalizado para começar.</span>
           </div>
         ) : (

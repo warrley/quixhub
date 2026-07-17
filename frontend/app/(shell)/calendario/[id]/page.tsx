@@ -8,7 +8,6 @@ import { Card } from '@/components/Card';
 import { Tag } from '@/components/Tag';
 import { disciplineById, materials } from '@/data/mock';
 import { useCalendar } from '@/lib/calendarStore';
-import styles from './EventDetail.module.css';
 
 const KIND_LABEL: Record<string, string> = {
   prova: 'Prova',
@@ -33,23 +32,23 @@ export default function EventDetail() {
 
   return (
     <div>
-      <Link href="/calendario" className={styles.back}>
+      <Link href="/calendario" className="inline-flex items-center gap-1 text-xs font-semibold text-ink-2 no-underline my-2 mb-5">
         <ArrowLeft size={13} /> Calendário
       </Link>
 
-      <Card className={styles.card} padding="none">
-        <div className={styles.kindTag}>
+      <Card className="max-w-[480px] p-6" padding="none">
+        <div className="mb-3">
           <Tag tone="accent">{KIND_LABEL[event.kind]}</Tag>
         </div>
-        <h1 className={styles.title}>{event.title}</h1>
-        <div className={styles.discipline}>{discipline?.name}</div>
-        <div className={styles.dateRow}>
+        <h1 className="font-heading font-bold text-21 mb-1.5">{event.title}</h1>
+        <div className="text-13 text-ink-2 mb-5">{discipline?.name}</div>
+        <div className="flex items-center gap-2 text-13-5 text-ink font-semibold mb-5">
           <CalendarDays size={16} />
           {dateLabel}
         </div>
 
         {linkedMaterial && (
-          <div className={styles.materialLink}>
+          <div className="mt-5">
             <Link href={`/materiais/${linkedMaterial.id}`}>
               <Button variant="secondary" size="sm">
                 Ver material vinculado: {linkedMaterial.title}
@@ -58,7 +57,7 @@ export default function EventDetail() {
           </div>
         )}
 
-        <div className={styles.confirmRow}>
+        <div className="flex items-center gap-3 pt-5 border-t border-line">
           {event.confirmed ? (
             <Tag tone="good" icon={<CircleCheck size={13} />}>
               Confirmado
@@ -68,7 +67,7 @@ export default function EventDetail() {
               Não confirmado
             </Tag>
           )}
-          <span className={styles.confirmCount}>{event.confirmations} alunos confirmaram</span>
+          <span className="text-12-5 text-ink-2">{event.confirmations} alunos confirmaram</span>
           <Button size="sm" variant="ghost" onClick={() => confirmEvent(event.id)}>
             Confirmar também
           </Button>
