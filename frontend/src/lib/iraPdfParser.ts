@@ -92,7 +92,7 @@ export async function parseHistoricoPdf(file: File): Promise<ParsedHistorico> {
     const match = line.match(ROW_RE);
     if (!match) continue;
 
-    const [, , , , ch, , , notaRaw, situacao] = match;
+    const [, period, , , ch, , , notaRaw, situacao] = match;
     const nota = toNumber(notaRaw);
     const workload = toNumber(ch) ?? 0;
     const disciplineName = (lines[i - 1] ?? '').trim();
@@ -104,6 +104,7 @@ export async function parseHistoricoPdf(file: File): Promise<ParsedHistorico> {
       workload,
       situacao: situacaoFromSituacao(situacao, nota),
       source: 'pdf',
+      semester: period,
     });
   }
 

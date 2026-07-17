@@ -56,6 +56,10 @@ export interface IraEntry {
   workload: number;
   situacao?: 'aprovado' | 'reprovado' | 'em_andamento' | 'outro';
   source: 'manual' | 'pdf';
+  /** Academic period the discipline was taken in (e.g. "2025.1" from a PDF
+   * import, or the catalog's semester label for a manual entry). Entries
+   * without one are grouped under "Outros" in the UI. */
+  semester?: string;
 }
 
 export interface IraState {
