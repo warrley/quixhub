@@ -25,6 +25,10 @@ function emptyDraft(): DraftEntry {
   return { disciplineName: '', grade: 0, workload: 0, situacao: 'aprovado', source: 'manual' };
 }
 
+function sortSemesters(semesters: string[]): string[] {
+  return [...new Set(semesters)].sort((a, b) => a.localeCompare(b));
+}
+
 const disciplinesBySemester = disciplines.reduce((groups, d) => {
   const list = groups.get(d.semester) ?? [];
   list.push(d);
@@ -50,13 +54,30 @@ function groupEntriesBySemester(entries: IraEntry[]): [string, IraEntry[]][] {
 }
 
 export default function Ira() {
-  const { state, ira, addEntry, addEntries, updateEntry, removeEntry } = useIra();
+  const { state, ira, addEntry, addEntries, updateEntry, removeEntry, removeEntries } = useIra();
   const { show } = useToast();
 
   const [draft, setDraft] = useState<DraftEntry>(emptyDraft());
   const [customName, setCustomName] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftEntry | null>(null);
+
+  const [knownSemesters, setKnownSemesters] = useState<string[]>([]);
+  const [activeSemester, setActiveSemester] = useState('');
+  const [newSemesterInput, setNewSemesterInput] = useState('');
+
+  const availableSemesters = sortSemesters([
+    ...knownSemesters,
+    ...state.entries.map((e) => e.semester).filter((s): s is string => Boolean(s)),
+  ]);
+
+  function addSemester() {
+    const value = newSemesterInput.trim();
+    if (!value) return;
+    setKnownSemesters((cur) => (cur.includes(value) ? cur : [...cur, value]));
+    setActiveSemester(value);
+    setNewSemesterInput('');
+  }
 
   const [fileName, setFileName] = useState<string>();
   const [parsing, setParsing] = useState(false);
@@ -66,9 +87,10 @@ export default function Ira() {
   const previewIra = review ? computeIra(review.map((e, i) => ({ ...e, id: `preview-${i}` }))) : null;
 
   function handleAddManual() {
-    if (!draft.disciplineName || draft.workload <= 0) return;
-    addEntry(draft);
+    if (!activeSemester || !draft.disciplineName || draft.workload <= 0) return;
+    addEntry({ ...draft, semester: activeSemester });
     setDraft(emptyDraft());
+    setCustomName(false);
   }
 
   async function handleFile(file: File) {
@@ -133,26 +155,68 @@ export default function Ira() {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>Adicionar disciplina manualmente</div>
+        <div className={styles.sectionTitle}>Semestre</div>
+        <div className={styles.semesterRow}>
+          <TextField
+            label="Novo semestre"
+            placeholder="Ex: 2025.1"
+            value={newSemesterInput}
+            onChange={(e) => setNewSemesterInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addSemester();
+              }
+            }}
+          />
+          <div className={styles.buttonField}>
+            <span className={styles.buttonFieldLabel}>Adicionar semestre</span>
+            <Button variant="secondary" onClick={addSemester} disabled={!newSemesterInput.trim()}>
+              Adicionar semestre
+            </Button>
+          </div>
+        </div>
+
+        {availableSemesters.length > 0 && (
+          <div className={styles.semesterChips}>
+            {availableSemesters.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={[styles.semesterChip, s === activeSemester ? styles.semesterChipActive : ''].join(' ')}
+                onClick={() => setActiveSemester(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.sectionTitle} style={{ marginTop: 20 }}>
+          Adicionar disciplina manualmente
+          {activeSemester ? ` — Semestre ${activeSemester}` : ''}
+        </div>
+        {!activeSemester && <div className={styles.empty}>Defina um semestre acima para adicionar disciplinas.</div>}
         <div className={styles.row3}>
           {customName ? (
             <TextField
               label="Disciplina"
               placeholder="Nome da disciplina"
               value={draft.disciplineName}
+              disabled={!activeSemester}
               onChange={(e) => setDraft((d) => ({ ...d, disciplineName: e.target.value }))}
             />
           ) : (
             <SelectField
               label="Disciplina"
               value={draft.disciplineName}
+              disabled={!activeSemester}
               onChange={(e) => {
                 if (e.target.value === '__outro__') {
                   setCustomName(true);
-                  setDraft((d) => ({ ...d, disciplineName: '', semester: undefined }));
+                  setDraft((d) => ({ ...d, disciplineName: '' }));
                 } else {
-                  const discipline = disciplines.find((d) => d.name === e.target.value);
-                  setDraft((d) => ({ ...d, disciplineName: e.target.value, semester: discipline?.semester }));
+                  setDraft((d) => ({ ...d, disciplineName: e.target.value }));
                 }
               }}
             >
@@ -177,6 +241,7 @@ export default function Ira() {
             min={0}
             max={10}
             step={0.1}
+            disabled={!activeSemester}
             value={draft.grade || ''}
             onChange={(e) => setDraft((d) => ({ ...d, grade: Number(e.target.value) }))}
           />
@@ -185,12 +250,13 @@ export default function Ira() {
             type="number"
             min={0}
             step={1}
+            disabled={!activeSemester}
             value={draft.workload || ''}
             onChange={(e) => setDraft((d) => ({ ...d, workload: Number(e.target.value) }))}
           />
           <div className={styles.buttonField}>
             <span className={styles.buttonFieldLabel}>Adicionar</span>
-            <Button onClick={handleAddManual} disabled={!draft.disciplineName || draft.workload <= 0}>
+            <Button onClick={handleAddManual} disabled={!activeSemester || !draft.disciplineName || draft.workload <= 0}>
               Adicionar
             </Button>
           </div>
@@ -202,7 +268,24 @@ export default function Ira() {
           ) : (
             groupEntriesBySemester(state.entries).map(([semester, entries]) => (
               <div key={semester}>
-                <div className={styles.groupTitle}>{semester === OUTROS ? OUTROS : `Semestre ${semester}`}</div>
+                <div className={styles.groupTitleRow}>
+                  <span className={styles.groupTitle}>{semester === OUTROS ? OUTROS : `Semestre ${semester}`}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      removeEntries(entries.map((e) => e.id));
+                      if (editingId && entries.some((e) => e.id === editingId)) {
+                        setEditingId(null);
+                        setEditDraft(null);
+                      }
+                      show(`Semestre ${semester === OUTROS ? OUTROS : semester} removido.`);
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Excluir semestre
+                  </Button>
+                </div>
                 <div className={styles.table}>
                   {entries.map((e) =>
                     editingId === e.id && editDraft ? (
