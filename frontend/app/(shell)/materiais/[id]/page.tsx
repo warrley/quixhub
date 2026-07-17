@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { ArrowLeft, Code2, Download, FileText, ThumbsUp, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -23,6 +25,10 @@ const TYPE_GRADIENT: Record<string, string> = {
 };
 
 export default function MaterialDetail() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const params = useParams<{ id: string }>();
   const material = materials.find((m) => m.id === params.id);
   const { show } = useToast();

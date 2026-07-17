@@ -1,3 +1,4 @@
+import { UnderConstruction } from '@/components/UnderConstruction';
 import { Compass, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar } from '@/components/Avatar';
@@ -9,6 +10,10 @@ import { MaterialCard } from '@/components/MaterialCard';
 import { calendarEvents, currentUser, disciplineById, disciplines, materials } from '@/data/mock';
 
 export default function Home() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const trackedIds = disciplines.filter((d) => d.tracked).map((d) => d.id);
   const upcoming = calendarEvents.slice(0, 3);
   const recentMaterials = materials

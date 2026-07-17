@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import '@xyflow/react/dist/style.css';
 
 import {
@@ -228,6 +230,10 @@ function FluxogramaCanvas() {
 }
 
 export default function Fluxograma() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   return (
     <ReactFlowProvider>
       <FluxogramaCanvas />

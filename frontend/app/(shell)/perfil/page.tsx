@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { LogOut, X } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -32,6 +34,10 @@ function Switch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function Profile() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const router = useRouter();
   const [trackedIds, setTrackedIds] = useState(new Set(disciplines.filter((d) => d.tracked).map((d) => d.id)));
   const [notifs, setNotifs] = useState({ emailDeadlines: true, pushDeadlines: true, weeklyDigest: false });

@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DisciplineCard } from '@/components/DisciplineCard';
@@ -9,6 +11,10 @@ import { disciplines } from '@/data/mock';
 const FILTERS = ['2025.2', 'Professor', 'Semestre'];
 
 export default function Catalog() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('2025.2');
 

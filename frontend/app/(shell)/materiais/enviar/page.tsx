@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { Clock3 } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -10,6 +12,10 @@ import { UploadDropzone } from '@/components/UploadDropzone';
 import { disciplines } from '@/data/mock';
 
 export default function Upload() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const [fileName, setFileName] = useState<string>();
   const [submitted, setSubmitted] = useState(false);
 
