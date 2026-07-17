@@ -13,6 +13,7 @@ interface IraContextValue {
   addEntries: (entries: Omit<IraEntry, 'id'>[]) => void;
   updateEntry: (id: string, patch: Partial<IraEntry>) => void;
   removeEntry: (id: string) => void;
+  removeEntries: (ids: string[]) => void;
   ira: number | null;
 }
 
@@ -64,10 +65,18 @@ export function IraProvider({ children }: { children: ReactNode }) {
     }));
   }
 
+  function removeEntries(ids: string[]) {
+    const idSet = new Set(ids);
+    setState((cur) => ({
+      entries: cur.entries.filter((e) => !idSet.has(e.id)),
+      updatedAt: new Date().toISOString(),
+    }));
+  }
+
   const ira = useMemo(() => computeIra(state.entries), [state.entries]);
 
   return (
-    <IraContext.Provider value={{ state, addEntry, addEntries, updateEntry, removeEntry, ira }}>
+    <IraContext.Provider value={{ state, addEntry, addEntries, updateEntry, removeEntry, removeEntries, ira }}>
       {children}
     </IraContext.Provider>
   );
