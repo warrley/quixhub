@@ -1,70 +1,98 @@
+@import 'tailwindcss';
 @import './tokens.css';
 
-* {
-  box-sizing: border-box;
+@utility bg-gradient-brand {
+  background: var(--gradient-brand);
 }
 
-html,
-body,
-#root {
-  height: 100%;
+@utility bg-gradient-warm {
+  background: var(--gradient-warm);
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-body);
-  background: var(--bg);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
+@utility bg-gradient-hero {
+  background: var(--gradient-hero);
+}
+
+@utility bg-gradient-cta {
+  background: var(--gradient-cta);
+}
+
+@utility shadow-btn-primary {
+  box-shadow: var(--shadow-btn-primary);
+}
+
+@utility bg-dot-grid {
   background-image: radial-gradient(oklch(53% 0.2 264 / 5%) 1px, transparent 1px),
     radial-gradient(oklch(78% 0.16 78 / 8%) 1px, transparent 1px);
   background-size: 28px 28px, 28px 28px;
   background-position: 0 0, 14px 14px;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-heading);
-  margin: 0;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-p {
-  margin: 0;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-button {
-  font-family: inherit;
-}
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 
-a {
-  color: var(--accent);
-}
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
 
-::selection {
-  background: var(--accent-tint-2);
-  color: var(--ink);
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    margin: 0;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+  p {
+    margin: 0;
+  }
 
-/* scrollbars — subtle, themed */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
-}
+  button {
+    font-family: inherit;
+  }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  a {
+    color: var(--color-accent);
+  }
+
+  ::selection {
+    background: var(--color-accent-tint-2);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* scrollbars — subtle, themed */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
 }
