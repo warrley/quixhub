@@ -100,10 +100,16 @@
 
   /* Tailwind's default spacing scale (0.25rem multiplier) already matches
      this project's --space-1..12 steps (4/8/12/16/20/24/32/40/48px) exactly
-     for whole-number keys — no override needed there. These two odd values
+     for whole-number keys — no override needed there. These odd values
      recur in gap/margin contexts and don't land on that multiplier scale. */
+  --spacing-3px: 3px;
   --spacing-5px: 5px;
   --spacing-9px: 9px;
+
+  /* form-control border weight — used consistently across every input/
+     select/textarea, doesn't match Tailwind's default border-width scale
+     (0/1/2/4/8px). */
+  --border-width-1-5: 1.5px;
 }
 
 /* Not Tailwind utility categories — plain custom properties, consumed via
