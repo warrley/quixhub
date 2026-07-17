@@ -1,5 +1,6 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
@@ -23,6 +24,10 @@ function isoDate(d: Date) {
 }
 
 export default function Calendar() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const { events, addEvent } = useCalendar();
   const [cursor, setCursor] = useState(new Date(2026, 6, 1));
   const [selectedDay, setSelectedDay] = useState<string | null>(null);

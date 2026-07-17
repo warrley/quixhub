@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { AlertTriangle, ArrowLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams } from 'next/navigation';
@@ -18,6 +20,10 @@ const ACCENT_GRADIENT: Record<string, string> = {
 };
 
 export default function DisciplineDetail() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const params = useParams<{ id: string }>();
   const discipline = disciplineById(params.id);
   const [tracked, setTracked] = useState(discipline?.tracked ?? false);

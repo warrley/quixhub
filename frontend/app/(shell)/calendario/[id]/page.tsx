@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { ArrowLeft, CalendarDays, CircleCheck, CircleDashed } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams } from 'next/navigation';
@@ -16,6 +18,10 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default function EventDetail() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const params = useParams<{ id: string }>();
   const { events, confirmEvent } = useCalendar();
   const event = events.find((e) => e.id === params.id);

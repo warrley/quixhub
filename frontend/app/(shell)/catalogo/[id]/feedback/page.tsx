@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams, useRouter } from 'next/navigation';
@@ -21,6 +23,10 @@ const YES_NO_BASE = 'py-2.5 px-5 rounded-md border-1-5 border-line bg-surface te
 const ACTIVE = 'border-accent bg-accent-tint text-accent-dark';
 
 export default function FeedbackSubmit() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { show } = useToast();

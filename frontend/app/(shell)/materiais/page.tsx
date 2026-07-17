@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -18,6 +20,10 @@ const TYPE_FILTERS: { value: MaterialType | 'todos'; label: string }[] = [
 ];
 
 export default function Materials() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const [type, setType] = useState<MaterialType | 'todos'>('todos');
 
   const published = useMemo(

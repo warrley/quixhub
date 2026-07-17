@@ -1,5 +1,7 @@
 'use client';
 
+import { UnderConstruction } from '@/components/UnderConstruction';
+
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/Button';
@@ -9,6 +11,10 @@ import { useToast } from '@/components/Toast';
 import { disciplineById, pendingMaterials } from '@/data/mock';
 
 export default function ModerationQueue() {
+  if (process.env.NODE_ENV === 'production') {
+    return <UnderConstruction />;
+  }
+
   const [resolved, setResolved] = useState<Set<string>>(new Set());
   const { show } = useToast();
   const items = pendingMaterials().filter((m) => !resolved.has(m.id));
