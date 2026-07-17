@@ -33,7 +33,7 @@ function isValidGrade(grade: number): boolean {
 }
 
 function emptyDraft(): DraftEntry {
-  return { disciplineName: '', grade: 0, workload: 0, situacao: 'aprovado', source: 'manual' };
+  return { disciplineName: '', grade: 0, workload: 64, situacao: 'aprovado', source: 'manual' };
 }
 
 function sortSemesters(semesters: string[]): string[] {
