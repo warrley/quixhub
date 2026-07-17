@@ -54,7 +54,7 @@ export interface IraEntry {
   disciplineId?: string;
   grade: number;
   workload: number;
-  situacao?: 'aprovado' | 'reprovado' | 'em_andamento' | 'outro';
+  situacao?: 'aprovado' | 'reprovado' | 'em_andamento' | 'trancado' | 'outro';
   source: 'manual' | 'pdf';
   /** Academic period the discipline was taken in (e.g. "2025.1" from a PDF
    * import, or the catalog's semester label for a manual entry). Entries

@@ -18,6 +18,7 @@ const SITUACAO_LABEL: Record<NonNullable<IraEntry['situacao']>, string> = {
   aprovado: 'Aprovado',
   reprovado: 'Reprovado',
   em_andamento: 'Em andamento',
+  trancado: 'Trancado',
   outro: 'Outro',
 };
 
@@ -157,7 +158,7 @@ export default function Ira() {
       <div className={styles.statRow}>
         <div className={styles.stat}>
           <div className={styles.statValue}>{ira !== null ? ira.toFixed(4) : '—'}</div>
-          <div className={styles.statLabel}>IRA calculado (aproximado)</div>
+          <div className={styles.statLabel}>IRA calculado (aproximado — fórmula não verificada oficialmente)</div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statValue}>{state.entries.length}</div>

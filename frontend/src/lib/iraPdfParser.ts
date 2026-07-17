@@ -18,6 +18,7 @@ function toNumber(raw: string): number | undefined {
 }
 
 function situacaoFromSituacao(situacao: string, nota: number | undefined): IraEntry['situacao'] {
+  if (situacao.startsWith('TRANCAD')) return 'trancado';
   if (nota === undefined) return 'em_andamento';
   if (situacao === 'APROVADO') return 'aprovado';
   if (situacao === 'REPROVADO') return 'reprovado';
