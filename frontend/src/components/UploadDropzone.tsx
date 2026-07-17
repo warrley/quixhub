@@ -2,7 +2,6 @@
 
 import { UploadCloud } from 'lucide-react';
 import { useRef, useState, type DragEvent } from 'react';
-import styles from './UploadDropzone.module.css';
 
 export function UploadDropzone({
   fileName,
@@ -25,7 +24,7 @@ export function UploadDropzone({
 
   return (
     <div
-      className={[styles.zone, active ? styles.zoneActive : ''].join(' ')}
+      className={`relative border-2 border-dashed border-line-strong rounded-lg py-8 px-4 flex flex-col items-center text-center gap-2.5 bg-surface text-ink-2 [transition:border-color_0.15s_ease,background-color_0.15s_ease] cursor-pointer hover:border-accent hover:bg-accent-tint ${active ? 'border-accent bg-accent-tint' : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
         setActive(true);
@@ -40,18 +39,18 @@ export function UploadDropzone({
         ref={inputRef}
         type="file"
         accept={accept}
-        className={styles.hiddenInput}
+        className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onFile(file);
           e.target.value = '';
         }}
       />
-      <div className={styles.icon}>
+      <div className="w-12 h-12 rounded-full bg-gradient-brand text-white flex items-center justify-center shadow-glow">
         <UploadCloud size={22} />
       </div>
-      <div className={styles.title}>{fileName ?? 'Arraste um arquivo ou clique para escolher'}</div>
-      <div className={styles.hint}>PDF, imagem ou ZIP · até 25MB</div>
+      <div className="font-heading font-bold text-sm text-ink">{fileName ?? 'Arraste um arquivo ou clique para escolher'}</div>
+      <div className="text-xs text-ink-3">PDF, imagem ou ZIP · até 25MB</div>
     </div>
   );
 }
