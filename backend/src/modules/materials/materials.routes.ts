@@ -1,7 +1,9 @@
+import { writeFile } from 'node:fs/promises';
 import { Router } from 'express';
+import multer from 'multer';
 import { z } from 'zod';
 import { AppError, asyncHandler } from '../../lib/errors.js';
-import { buildObjectKey, presignDownload, presignUpload } from '../../lib/storage.js';
+import { buildObjectKey, ensureUploadDir, resolveStoragePath } from '../../lib/storage.js';
 import { requireAdmin, requireAuth } from '../auth/auth.middleware.js';
 import {
   createMaterial,
@@ -14,20 +16,15 @@ import {
 
 export const materialsRouter = Router();
 
-const uploadUrlSchema = z.object({
-  disciplineId: z.string().min(1),
-  fileName: z.string().min(1),
-  contentType: z.string().min(1),
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const createMaterialSchema = z.object({
   disciplineId: z.string().min(1),
   type: z.enum(['prova', 'resumo', 'codigo', 'trabalho']),
   title: z.string().min(1),
   fileKind: z.string().min(1),
-  storageKey: z.string().min(1),
   note: z.string().optional(),
-  anonymous: z.boolean().default(true),
+  anonymous: z.coerce.boolean().default(true),
 });
 
 materialsRouter.get(
@@ -43,22 +40,18 @@ materialsRouter.get('/pending', requireAuth, requireAdmin, asyncHandler(async (_
 }));
 
 materialsRouter.post(
-  '/upload-url',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const input = uploadUrlSchema.parse(req.body);
-    const storageKey = buildObjectKey(input.disciplineId, input.fileName);
-    const uploadUrl = await presignUpload(storageKey, input.contentType);
-    res.json({ uploadUrl, storageKey });
-  }),
-);
-
-materialsRouter.post(
   '/',
   requireAuth,
+  upload.single('file'),
   asyncHandler(async (req, res) => {
+    if (!req.file) throw new AppError(400, 'file is required');
     const input = createMaterialSchema.parse(req.body);
-    const material = await createMaterial({ ...input, uploaderId: req.user!.id });
+
+    const storageKey = buildObjectKey(input.disciplineId, req.file.originalname);
+    await ensureUploadDir(storageKey);
+    await writeFile(resolveStoragePath(storageKey), req.file.buffer);
+
+    const material = await createMaterial({ ...input, storageKey, uploaderId: req.user!.id });
     res.status(201).json({ material });
   }),
 );
@@ -71,8 +64,7 @@ materialsRouter.get(
     if (!material) throw new AppError(404, 'Material not found');
     const isOwnerOrAdmin = material.uploaderId === req.user!.id || req.user!.role === 'admin';
     if (material.status !== 'published' && !isOwnerOrAdmin) throw new AppError(404, 'Material not found');
-    const downloadUrl = await presignDownload(material.storageKey);
-    res.json({ downloadUrl });
+    res.download(resolveStoragePath(material.storageKey), material.title);
   }),
 );
 

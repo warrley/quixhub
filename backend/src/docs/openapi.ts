@@ -37,16 +37,17 @@ export const openapiDocument = {
         parameters: [{ name: 'disciplineId', in: 'query', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'OK' } },
       },
-      post: { summary: 'Create material record (status: pending)', security: [{ cookieAuth: [] }], responses: { '201': { description: 'Created' } } },
+      post: {
+        summary: 'Upload a material (multipart/form-data, field "file" + metadata fields; status: pending)',
+        security: [{ cookieAuth: [] }],
+        responses: { '201': { description: 'Created' } },
+      },
     },
     '/materials/pending': {
       get: { summary: 'Moderation queue (admin)', security: [{ cookieAuth: [] }], responses: { '200': { description: 'OK' } } },
     },
-    '/materials/upload-url': {
-      post: { summary: 'Get a presigned S3/MinIO upload URL', security: [{ cookieAuth: [] }], responses: { '200': { description: 'OK' } } },
-    },
     '/materials/{id}/download': {
-      get: { summary: 'Get a presigned download URL', security: [{ cookieAuth: [] }], responses: { '200': { description: 'OK' } } },
+      get: { summary: 'Download the file (streamed from local disk)', security: [{ cookieAuth: [] }], responses: { '200': { description: 'OK' } } },
     },
     '/materials/{id}/helpful': {
       post: { summary: 'Mark a material as helpful (idempotent per user)', security: [{ cookieAuth: [] }], responses: { '204': { description: 'No content' } } },

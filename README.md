@@ -5,11 +5,11 @@ A platform for the UFC Quixadá student community: centralized study materials, 
 ## Stack
 
 - `frontend/` — Next.js (App Router) + TypeScript, Tailwind CSS v4. Auth, Home, Catalog, Materials, Feedback, Calendar and Profile screens are built against mock data (not yet wired to the backend).
-- `backend/` — Node + Express + TypeScript, PostgreSQL via Drizzle ORM, S3-compatible object storage (MinIO locally).
+- `backend/` — Node + Express + TypeScript, PostgreSQL via Drizzle ORM, material uploads stored on local disk (`backend/uploads/`) for now — no S3/MinIO dependency.
 
 ## Local development
 
-Infrastructure (Postgres + MinIO):
+Infrastructure (Postgres):
 
 ```bash
 docker compose up -d
