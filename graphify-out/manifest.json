@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784225467.6584911,
-    "ast_hash": "e7fc4db2ceda00eab898cb02326b6e81",
+    "mtime": 1784254429.1366365,
+    "ast_hash": "eeb111ebb5ff3a2743a794f5f4486245",
     "semantic_hash": ""
   },
   "README.md": {
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1784235029.357095,
-    "ast_hash": "6c7ba7f085835621e5b99c9d702ab8ca",
+    "mtime": 1784254406.2191513,
+    "ast_hash": "48bee8dbcf23e1ba01688b53f6fe1e02",
     "semantic_hash": ""
   },
   "docs/features.md": {
@@ -135,8 +135,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UploadDropzone.tsx": {
-    "mtime": 1784248270.354946,
-    "ast_hash": "47788ba53551f3ff3c1e0159bde1390d",
+    "mtime": 1784250701.2472858,
+    "ast_hash": "0af26bd74e9ffe58b8986271118b8ad0",
     "semantic_hash": ""
   },
   "frontend/src/data/mock.ts": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "frontend/src/data/types.ts": {
-    "mtime": 1784248254.6810598,
-    "ast_hash": "54aba2fae76b96d694a7a091496c67aa",
+    "mtime": 1784252554.581001,
+    "ast_hash": "43f82c17d1769d8c162cd9b419a6c892",
     "semantic_hash": ""
   },
   "frontend/src/lib/calendarStore.tsx": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "frontend/app/(shell)/ira/page.tsx": {
-    "mtime": 1784248689.1289654,
-    "ast_hash": "7ff824f5e2739971a49fc099d1724976",
+    "mtime": 1784253598.0704727,
+    "ast_hash": "e4688b11d91617888c876040ca69d152",
     "semantic_hash": ""
   },
   "frontend/public/pdf.worker.min.mjs": {
@@ -310,18 +310,18 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/ira.ts": {
-    "mtime": 1784248306.5020752,
-    "ast_hash": "02d27c37c784a6153004c85a20b0d2f2",
+    "mtime": 1784253578.7941542,
+    "ast_hash": "c2750bbd5dea782ffc49668aac927920",
     "semantic_hash": ""
   },
   "frontend/src/lib/iraPdfParser.ts": {
-    "mtime": 1784249541.6664076,
-    "ast_hash": "994044a895d5f5f3b3de8c0157f65a41",
+    "mtime": 1784252589.5220754,
+    "ast_hash": "0d8295e492cd2cdc043ca1fece57d05c",
     "semantic_hash": ""
   },
   "frontend/src/lib/iraStore.tsx": {
-    "mtime": 1784248380.371836,
-    "ast_hash": "3b57ef285d29c9efaad02ead2bad776f",
+    "mtime": 1784251679.823695,
+    "ast_hash": "df9d0337e9c17e800f1933d526d62a96",
     "semantic_hash": ""
   }
 }
