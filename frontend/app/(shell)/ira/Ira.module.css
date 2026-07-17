@@ -76,6 +76,14 @@
   margin-top: var(--space-3);
 }
 
+.groupTitle {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
 .entryRow {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr auto;

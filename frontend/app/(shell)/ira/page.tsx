@@ -32,6 +32,23 @@ const disciplinesBySemester = disciplines.reduce((groups, d) => {
   return groups;
 }, new Map<string, typeof disciplines>());
 
+const OUTROS = 'Outros';
+
+function groupEntriesBySemester(entries: IraEntry[]): [string, IraEntry[]][] {
+  const groups = new Map<string, IraEntry[]>();
+  for (const e of entries) {
+    const key = e.semester ?? OUTROS;
+    const list = groups.get(key) ?? [];
+    list.push(e);
+    groups.set(key, list);
+  }
+  return [...groups.entries()].sort(([a], [b]) => {
+    if (a === OUTROS) return 1;
+    if (b === OUTROS) return -1;
+    return a.localeCompare(b);
+  });
+}
+
 export default function Ira() {
   const { state, ira, addEntry, addEntries, updateEntry, removeEntry } = useIra();
   const { show } = useToast();
@@ -132,9 +149,10 @@ export default function Ira() {
               onChange={(e) => {
                 if (e.target.value === '__outro__') {
                   setCustomName(true);
-                  setDraft((d) => ({ ...d, disciplineName: '' }));
+                  setDraft((d) => ({ ...d, disciplineName: '', semester: undefined }));
                 } else {
-                  setDraft((d) => ({ ...d, disciplineName: e.target.value }));
+                  const discipline = disciplines.find((d) => d.name === e.target.value);
+                  setDraft((d) => ({ ...d, disciplineName: e.target.value, semester: discipline?.semester }));
                 }
               }}
             >
@@ -178,12 +196,16 @@ export default function Ira() {
           </div>
         </div>
 
-        <div className={styles.table}>
+        <div>
           {state.entries.length === 0 ? (
             <div className={styles.empty}>Nenhuma disciplina adicionada ainda.</div>
           ) : (
-            state.entries.map((e) =>
-              editingId === e.id && editDraft ? (
+            groupEntriesBySemester(state.entries).map(([semester, entries]) => (
+              <div key={semester}>
+                <div className={styles.groupTitle}>{semester === OUTROS ? OUTROS : `Semestre ${semester}`}</div>
+                <div className={styles.table}>
+                  {entries.map((e) =>
+                    editingId === e.id && editDraft ? (
                 <div key={e.id} className={styles.entryRow}>
                   <TextField
                     value={editDraft.disciplineName}
@@ -260,6 +282,7 @@ export default function Ira() {
                           workload: e.workload,
                           situacao: e.situacao,
                           source: e.source,
+                          semester: e.semester,
                         });
                       }}
                       aria-label="Editar"
@@ -271,8 +294,11 @@ export default function Ira() {
                     </Button>
                   </div>
                 </div>
-              ),
-            )
+                    ),
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
