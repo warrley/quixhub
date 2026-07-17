@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 
-import { errorMiddleware } from "./lib/errors.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { calendarRouter } from "./modules/calendar/calendar.routes.js";
 import { disciplinesRouter } from "./modules/disciplines/disciplines.routes.js";
@@ -30,7 +29,6 @@ server.use('/api/materials', materialsRouter);
 server.use('/api/feedback', feedbackRouter);
 server.use('/api/calendar', calendarRouter);
 
-server.use(errorMiddleware);
 
 const port = process.env.PORT ?? 4000;
 server.listen(port, () => {
