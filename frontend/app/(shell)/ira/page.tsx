@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { Check, Pencil, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/Button';
 import { SelectField, TextField } from '@/components/Field';
@@ -25,12 +25,21 @@ function emptyDraft(): DraftEntry {
   return { disciplineName: '', grade: 0, workload: 0, situacao: 'aprovado', source: 'manual' };
 }
 
+const disciplinesBySemester = disciplines.reduce((groups, d) => {
+  const list = groups.get(d.semester) ?? [];
+  list.push(d);
+  groups.set(d.semester, list);
+  return groups;
+}, new Map<string, typeof disciplines>());
+
 export default function Ira() {
-  const { state, ira, addEntry, addEntries, removeEntry } = useIra();
+  const { state, ira, addEntry, addEntries, updateEntry, removeEntry } = useIra();
   const { show } = useToast();
 
   const [draft, setDraft] = useState<DraftEntry>(emptyDraft());
   const [customName, setCustomName] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<DraftEntry | null>(null);
 
   const [fileName, setFileName] = useState<string>();
   const [parsing, setParsing] = useState(false);
@@ -132,10 +141,14 @@ export default function Ira() {
               <option value="" disabled>
                 Selecione
               </option>
-              {disciplines.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name}
-                </option>
+              {[...disciplinesBySemester.entries()].map(([semester, group]) => (
+                <optgroup key={semester} label={semester}>
+                  {group.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
               <option value="__outro__">Outra (digitar nome)</option>
             </SelectField>
@@ -157,26 +170,109 @@ export default function Ira() {
             value={draft.workload || ''}
             onChange={(e) => setDraft((d) => ({ ...d, workload: Number(e.target.value) }))}
           />
-          <Button onClick={handleAddManual} disabled={!draft.disciplineName || draft.workload <= 0}>
-            Adicionar
-          </Button>
+          <div className={styles.buttonField}>
+            <span className={styles.buttonFieldLabel}>Adicionar</span>
+            <Button onClick={handleAddManual} disabled={!draft.disciplineName || draft.workload <= 0}>
+              Adicionar
+            </Button>
+          </div>
         </div>
 
         <div className={styles.table}>
           {state.entries.length === 0 ? (
             <div className={styles.empty}>Nenhuma disciplina adicionada ainda.</div>
           ) : (
-            state.entries.map((e) => (
-              <div key={e.id} className={styles.entryRow}>
-                <span>{e.disciplineName}</span>
-                <span>{e.grade}</span>
-                <span>{e.workload}h</span>
-                <span className={styles.badge}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
-                <Button variant="ghost" size="icon" onClick={() => removeEntry(e.id)} aria-label="Remover">
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            ))
+            state.entries.map((e) =>
+              editingId === e.id && editDraft ? (
+                <div key={e.id} className={styles.entryRow}>
+                  <TextField
+                    value={editDraft.disciplineName}
+                    onChange={(ev) => setEditDraft((d) => d && { ...d, disciplineName: ev.target.value })}
+                  />
+                  <TextField
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={editDraft.grade}
+                    onChange={(ev) => setEditDraft((d) => d && { ...d, grade: Number(ev.target.value) })}
+                  />
+                  <TextField
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={editDraft.workload}
+                    onChange={(ev) => setEditDraft((d) => d && { ...d, workload: Number(ev.target.value) })}
+                  />
+                  <SelectField
+                    value={editDraft.situacao}
+                    onChange={(ev) =>
+                      setEditDraft((d) => d && { ...d, situacao: ev.target.value as IraEntry['situacao'] })
+                    }
+                  >
+                    {Object.entries(SITUACAO_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </SelectField>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        updateEntry(e.id, editDraft);
+                        setEditingId(null);
+                        setEditDraft(null);
+                      }}
+                      aria-label="Salvar"
+                    >
+                      <Check size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditDraft(null);
+                      }}
+                      aria-label="Cancelar"
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div key={e.id} className={styles.entryRow}>
+                  <span>{e.disciplineName}</span>
+                  <span>{e.grade}</span>
+                  <span>{e.workload}h</span>
+                  <span className={styles.badge}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingId(e.id);
+                        setEditDraft({
+                          disciplineName: e.disciplineName,
+                          grade: e.grade,
+                          workload: e.workload,
+                          situacao: e.situacao,
+                          source: e.source,
+                        });
+                      }}
+                      aria-label="Editar"
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => removeEntry(e.id)} aria-label="Remover">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+              ),
+            )
           )}
         </div>
       </div>
