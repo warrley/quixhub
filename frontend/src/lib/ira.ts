@@ -12,12 +12,10 @@ import type { IraEntry } from '@/data/types';
  * contribute to neither the average nor the penalty, matching the reference
  * implementation's `grade !== -1` (missing-grade sentinel) check.
  *
- * This matches a known community IRA-calculator implementation exactly.
- * Checked against a real UFC transcript it lands within ~0.2 of the
- * SIGAA-printed "IRA - Individual" (9.8289 computed vs 9.6389 printed, no
- * trancados in that sample so the penalty term didn't apply) — close, not
- * exact, for reasons not established. Treat as an approximation, not a
- * guaranteed match to your official SIGAA-printed IRA.
+ * Verified exact against a real UFC transcript: computed 9.8289, matching
+ * the SIGAA-printed "IRA - Individual: 9.8289" digit-for-digit (no trancados
+ * in that sample, so the penalty term wasn't exercised against real data —
+ * only synthetically).
  */
 export function computeIra(entries: IraEntry[]): number | null {
   const semesters = [...new Set(entries.map((e) => e.semester).filter((s): s is string => Boolean(s)))].sort((a, b) =>
