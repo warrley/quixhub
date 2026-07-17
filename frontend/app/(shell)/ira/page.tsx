@@ -29,6 +29,21 @@ function sortSemesters(semesters: string[]): string[] {
   return [...new Set(semesters)].sort((a, b) => a.localeCompare(b));
 }
 
+function groupIndexedBySemester(entries: DraftEntry[]): [string, { index: number; entry: DraftEntry }[]][] {
+  const groups = new Map<string, { index: number; entry: DraftEntry }[]>();
+  entries.forEach((entry, index) => {
+    const key = entry.semester ?? OUTROS;
+    const list = groups.get(key) ?? [];
+    list.push({ index, entry });
+    groups.set(key, list);
+  });
+  return [...groups.entries()].sort(([a], [b]) => {
+    if (a === OUTROS) return 1;
+    if (b === OUTROS) return -1;
+    return a.localeCompare(b);
+  });
+}
+
 const disciplinesBySemester = disciplines.reduce((groups, d) => {
   const list = groups.get(d.semester) ?? [];
   list.push(d);
@@ -401,32 +416,40 @@ export default function Ira() {
                 ajustes.
               </div>
             )}
-            <div className={styles.table}>
-              {review.map((e, i) => (
-                <div key={i} className={styles.entryRow}>
-                  <TextField value={e.disciplineName} onChange={(ev) => updateReviewRow(i, { disciplineName: ev.target.value })} />
-                  <TextField
-                    type="number"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={e.grade}
-                    onChange={(ev) => updateReviewRow(i, { grade: Number(ev.target.value) })}
-                  />
-                  <TextField
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={e.workload}
-                    onChange={(ev) => updateReviewRow(i, { workload: Number(ev.target.value) })}
-                  />
-                  <span className={styles.badge}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
-                  <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
-                    <Trash2 size={16} />
-                  </Button>
+            {groupIndexedBySemester(review).map(([semester, items]) => (
+              <div key={semester}>
+                <div className={styles.groupTitle}>{semester === OUTROS ? OUTROS : `Semestre ${semester}`}</div>
+                <div className={styles.table}>
+                  {items.map(({ index: i, entry: e }) => (
+                    <div key={i} className={styles.entryRow}>
+                      <TextField
+                        value={e.disciplineName}
+                        onChange={(ev) => updateReviewRow(i, { disciplineName: ev.target.value })}
+                      />
+                      <TextField
+                        type="number"
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        value={e.grade}
+                        onChange={(ev) => updateReviewRow(i, { grade: Number(ev.target.value) })}
+                      />
+                      <TextField
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={e.workload}
+                        onChange={(ev) => updateReviewRow(i, { workload: Number(ev.target.value) })}
+                      />
+                      <span className={styles.badge}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
+                      <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
             <Button block onClick={confirmReview} style={{ marginTop: 12 }}>
               Confirmar e salvar
             </Button>
