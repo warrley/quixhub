@@ -13,6 +13,10 @@ function emptyState(): FluxogramaState {
 
 interface FluxogramaContextValue {
   state: FluxogramaState;
+  /** Flips to true once the localStorage read completes (or is confirmed empty). React Flow's
+   * useNodesState/useEdgesState only consume their initial value once, so consumers must wait
+   * for this before seeding — otherwise they seed from the pre-hydration empty state. */
+  hydrated: boolean;
   save: (next: Pick<FluxogramaState, 'nodes' | 'edges'>) => void;
 }
 
@@ -20,16 +24,18 @@ const FluxogramaContext = createContext<FluxogramaContextValue | null>(null);
 
 export function FluxogramaProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FluxogramaState>(emptyState);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as FluxogramaState;
-      setState(parsed);
-    } catch {
-      // corrupt/old data — ignore and keep the seeded state
+    if (stored) {
+      try {
+        setState(JSON.parse(stored) as FluxogramaState);
+      } catch {
+        // corrupt/old data — ignore and keep the seeded state
+      }
     }
+    setHydrated(true);
   }, []);
 
   function save(next: { nodes: FluxogramaNode[]; edges: FluxogramaEdge[] }) {
@@ -38,7 +44,7 @@ export function FluxogramaProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
   }
 
-  return <FluxogramaContext.Provider value={{ state, save }}>{children}</FluxogramaContext.Provider>;
+  return <FluxogramaContext.Provider value={{ state, hydrated, save }}>{children}</FluxogramaContext.Provider>;
 }
 
 export function useFluxograma() {
