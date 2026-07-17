@@ -2,7 +2,6 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-import styles from './Toast.module.css';
 
 interface ToastItem {
   id: number;
@@ -23,10 +22,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className={styles.stack}>
+      <div className="fixed bottom-[88px] mid:bottom-6 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-[200] w-[min(360px,calc(100vw-32px))]">
         {toasts.map((t) => (
-          <div className={styles.toast} key={t.id}>
-            <CheckCircle2 size={18} />
+          <div
+            key={t.id}
+            className="flex items-center gap-2.5 bg-surface-raised border border-line border-l-4 border-l-good rounded-md px-4 py-3 shadow-lg text-13 font-medium text-ink [animation:slideUp_0.2s_ease]"
+          >
+            <CheckCircle2 size={18} className="text-good shrink-0" />
             {t.message}
           </div>
         ))}

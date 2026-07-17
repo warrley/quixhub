@@ -1,64 +1,57 @@
 /* QuixHub design tokens — warm, rounded, student-community tone.
    Derived from the Claude Design brief but pushed further: deeper gradients,
-   a fuller accent set, and a real dark mode (light mode only in the brief). */
+   a fuller accent set, and a real dark mode (light mode only in the brief).
+   Registered under Tailwind v4's @theme so utilities (bg-accent, text-ink-2,
+   rounded-lg, shadow-glow, font-heading...) auto-generate from these. */
 
-:root {
-  color-scheme: light;
-
+@theme {
   /* surfaces */
-  --bg: oklch(97% 0.014 92);
-  --bg-alt: oklch(94% 0.02 92);
-  --surface: oklch(99% 0.004 92);
-  --surface-raised: oklch(100% 0 0);
-  --surface-sunken: oklch(95.5% 0.014 92);
-  --line: oklch(89% 0.015 262);
-  --line-strong: oklch(80% 0.02 262);
+  --color-bg: oklch(97% 0.014 92);
+  --color-bg-alt: oklch(94% 0.02 92);
+  --color-surface: oklch(99% 0.004 92);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-surface-sunken: oklch(95.5% 0.014 92);
+  --color-line: oklch(89% 0.015 262);
+  --color-line-strong: oklch(80% 0.02 262);
 
   /* ink */
-  --ink: oklch(22% 0.03 262);
-  --ink-2: oklch(46% 0.025 262);
-  --ink-3: oklch(65% 0.018 262);
-  --ink-inverse: oklch(98% 0.005 262);
+  --color-ink: oklch(22% 0.03 262);
+  --color-ink-2: oklch(46% 0.025 262);
+  --color-ink-3: oklch(65% 0.018 262);
+  --color-ink-inverse: oklch(98% 0.005 262);
 
   /* accent ramp — indigo/blue primary */
-  --accent: oklch(53% 0.2 264);
-  --accent-hover: oklch(48% 0.2 264);
-  --accent-active: oklch(43% 0.19 264);
-  --accent-dark: oklch(34% 0.16 264);
-  --accent-tint: oklch(94% 0.035 264);
-  --accent-tint-2: oklch(90% 0.055 264);
-  --accent-ink: oklch(97% 0.01 264);
+  --color-accent: oklch(53% 0.2 264);
+  --color-accent-hover: oklch(48% 0.2 264);
+  --color-accent-active: oklch(43% 0.19 264);
+  --color-accent-dark: oklch(34% 0.16 264);
+  --color-accent-tint: oklch(94% 0.035 264);
+  --color-accent-tint-2: oklch(90% 0.055 264);
+  --color-accent-ink: oklch(97% 0.01 264);
 
   /* accent-2 — warm amber (materials / highlights) */
-  --accent-2: oklch(78% 0.16 78);
-  --accent-2-dark: oklch(55% 0.15 60);
-  --accent-2-ink: oklch(38% 0.1 60);
-  --accent-2-tint: oklch(94% 0.05 85);
+  --color-accent-2: oklch(78% 0.16 78);
+  --color-accent-2-dark: oklch(55% 0.15 60);
+  --color-accent-2-ink: oklch(38% 0.1 60);
+  --color-accent-2-tint: oklch(94% 0.05 85);
 
   /* accent-3 — periwinkle (secondary blue, calendar/feedback) */
-  --accent-3: oklch(64% 0.17 288);
-  --accent-3-dark: oklch(46% 0.16 288);
-  --accent-3-tint: oklch(94% 0.03 288);
+  --color-accent-3: oklch(64% 0.17 288);
+  --color-accent-3-dark: oklch(46% 0.16 288);
+  --color-accent-3-tint: oklch(94% 0.03 288);
 
   /* accent-4 — coral (materials variety, warnings-adjacent) */
-  --accent-4: oklch(70% 0.19 33);
-  --accent-4-dark: oklch(52% 0.18 33);
-  --accent-4-tint: oklch(94% 0.04 33);
+  --color-accent-4: oklch(70% 0.19 33);
+  --color-accent-4-dark: oklch(52% 0.18 33);
+  --color-accent-4-tint: oklch(94% 0.04 33);
 
   /* semantic */
-  --good: oklch(58% 0.14 152);
-  --good-tint: oklch(94% 0.035 152);
-  --warn: oklch(70% 0.16 70);
-  --warn-tint: oklch(95% 0.045 75);
-  --danger: oklch(56% 0.2 25);
-  --danger-tint: oklch(94% 0.04 25);
-
-  /* gradients (reusable, not ad-hoc) */
-  --gradient-brand: linear-gradient(135deg, var(--accent), var(--accent-3));
-  --gradient-warm: linear-gradient(135deg, var(--accent-2), var(--accent-4));
-  --gradient-hero: radial-gradient(120% 140% at 15% 0%, oklch(53% 0.2 264 / 16%), transparent 55%),
-    radial-gradient(90% 120% at 100% 10%, oklch(78% 0.16 78 / 18%), transparent 60%);
-  --gradient-cta: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  --color-good: oklch(58% 0.14 152);
+  --color-good-tint: oklch(94% 0.035 152);
+  --color-warn: oklch(70% 0.16 70);
+  --color-warn-tint: oklch(95% 0.045 75);
+  --color-danger: oklch(56% 0.2 25);
+  --color-danger-tint: oklch(94% 0.04 25);
 
   /* elevation */
   --shadow-sm: 0 1px 2px oklch(22% 0.03 262 / 6%), 0 1px 1px oklch(22% 0.03 262 / 4%);
@@ -67,128 +60,205 @@
   --shadow-glow: 0 10px 24px -8px oklch(53% 0.2 264 / 45%);
   --shadow-glow-warm: 0 10px 24px -8px oklch(78% 0.16 78 / 45%);
 
-  /* radius */
+  /* radius — overrides Tailwind's defaults with the project's own scale */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 28px;
   --radius-full: 999px;
 
+  /* breakpoint — the mobile-bottom-nav to desktop-sidebar switch, reused
+     identically across AppShell/AuthLayout. Use mid: instead of an
+     arbitrary min-[900px]: variant. */
+  --breakpoint-mid: 900px;
+
   /* type */
   --font-heading: 'Sora', system-ui, sans-serif;
   --font-body: 'Public Sans', system-ui, sans-serif;
 
-  /* spacing */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
+  /* Font-size scale — every distinct size actually used across the (former)
+     CSS Modules files, inventoried via grep before migrating. Sizes that
+     already match a Tailwind default (12/14/18/20/24/30px → xs/sm/lg/xl/2xl
+     /3xl) intentionally have no entry here; use the built-in utility for
+     those. No component should use an arbitrary text-[Npx] value — add a
+     new --text-* entry here instead if a genuinely new size is needed. */
+  --text-10: 10px;
+  --text-10-5: 10.5px;
+  --text-11: 11px;
+  --text-11-5: 11.5px;
+  --text-12-5: 12.5px;
+  --text-13: 13px;
+  --text-13-5: 13.5px;
+  --text-14-5: 14.5px;
+  --text-15: 15px;
+  --text-17: 17px;
+  --text-19: 19px;
+  --text-21: 21px;
+  --text-22: 22px;
+  --text-25: 25px;
+  --text-28: 28px;
+
+  /* Tailwind's default spacing scale (0.25rem multiplier) already matches
+     this project's --space-1..12 steps (4/8/12/16/20/24/32/40/48px) exactly
+     for whole-number keys — no override needed there. These two odd values
+     recur in gap/margin contexts and don't land on that multiplier scale. */
+  --spacing-5px: 5px;
+  --spacing-9px: 9px;
+}
+
+/* Not Tailwind utility categories — plain custom properties, consumed via
+   small @utility classes defined in global.css. */
+:root {
+  --gradient-brand: linear-gradient(135deg, var(--color-accent), var(--color-accent-3));
+  --gradient-warm: linear-gradient(135deg, var(--color-accent-2), var(--color-accent-4));
+  --gradient-hero: radial-gradient(120% 140% at 15% 0%, oklch(53% 0.2 264 / 16%), transparent 55%),
+    radial-gradient(90% 120% at 100% 10%, oklch(78% 0.16 78 / 18%), transparent 60%);
+  --gradient-cta: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+  --shadow-btn-primary: var(--shadow-glow), inset 0 -2px 0 oklch(0% 0 0 / 12%);
+  color-scheme: light;
+
+  /* TRANSITIONAL: bare-name aliases for the not-yet-migrated CSS Modules
+     files still referencing var(--accent) etc. These resolve live off the
+     --color-* tokens above (correct in both themes automatically), so
+     old and new files coexist during the Tailwind migration. Remove this
+     block once every .module.css file is deleted. */
+  --bg: var(--color-bg);
+  --bg-alt: var(--color-bg-alt);
+  --surface: var(--color-surface);
+  --surface-raised: var(--color-surface-raised);
+  --surface-sunken: var(--color-surface-sunken);
+  --line: var(--color-line);
+  --line-strong: var(--color-line-strong);
+  --ink: var(--color-ink);
+  --ink-2: var(--color-ink-2);
+  --ink-3: var(--color-ink-3);
+  --ink-inverse: var(--color-ink-inverse);
+  --accent: var(--color-accent);
+  --accent-hover: var(--color-accent-hover);
+  --accent-active: var(--color-accent-active);
+  --accent-dark: var(--color-accent-dark);
+  --accent-tint: var(--color-accent-tint);
+  --accent-tint-2: var(--color-accent-tint-2);
+  --accent-ink: var(--color-accent-ink);
+  --accent-2: var(--color-accent-2);
+  --accent-2-dark: var(--color-accent-2-dark);
+  --accent-2-ink: var(--color-accent-2-ink);
+  --accent-2-tint: var(--color-accent-2-tint);
+  --accent-3: var(--color-accent-3);
+  --accent-3-dark: var(--color-accent-3-dark);
+  --accent-3-tint: var(--color-accent-3-tint);
+  --accent-4: var(--color-accent-4);
+  --accent-4-dark: var(--color-accent-4-dark);
+  --accent-4-tint: var(--color-accent-4-tint);
+  --good: var(--color-good);
+  --good-tint: var(--color-good-tint);
+  --warn: var(--color-warn);
+  --warn-tint: var(--color-warn-tint);
+  --danger: var(--color-danger);
+  --danger-tint: var(--color-danger-tint);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --bg: oklch(19% 0.018 262);
-  --bg-alt: oklch(16% 0.02 262);
-  --surface: oklch(23% 0.02 262);
-  --surface-raised: oklch(26% 0.022 262);
-  --surface-sunken: oklch(16% 0.018 262);
-  --line: oklch(32% 0.02 262);
-  --line-strong: oklch(40% 0.02 262);
+  --color-bg: oklch(19% 0.018 262);
+  --color-bg-alt: oklch(16% 0.02 262);
+  --color-surface: oklch(23% 0.02 262);
+  --color-surface-raised: oklch(26% 0.022 262);
+  --color-surface-sunken: oklch(16% 0.018 262);
+  --color-line: oklch(32% 0.02 262);
+  --color-line-strong: oklch(40% 0.02 262);
 
-  --ink: oklch(96% 0.008 262);
-  --ink-2: oklch(78% 0.015 262);
-  --ink-3: oklch(58% 0.02 262);
-  --ink-inverse: oklch(18% 0.02 262);
+  --color-ink: oklch(96% 0.008 262);
+  --color-ink-2: oklch(78% 0.015 262);
+  --color-ink-3: oklch(58% 0.02 262);
+  --color-ink-inverse: oklch(18% 0.02 262);
 
-  --accent: oklch(72% 0.15 264);
-  --accent-hover: oklch(78% 0.14 264);
-  --accent-active: oklch(66% 0.16 264);
-  --accent-dark: oklch(85% 0.1 264);
-  --accent-tint: oklch(30% 0.06 264);
-  --accent-tint-2: oklch(36% 0.08 264);
-  --accent-ink: oklch(15% 0.02 264);
+  --color-accent: oklch(72% 0.15 264);
+  --color-accent-hover: oklch(78% 0.14 264);
+  --color-accent-active: oklch(66% 0.16 264);
+  --color-accent-dark: oklch(85% 0.1 264);
+  --color-accent-tint: oklch(30% 0.06 264);
+  --color-accent-tint-2: oklch(36% 0.08 264);
+  --color-accent-ink: oklch(15% 0.02 264);
 
-  --accent-2: oklch(75% 0.14 78);
-  --accent-2-dark: oklch(85% 0.1 78);
-  --accent-2-ink: oklch(90% 0.05 78);
-  --accent-2-tint: oklch(30% 0.05 85);
+  --color-accent-2: oklch(75% 0.14 78);
+  --color-accent-2-dark: oklch(85% 0.1 78);
+  --color-accent-2-ink: oklch(90% 0.05 78);
+  --color-accent-2-tint: oklch(30% 0.05 85);
 
-  --accent-3: oklch(74% 0.14 288);
-  --accent-3-dark: oklch(84% 0.09 288);
-  --accent-3-tint: oklch(30% 0.05 288);
+  --color-accent-3: oklch(74% 0.14 288);
+  --color-accent-3-dark: oklch(84% 0.09 288);
+  --color-accent-3-tint: oklch(30% 0.05 288);
 
-  --accent-4: oklch(74% 0.16 33);
-  --accent-4-dark: oklch(84% 0.1 33);
-  --accent-4-tint: oklch(30% 0.06 33);
+  --color-accent-4: oklch(74% 0.16 33);
+  --color-accent-4-dark: oklch(84% 0.1 33);
+  --color-accent-4-tint: oklch(30% 0.06 33);
 
-  --good: oklch(72% 0.14 152);
-  --good-tint: oklch(28% 0.05 152);
-  --warn: oklch(78% 0.14 75);
-  --warn-tint: oklch(30% 0.05 75);
-  --danger: oklch(70% 0.18 25);
-  --danger-tint: oklch(28% 0.06 25);
+  --color-good: oklch(72% 0.14 152);
+  --color-good-tint: oklch(28% 0.05 152);
+  --color-warn: oklch(78% 0.14 75);
+  --color-warn-tint: oklch(30% 0.05 75);
+  --color-danger: oklch(70% 0.18 25);
+  --color-danger-tint: oklch(28% 0.06 25);
 
   --gradient-hero: radial-gradient(120% 140% at 15% 0%, oklch(72% 0.15 264 / 14%), transparent 55%),
     radial-gradient(90% 120% at 100% 10%, oklch(75% 0.14 78 / 12%), transparent 60%);
-  --gradient-cta: linear-gradient(135deg, var(--accent), var(--accent-active));
+  --gradient-cta: linear-gradient(135deg, var(--color-accent), var(--color-accent-active));
 
   --shadow-sm: 0 1px 2px oklch(0% 0 0 / 30%);
   --shadow-md: 0 8px 24px -10px oklch(0% 0 0 / 45%);
   --shadow-lg: 0 24px 48px -18px oklch(0% 0 0 / 55%);
   --shadow-glow: 0 10px 24px -8px oklch(72% 0.15 264 / 35%);
   --shadow-glow-warm: 0 10px 24px -8px oklch(75% 0.14 78 / 30%);
+  --shadow-btn-primary: var(--shadow-glow), inset 0 -2px 0 oklch(0% 0 0 / 12%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: oklch(19% 0.018 262);
-    --bg-alt: oklch(16% 0.02 262);
-    --surface: oklch(23% 0.02 262);
-    --surface-raised: oklch(26% 0.022 262);
-    --surface-sunken: oklch(16% 0.018 262);
-    --line: oklch(32% 0.02 262);
-    --line-strong: oklch(40% 0.02 262);
-    --ink: oklch(96% 0.008 262);
-    --ink-2: oklch(78% 0.015 262);
-    --ink-3: oklch(58% 0.02 262);
-    --ink-inverse: oklch(18% 0.02 262);
-    --accent: oklch(72% 0.15 264);
-    --accent-hover: oklch(78% 0.14 264);
-    --accent-active: oklch(66% 0.16 264);
-    --accent-dark: oklch(85% 0.1 264);
-    --accent-tint: oklch(30% 0.06 264);
-    --accent-tint-2: oklch(36% 0.08 264);
-    --accent-ink: oklch(15% 0.02 264);
-    --accent-2: oklch(75% 0.14 78);
-    --accent-2-dark: oklch(85% 0.1 78);
-    --accent-2-ink: oklch(90% 0.05 78);
-    --accent-2-tint: oklch(30% 0.05 85);
-    --accent-3: oklch(74% 0.14 288);
-    --accent-3-dark: oklch(84% 0.09 288);
-    --accent-3-tint: oklch(30% 0.05 288);
-    --accent-4: oklch(74% 0.16 33);
-    --accent-4-dark: oklch(84% 0.1 33);
-    --accent-4-tint: oklch(30% 0.06 33);
-    --good: oklch(72% 0.14 152);
-    --good-tint: oklch(28% 0.05 152);
-    --warn: oklch(78% 0.14 75);
-    --warn-tint: oklch(30% 0.05 75);
-    --danger: oklch(70% 0.18 25);
-    --danger-tint: oklch(28% 0.06 25);
+    --color-bg: oklch(19% 0.018 262);
+    --color-bg-alt: oklch(16% 0.02 262);
+    --color-surface: oklch(23% 0.02 262);
+    --color-surface-raised: oklch(26% 0.022 262);
+    --color-surface-sunken: oklch(16% 0.018 262);
+    --color-line: oklch(32% 0.02 262);
+    --color-line-strong: oklch(40% 0.02 262);
+    --color-ink: oklch(96% 0.008 262);
+    --color-ink-2: oklch(78% 0.015 262);
+    --color-ink-3: oklch(58% 0.02 262);
+    --color-ink-inverse: oklch(18% 0.02 262);
+    --color-accent: oklch(72% 0.15 264);
+    --color-accent-hover: oklch(78% 0.14 264);
+    --color-accent-active: oklch(66% 0.16 264);
+    --color-accent-dark: oklch(85% 0.1 264);
+    --color-accent-tint: oklch(30% 0.06 264);
+    --color-accent-tint-2: oklch(36% 0.08 264);
+    --color-accent-ink: oklch(15% 0.02 264);
+    --color-accent-2: oklch(75% 0.14 78);
+    --color-accent-2-dark: oklch(85% 0.1 78);
+    --color-accent-2-ink: oklch(90% 0.05 78);
+    --color-accent-2-tint: oklch(30% 0.05 85);
+    --color-accent-3: oklch(74% 0.14 288);
+    --color-accent-3-dark: oklch(84% 0.09 288);
+    --color-accent-3-tint: oklch(30% 0.05 288);
+    --color-accent-4: oklch(74% 0.16 33);
+    --color-accent-4-dark: oklch(84% 0.1 33);
+    --color-accent-4-tint: oklch(30% 0.06 33);
+    --color-good: oklch(72% 0.14 152);
+    --color-good-tint: oklch(28% 0.05 152);
+    --color-warn: oklch(78% 0.14 75);
+    --color-warn-tint: oklch(30% 0.05 75);
+    --color-danger: oklch(70% 0.18 25);
+    --color-danger-tint: oklch(28% 0.06 25);
     --gradient-hero: radial-gradient(120% 140% at 15% 0%, oklch(72% 0.15 264 / 14%), transparent 55%),
       radial-gradient(90% 120% at 100% 10%, oklch(75% 0.14 78 / 12%), transparent 60%);
-    --gradient-cta: linear-gradient(135deg, var(--accent), var(--accent-active));
+    --gradient-cta: linear-gradient(135deg, var(--color-accent), var(--color-accent-active));
     --shadow-sm: 0 1px 2px oklch(0% 0 0 / 30%);
     --shadow-md: 0 8px 24px -10px oklch(0% 0 0 / 45%);
     --shadow-lg: 0 24px 48px -18px oklch(0% 0 0 / 55%);
     --shadow-glow: 0 10px 24px -8px oklch(72% 0.15 264 / 35%);
     --shadow-glow-warm: 0 10px 24px -8px oklch(75% 0.14 78 / 30%);
+    --shadow-btn-primary: var(--shadow-glow), inset 0 -2px 0 oklch(0% 0 0 / 12%);
   }
 }

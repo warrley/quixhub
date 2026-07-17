@@ -230,16 +230,16 @@ export const calendarEvents: CalendarEvent[] = [
 
 export const feedbackStats: Record<string, FeedbackStat[]> = {
   'sistemas-operacionais': [
-    { label: 'Carga de trabalho', value: 'alta', percent: 72, tone: 'var(--warn)' },
-    { label: 'Trabalho em grupo', value: 'frequente', percent: 58, tone: 'var(--accent-2)' },
-    { label: 'Uso de slides', value: 'predominante', percent: 80, tone: 'var(--accent-3)' },
-    { label: 'Frequência cobrada', value: 'às vezes', percent: 40, tone: 'var(--accent)' },
+    { label: 'Carga de trabalho', value: 'alta', percent: 72, tone: 'var(--color-warn)' },
+    { label: 'Trabalho em grupo', value: 'frequente', percent: 58, tone: 'var(--color-accent-2)' },
+    { label: 'Uso de slides', value: 'predominante', percent: 80, tone: 'var(--color-accent-3)' },
+    { label: 'Frequência cobrada', value: 'às vezes', percent: 40, tone: 'var(--color-accent)' },
   ],
   'estrutura-de-dados': [
-    { label: 'Carga de trabalho', value: 'média', percent: 55, tone: 'var(--warn)' },
-    { label: 'Trabalho em grupo', value: 'raro', percent: 22, tone: 'var(--accent-2)' },
-    { label: 'Uso de slides', value: 'quadro e slides', percent: 60, tone: 'var(--accent-3)' },
-    { label: 'Frequência cobrada', value: 'sempre', percent: 90, tone: 'var(--accent)' },
+    { label: 'Carga de trabalho', value: 'média', percent: 55, tone: 'var(--color-warn)' },
+    { label: 'Trabalho em grupo', value: 'raro', percent: 22, tone: 'var(--color-accent-2)' },
+    { label: 'Uso de slides', value: 'quadro e slides', percent: 60, tone: 'var(--color-accent-3)' },
+    { label: 'Frequência cobrada', value: 'sempre', percent: 90, tone: 'var(--color-accent)' },
   ],
 };
 

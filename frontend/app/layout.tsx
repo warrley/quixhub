@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body className="bg-dot-grid">
         <Providers>{children}</Providers>
       </body>
     </html>
