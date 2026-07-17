@@ -7,7 +7,6 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
 import { disciplineById, pendingMaterials } from '@/data/mock';
-import styles from './ModerationQueue.module.css';
 
 export default function ModerationQueue() {
   const [resolved, setResolved] = useState<Set<string>>(new Set());
@@ -16,8 +15,8 @@ export default function ModerationQueue() {
 
   return (
     <div>
-      <h1 className={styles.title}>Fila de moderação</h1>
-      <p className={styles.subtitle}>Materiais enviados pelos alunos aguardando revisão.</p>
+      <h1 className="font-heading font-bold text-22 my-2 mb-1">Fila de moderação</h1>
+      <p className="text-13 text-ink-2 mb-6">Materiais enviados pelos alunos aguardando revisão.</p>
 
       {items.length === 0 ? (
         <EmptyState
@@ -30,14 +29,14 @@ export default function ModerationQueue() {
           const discipline = disciplineById(m.disciplineId);
           return (
             <Card key={m.id} padding="none">
-              <div className={styles.row}>
-                <div className={styles.info}>
-                  <div className={styles.title2}>{m.title}</div>
-                  <div className={styles.meta}>
+              <div className="flex items-center gap-3.5 p-4 mb-9px">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-13-5">{m.title}</div>
+                  <div className="text-11-5 text-ink-2 mt-0.5">
                     {discipline?.name} · {m.anonymous ? 'anônimo' : m.uploader} · {m.fileKind}
                   </div>
                 </div>
-                <div className={styles.actions}>
+                <div className="flex gap-2 shrink-0">
                   <Button
                     variant="secondary"
                     size="sm"

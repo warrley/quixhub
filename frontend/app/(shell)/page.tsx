@@ -7,7 +7,6 @@ import { EventChip } from '@/components/EventChip';
 import { Greeting } from '@/components/Greeting';
 import { MaterialCard } from '@/components/MaterialCard';
 import { calendarEvents, currentUser, disciplineById, disciplines, materials } from '@/data/mock';
-import styles from './Home.module.css';
 
 export default function Home() {
   const trackedIds = disciplines.filter((d) => d.tracked).map((d) => d.id);
@@ -18,17 +17,22 @@ export default function Home() {
 
   return (
     <div>
-      <div className={styles.greetingRow}>
+      <div className="flex items-center gap-3 my-2 mb-5">
         <Avatar name={currentUser.name} size="lg" />
         <div>
-          <div className={styles.greetingText}><Greeting /></div>
-          <div className={styles.greetingName}>{currentUser.name.split(' ')[0]}</div>
+          <div className="text-12-5 text-ink-2 mb-px">
+            <Greeting />
+          </div>
+          <div className="font-heading font-bold text-22">{currentUser.name.split(' ')[0]}</div>
         </div>
       </div>
 
-      <div className={styles.searchBar}>
+      <div className="flex items-center gap-2.5 border border-line bg-surface rounded-md py-13px px-4 text-ink-3 mb-8 shadow-sm">
         <Search size={16} />
-        <input placeholder="Buscar disciplinas, materiais..." />
+        <input
+          placeholder="Buscar disciplinas, materiais..."
+          className="border-none outline-none bg-transparent flex-1 font-body text-13-5 text-ink"
+        />
       </div>
 
       {trackedIds.length === 0 ? (
@@ -43,15 +47,15 @@ export default function Home() {
           }
         />
       ) : (
-        <div className={styles.grid}>
+        <div className="grid grid-cols-1 min-[760px]:grid-cols-2 gap-8">
           <section>
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionTitle}>Próximos prazos</span>
-              <Link href="/calendario" className={styles.sectionLink}>
+            <div className="flex justify-between items-baseline mb-3">
+              <span className="font-heading font-bold text-14-5">Próximos prazos</span>
+              <Link href="/calendario" className="font-heading font-semibold text-11-5 text-accent no-underline">
                 ver agenda
               </Link>
             </div>
-            <div className={styles.list}>
+            <div className="flex flex-col gap-9px">
               {upcoming.map((event) => (
                 <EventChip key={event.id} event={event} discipline={disciplineById(event.disciplineId)} />
               ))}
@@ -59,13 +63,13 @@ export default function Home() {
           </section>
 
           <section>
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionTitle}>Novos materiais</span>
-              <Link href="/materiais" className={styles.sectionLink}>
+            <div className="flex justify-between items-baseline mb-3">
+              <span className="font-heading font-bold text-14-5">Novos materiais</span>
+              <Link href="/materiais" className="font-heading font-semibold text-11-5 text-accent no-underline">
                 ver tudo
               </Link>
             </div>
-            <div className={styles.list}>
+            <div className="flex flex-col gap-9px">
               {recentMaterials.map((material) => (
                 <MaterialCard key={material.id} material={material} />
               ))}

@@ -105,6 +105,10 @@
   --spacing-3px: 3px;
   --spacing-5px: 5px;
   --spacing-9px: 9px;
+  --spacing-11px: 11px;
+  --spacing-13px: 13px;
+  --spacing-15px: 15px;
+  --spacing-18px: 18px;
 
   /* form-control border weight — used consistently across every input/
      select/textarea, doesn't match Tailwind's default border-width scale
@@ -122,46 +126,6 @@
   --gradient-cta: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
   --shadow-btn-primary: var(--shadow-glow), inset 0 -2px 0 oklch(0% 0 0 / 12%);
   color-scheme: light;
-
-  /* TRANSITIONAL: bare-name aliases for the not-yet-migrated CSS Modules
-     files still referencing var(--accent) etc. These resolve live off the
-     --color-* tokens above (correct in both themes automatically), so
-     old and new files coexist during the Tailwind migration. Remove this
-     block once every .module.css file is deleted. */
-  --bg: var(--color-bg);
-  --bg-alt: var(--color-bg-alt);
-  --surface: var(--color-surface);
-  --surface-raised: var(--color-surface-raised);
-  --surface-sunken: var(--color-surface-sunken);
-  --line: var(--color-line);
-  --line-strong: var(--color-line-strong);
-  --ink: var(--color-ink);
-  --ink-2: var(--color-ink-2);
-  --ink-3: var(--color-ink-3);
-  --ink-inverse: var(--color-ink-inverse);
-  --accent: var(--color-accent);
-  --accent-hover: var(--color-accent-hover);
-  --accent-active: var(--color-accent-active);
-  --accent-dark: var(--color-accent-dark);
-  --accent-tint: var(--color-accent-tint);
-  --accent-tint-2: var(--color-accent-tint-2);
-  --accent-ink: var(--color-accent-ink);
-  --accent-2: var(--color-accent-2);
-  --accent-2-dark: var(--color-accent-2-dark);
-  --accent-2-ink: var(--color-accent-2-ink);
-  --accent-2-tint: var(--color-accent-2-tint);
-  --accent-3: var(--color-accent-3);
-  --accent-3-dark: var(--color-accent-3-dark);
-  --accent-3-tint: var(--color-accent-3-tint);
-  --accent-4: var(--color-accent-4);
-  --accent-4-dark: var(--color-accent-4-dark);
-  --accent-4-tint: var(--color-accent-4-tint);
-  --good: var(--color-good);
-  --good-tint: var(--color-good-tint);
-  --warn: var(--color-warn);
-  --warn-tint: var(--color-warn-tint);
-  --danger: var(--color-danger);
-  --danger-tint: var(--color-danger-tint);
 }
 
 :root[data-theme='dark'] {
