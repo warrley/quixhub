@@ -27,8 +27,9 @@ export default function Catalog() {
   const filtered = useMemo(() => {
     if (!disciplines) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return disciplines;
-    return disciplines.filter((d) => d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q));
+    const matches = q ? disciplines.filter((d) => d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q)) : disciplines;
+    // Most-active first — materials and opinions both count as "engagement".
+    return [...matches].sort((a, b) => (b.materialsCount + b.responses) - (a.materialsCount + a.responses));
   }, [disciplines, query]);
 
   return (
@@ -51,7 +52,7 @@ export default function Catalog() {
       </div>
 
       {disciplines === null && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 min-[1000px]:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <CardSkeleton key={i} />
           ))}
@@ -62,7 +63,7 @@ export default function Catalog() {
         <p className="text-13 text-ink-2 py-10 text-center">Nenhuma disciplina encontrada.</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 min-[1000px]:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filtered.map((d) => (
           <DisciplineCard key={d.id} discipline={d} />
         ))}

@@ -10,6 +10,7 @@ import { Button } from '@/components/Button';
 import { StatBar } from '@/components/StatBar';
 import { Tag } from '@/components/Tag';
 import { api } from '@/lib/api';
+import { summarizeProfessor } from '@/lib/feedbackSummary';
 import { Skeleton } from '@/components/Skeleton';
 import type { Discipline, DisciplineProfessorStats, FeedbackComment, Offering } from '@/data/types';
 
@@ -110,6 +111,7 @@ export default function ProfessorDiscipline() {
 
           {stats && stats.stats.totalReviews > 0 ? (
             <>
+              <p className="text-13 text-ink-2 mb-3">{summarizeProfessor(stats.stats)}</p>
               <StatBar label="Qualidade do material" value={`${stats.stats.materialQuality.toFixed(1)}/5`} percent={(stats.stats.materialQuality / 5) * 100} tone="var(--color-accent)" />
               <StatBar label="Nível das provas" value={`${stats.stats.examDifficulty.toFixed(1)}/5`} percent={(stats.stats.examDifficulty / 5) * 100} tone="var(--color-warn)" />
               <StatBar label="Nível dos trabalhos" value={`${stats.stats.workDifficulty.toFixed(1)}/5`} percent={(stats.stats.workDifficulty / 5) * 100} tone="var(--color-accent-3)" />

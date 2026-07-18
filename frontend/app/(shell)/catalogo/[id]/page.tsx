@@ -2,13 +2,15 @@
 
 import { UnderConstruction } from '@/components/UnderConstruction';
 
-import { ArrowLeft, ArrowRight, Plus, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { MaterialCard } from '@/components/MaterialCard';
+import { MiniBars } from '@/components/MiniBars';
 import { api } from '@/lib/api';
+import { summarizeProfessor } from '@/lib/feedbackSummary';
 import { RowSkeleton, Skeleton } from '@/components/Skeleton';
 import type { Discipline, DisciplineProfessorStats, Material } from '@/data/types';
 
@@ -18,12 +20,6 @@ const ACCENT_GRADIENT: Record<string, string> = {
   accent3: 'linear-gradient(135deg, var(--color-accent-3), var(--color-accent))',
   accent4: 'linear-gradient(135deg, var(--color-accent-4), var(--color-accent-2))',
 };
-
-function professorScore(stats: DisciplineProfessorStats['stats']) {
-  const values = [stats.materialQuality, stats.examDifficulty, stats.workDifficulty].filter((v) => v > 0);
-  if (values.length === 0) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
-}
 
 export default function DisciplineDetail() {
   if (process.env.NODE_ENV === 'production') {
@@ -137,22 +133,20 @@ export default function DisciplineDetail() {
                 <Link
                   key={p.professor}
                   href={`/opinioes/professor/${discipline.id}?professor=${encodeURIComponent(p.professor)}`}
-                  className="flex items-center justify-between gap-2.5 bg-surface border border-line rounded-md py-3 px-3.5 no-underline text-inherit hover:bg-surface-sunken"
+                  className="flex flex-col gap-2 bg-surface border border-line rounded-md py-3 px-3.5 no-underline text-inherit hover:bg-surface-sunken"
                 >
-                  <div>
+                  <div className="flex items-center justify-between gap-2.5">
                     <div className="font-semibold text-13">{p.professor}</div>
                     <div className="text-11 text-ink-3">{p.stats.totalReviews} opiniões · {p.semesters.join(', ')}</div>
                   </div>
-                  <span className="text-12-5 font-bold flex items-center gap-3px text-accent">
-                    <Star size={13} fill="currentColor" strokeWidth={0} />
-                    {professorScore(p.stats).toFixed(1)}
-                  </span>
+                  <p className="text-11-5 text-ink-2">{summarizeProfessor(p.stats)}</p>
+                  <MiniBars stats={p.stats} />
                 </Link>
               ))}
             </div>
 
             <Link
-              href={`/opinioes?discipline=${discipline.id}`}
+              href={`/opinioes?q=${encodeURIComponent(discipline.name)}`}
               className="flex items-center gap-1.5 text-13 font-semibold text-accent-dark no-underline"
             >
               Ver todas as opiniões <ArrowRight size={14} />

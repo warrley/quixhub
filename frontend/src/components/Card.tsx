@@ -27,7 +27,7 @@ export function Card({ padding = 'md', interactive, accent, className, children,
     .join(' ');
   return (
     <div className={classes} {...rest}>
-      {accent && <div className="absolute top-0 left-0 w-5px h-full" style={{ background: accent }} />}
+      {accent && <div className="absolute top-2.5 bottom-2.5 left-2.5 w-1.5 rounded-full" style={{ background: accent }} />}
       {children}
     </div>
   );

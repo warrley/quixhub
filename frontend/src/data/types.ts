@@ -24,6 +24,7 @@ export interface Offering {
 export interface OfferingSearchResult extends Offering {
   disciplineName: string;
   disciplineCode: string;
+  disciplineAccent: Discipline['accent'];
 }
 
 export interface OfferingWithDiscipline extends Offering {

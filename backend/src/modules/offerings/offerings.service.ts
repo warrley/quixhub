@@ -18,6 +18,7 @@ export async function search(query: string) {
       semester: offerings.semester,
       disciplineName: disciplines.name,
       disciplineCode: disciplines.code,
+      disciplineAccent: disciplines.accent,
     })
     .from(offerings)
     .innerJoin(disciplines, eq(offerings.disciplineId, disciplines.id))
