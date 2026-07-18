@@ -9,8 +9,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { MaterialCard } from '@/components/MaterialCard';
 import { api } from '@/lib/api';
-import { materialsByDiscipline } from '@/data/mock';
-import type { Discipline, DisciplineProfessorStats } from '@/data/types';
+import type { Discipline, DisciplineProfessorStats, Material } from '@/data/types';
 
 const ACCENT_GRADIENT: Record<string, string> = {
   accent: 'var(--gradient-cta)',
@@ -33,6 +32,7 @@ export default function DisciplineDetail() {
   const params = useParams<{ id: string }>();
   const [discipline, setDiscipline] = useState<Discipline | null | undefined>(undefined);
   const [professors, setProfessors] = useState<DisciplineProfessorStats[]>([]);
+  const [relatedMaterials, setRelatedMaterials] = useState<Material[]>([]);
   const [tracked, setTracked] = useState(false);
 
   useEffect(() => {
@@ -44,12 +44,14 @@ export default function DisciplineDetail() {
       .getDisciplineStats(params.id)
       .then(setProfessors)
       .catch(() => setProfessors([]));
+    api
+      .getMaterialsByDiscipline(params.id)
+      .then(setRelatedMaterials)
+      .catch(() => setRelatedMaterials([]));
   }, [params.id]);
 
   if (discipline === null) redirect('/catalogo');
   if (discipline === undefined) return null;
-
-  const relatedMaterials = materialsByDiscipline(discipline.id);
 
   return (
     <div>

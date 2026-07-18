@@ -2,6 +2,7 @@ import type {
   Discipline,
   DisciplineProfessorStats,
   FeedbackComment,
+  Material,
   Offering,
   OfferingSearchResult,
   OfferingStats,
@@ -68,6 +69,11 @@ export const api = {
 
   getDisciplines: () => request<{ disciplines: Discipline[] }>('/disciplines').then((r) => r.disciplines),
   getDiscipline: (id: string) => request<{ discipline: Discipline }>(`/disciplines/${id}`).then((r) => r.discipline),
+
+  getMaterialsByDiscipline: (disciplineId: string) =>
+    request<{ materials: Material[] }>(`/materials?disciplineId=${encodeURIComponent(disciplineId)}`).then(
+      (r) => r.materials,
+    ),
 
   getOfferingsByDiscipline: (disciplineId: string) =>
     request<{ offerings: Offering[] }>(`/offerings?disciplineId=${encodeURIComponent(disciplineId)}`).then(
