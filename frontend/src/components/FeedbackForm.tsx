@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button } from './Button';
 import { SelectField, TextareaField } from './Field';
 import { TagButton } from './Tag';
-import { api, type SubmitFeedbackInput } from '../lib/api';
+import { ApiError, api, type SubmitFeedbackInput } from '../lib/api';
 
 const SCALES: { key: 'materialQuality' | 'examDifficulty' | 'workDifficulty'; label: string; low: string; high: string }[] = [
   { key: 'materialQuality', label: 'Qualidade do material', low: 'Péssimo', high: 'Excelente' },
@@ -29,8 +29,7 @@ export function FeedbackForm({ offeringId, onSubmitted }: { offeringId: string; 
       await api.submitFeedback(offeringId, values);
       onSubmitted();
     } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      setStatus(message.includes('401') || message.toLowerCase().includes('not authenticated') ? 'unauthenticated' : 'error');
+      setStatus(err instanceof ApiError && err.status === 401 ? 'unauthenticated' : 'error');
     }
   }
 
