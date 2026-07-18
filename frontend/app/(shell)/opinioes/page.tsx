@@ -2,21 +2,18 @@
 
 import { UnderConstruction } from '@/components/UnderConstruction';
 
-import { MessageSquare, Search, Star } from 'lucide-react';
+import { MessageSquare, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/Card';
+import { MiniBars } from '@/components/MiniBars';
 import { CardSkeleton } from '@/components/Skeleton';
 import { Tag } from '@/components/Tag';
+import { ACCENT_VAR } from '@/lib/accent';
 import { api } from '@/lib/api';
+import { summarizeProfessor } from '@/lib/feedbackSummary';
 import type { DisciplineProfessorStats, OfferingSearchResult } from '@/data/types';
-
-function professorScore(stats: DisciplineProfessorStats['stats']) {
-  const values = [stats.materialQuality, stats.examDifficulty, stats.workDifficulty].filter((v) => v > 0);
-  if (values.length === 0) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
-}
 
 interface ProfessorRow {
   professor: string;
@@ -29,6 +26,7 @@ interface DisciplineGroup {
   disciplineId: string;
   disciplineName: string;
   disciplineCode: string;
+  disciplineAccent: OfferingSearchResult['disciplineAccent'];
   professors: ProfessorRow[];
 }
 
@@ -38,14 +36,13 @@ export default function Opinioes() {
   }
 
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const initialQuery = searchParams.get('q') ?? '';
+  const [query, setQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [results, setResults] = useState<OfferingSearchResult[]>([]);
   const [statsByDiscipline, setStatsByDiscipline] = useState<Record<string, DisciplineProfessorStats[]>>({});
   const [loading, setLoading] = useState(true);
-
-  const disciplineFilter = searchParams.get('discipline');
-  const professorFilter = searchParams.get('professor');
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedQuery(query), 300);
@@ -66,14 +63,16 @@ export default function Opinioes() {
   // offering level). Never one row per raw offering, or the same professor
   // would repeat once per semester they've taught it.
   const groups = useMemo<DisciplineGroup[]>(() => {
-    let filtered = disciplineFilter ? results.filter((o) => o.disciplineId === disciplineFilter) : results;
-    if (professorFilter) filtered = filtered.filter((o) => o.professor === professorFilter);
-    const byDiscipline = new Map<string, { disciplineName: string; disciplineCode: string; byProfessor: Map<string, ProfessorRow> }>();
+    const byDiscipline = new Map<
+      string,
+      { disciplineName: string; disciplineCode: string; disciplineAccent: OfferingSearchResult['disciplineAccent']; byProfessor: Map<string, ProfessorRow> }
+    >();
 
-    for (const o of filtered) {
+    for (const o of results) {
       const disciplineEntry = byDiscipline.get(o.disciplineId) ?? {
         disciplineName: o.disciplineName,
         disciplineCode: o.disciplineCode,
+        disciplineAccent: o.disciplineAccent,
         byProfessor: new Map<string, ProfessorRow>(),
       };
       const professorRow = disciplineEntry.byProfessor.get(o.professor) ?? { professor: o.professor, semesters: [] };
@@ -83,29 +82,44 @@ export default function Opinioes() {
     }
 
     return [...byDiscipline.entries()]
-      .map(([disciplineId, { disciplineName, disciplineCode, byProfessor }]) => ({
+      .map(([disciplineId, { disciplineName, disciplineCode, disciplineAccent, byProfessor }]) => ({
         disciplineId,
         disciplineName,
         disciplineCode,
+        disciplineAccent,
         professors: [...byProfessor.values()]
           .map((p) => ({ ...p, semesters: [...p.semesters].sort((a, b) => b.semester.localeCompare(a.semester)) }))
           .sort((a, b) => a.professor.localeCompare(b.professor)),
       }))
       .sort((a, b) => a.disciplineName.localeCompare(b.disciplineName));
-  }, [results, disciplineFilter, professorFilter]);
+  }, [results]);
 
+  // Most-discussed disciplines first — recomputed whenever stats arrive, since
+  // `groups` above is ordered alphabetically and knows nothing about review counts.
+  const sortedGroups = useMemo(() => {
+    const reviewCount = (g: DisciplineGroup) =>
+      (statsByDiscipline[g.disciplineId] ?? []).reduce((sum, s) => sum + s.stats.totalReviews, 0);
+    return [...groups].sort((a, b) => reviewCount(b) - reviewCount(a));
+  }, [groups, statsByDiscipline]);
+
+  // Gates the skeleton until every visible discipline's stats have loaded, so
+  // the list never flashes in alphabetical order before jumping to the
+  // most-opinions sort once `sortedGroups` can finally tell them apart.
   useEffect(() => {
     const missing = groups.map((g) => g.disciplineId).filter((id) => !(id in statsByDiscipline));
-    if (missing.length === 0) return;
-    Promise.all(missing.map((id) => api.getDisciplineStats(id).then((stats) => [id, stats] as const))).then((entries) => {
-      setStatsByDiscipline((prev) => {
-        const next = { ...prev };
-        for (const [id, stats] of entries) next[id] = stats;
-        return next;
-      });
+    if (missing.length === 0) {
+      setStatsLoading(false);
+      return;
+    }
+    setStatsLoading(true);
+    api.getDisciplineStatsBulk(missing).then((stats) => {
+      setStatsByDiscipline((prev) => ({ ...prev, ...stats }));
+      setStatsLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups]);
+
+  const showSkeleton = loading || statsLoading;
 
   return (
     <div>
@@ -126,7 +140,7 @@ export default function Opinioes() {
         </div>
       </div>
 
-      {loading && (
+      {showSkeleton && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <CardSkeleton key={i} />
@@ -134,7 +148,7 @@ export default function Opinioes() {
         </div>
       )}
 
-      {!loading && groups.length === 0 && (
+      {!showSkeleton && groups.length === 0 && (
         <div className="flex flex-col items-center text-center py-14 gap-3">
           <MessageSquare size={32} className="text-ink-3" />
           <p className="text-13-5 text-ink-2">Nenhuma opinião ainda — seja o primeiro!</p>
@@ -142,11 +156,11 @@ export default function Opinioes() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {!loading && groups.map((group) => {
+        {!showSkeleton && sortedGroups.map((group) => {
           const stats = statsByDiscipline[group.disciplineId] ?? [];
           const statsByProfessor = new Map(stats.map((s) => [s.professor, s]));
           return (
-            <Card key={group.disciplineId} padding="md">
+            <Card key={group.disciplineId} padding="md" accent={ACCENT_VAR[group.disciplineAccent]}>
               <div className="flex justify-between items-baseline mb-3">
                 <div className="font-heading font-bold text-14-5">{group.disciplineName}</div>
                 <div className="text-10-5 font-semibold text-ink-3">{group.disciplineCode}</div>
@@ -156,26 +170,20 @@ export default function Opinioes() {
                   const s = statsByProfessor.get(p.professor);
                   const generalHref = `/opinioes/professor/${group.disciplineId}?professor=${encodeURIComponent(p.professor)}`;
                   return (
-                    <div key={p.professor} className="border border-line rounded-md py-2.5 px-3">
-                      <Link href={generalHref} className="flex items-center justify-between gap-2.5 no-underline text-inherit">
-                        <div>
+                    <div
+                      key={p.professor}
+                      className="border border-line rounded-md py-2.5 px-3 [transition:box-shadow_0.18s_ease,border-color_0.18s_ease,transform_0.18s_ease] hover:shadow-md hover:border-line-strong hover:-translate-y-0.5"
+                    >
+                      <Link href={generalHref} className="block no-underline text-inherit cursor-pointer">
+                        <div className="flex items-center justify-between gap-2.5">
                           <div className="font-semibold text-13">{p.professor}</div>
-                          <div className="flex gap-1.5 mt-1">
-                            {s ? (
-                              <>
-                                <Tag tone="neutral">{s.stats.totalReviews} opiniões</Tag>
-                                {s.stats.attendance && <Tag tone="outline">{s.stats.attendance}</Tag>}
-                              </>
-                            ) : (
-                              <Tag tone="neutral">Sem opiniões ainda</Tag>
-                            )}
-                          </div>
+                          <Tag tone="neutral">{s ? `${s.stats.totalReviews} opiniões` : 'Sem opiniões ainda'}</Tag>
                         </div>
                         {s && (
-                          <span className="text-12-5 font-bold flex items-center gap-3px text-accent shrink-0">
-                            <Star size={13} fill="currentColor" strokeWidth={0} />
-                            {professorScore(s.stats).toFixed(1)}
-                          </span>
+                          <div className="mt-2.5">
+                            <p className="text-11-5 text-ink-2 mb-2">{summarizeProfessor(s.stats)}</p>
+                            <MiniBars stats={s.stats} />
+                          </div>
                         )}
                       </Link>
                       {p.semesters.length > 1 && (

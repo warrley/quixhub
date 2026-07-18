@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, eq, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { feedback, offerings } from '../../db/schema.js';
 
@@ -98,6 +98,50 @@ export async function getDisciplineStats(disciplineId: string) {
       stats: summarize(rows),
       semesters: [...new Set(profOfferings.map((o) => o.semester))],
     });
+  }
+  return result;
+}
+
+// Same aggregation as getDisciplineStats, but for many disciplines in one
+// round trip (2 queries total instead of N) — used by the Opiniões list,
+// which otherwise fires one request per visible discipline.
+export async function getDisciplineStatsBulk(disciplineIds: string[]) {
+  const result: Record<string, { professor: string; stats: ReturnType<typeof summarize>; semesters: string[] }[]> = {};
+  if (disciplineIds.length === 0) return result;
+
+  const relevantOfferings = await db.query.offerings.findMany({
+    where: inArray(offerings.disciplineId, disciplineIds),
+  });
+  const offeringIds = relevantOfferings.map((o) => o.id);
+  const rows = offeringIds.length ? await db.query.feedback.findMany({ where: inArray(feedback.offeringId, offeringIds) }) : [];
+
+  const feedbackByOffering = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const list = feedbackByOffering.get(r.offeringId) ?? [];
+    list.push(r);
+    feedbackByOffering.set(r.offeringId, list);
+  }
+
+  for (const disciplineId of disciplineIds) {
+    const disciplineOfferings = relevantOfferings.filter((o) => o.disciplineId === disciplineId);
+    const byProfessor = new Map<string, typeof disciplineOfferings>();
+    for (const o of disciplineOfferings) {
+      const list = byProfessor.get(o.professor) ?? [];
+      list.push(o);
+      byProfessor.set(o.professor, list);
+    }
+
+    const professors = [];
+    for (const [professor, profOfferings] of byProfessor) {
+      const profRows = profOfferings.flatMap((o) => feedbackByOffering.get(o.id) ?? []);
+      if (profRows.length === 0) continue;
+      professors.push({
+        professor,
+        stats: summarize(profRows),
+        semesters: [...new Set(profOfferings.map((o) => o.semester))],
+      });
+    }
+    result[disciplineId] = professors;
   }
   return result;
 }

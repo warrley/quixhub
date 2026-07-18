@@ -8,3 +8,4 @@ feedbackRouter.post('/', requireAuth, feedbackController.submit);
 feedbackRouter.get('/offering/:offeringId/stats', feedbackController.offeringStats);
 feedbackRouter.get('/offering/:offeringId/comments', feedbackController.offeringComments);
 feedbackRouter.get('/discipline/:disciplineId', feedbackController.disciplineStats);
+feedbackRouter.get('/discipline-stats', feedbackController.disciplineStatsBulk);

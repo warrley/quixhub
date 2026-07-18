@@ -93,6 +93,13 @@ export const openapiDocument = {
     '/feedback/discipline/{disciplineId}': {
       get: { summary: 'Feedback stats aggregated by professor across every offering of a discipline', responses: { '200': { description: 'OK' } } },
     },
+    '/feedback/discipline-stats': {
+      get: {
+        summary: 'Same as /feedback/discipline/{id}, batched for many disciplines in one round trip (2 queries total instead of N)',
+        parameters: [{ name: 'ids', in: 'query', required: true, schema: { type: 'string' }, description: 'Comma-separated discipline ids' }],
+        responses: { '200': { description: 'OK' } },
+      },
+    },
 
     '/calendar': {
       get: {

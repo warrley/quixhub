@@ -96,4 +96,8 @@ export const api = {
     request<{ professors: DisciplineProfessorStats[] }>(`/feedback/discipline/${disciplineId}`).then(
       (r) => r.professors,
     ),
+  getDisciplineStatsBulk: (disciplineIds: string[]) =>
+    request<{ stats: Record<string, DisciplineProfessorStats[]> }>(
+      `/feedback/discipline-stats?ids=${encodeURIComponent(disciplineIds.join(','))}`,
+    ).then((r) => r.stats),
 };

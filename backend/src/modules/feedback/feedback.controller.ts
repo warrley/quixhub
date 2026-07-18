@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   getComments,
   getDisciplineStats,
+  getDisciplineStatsBulk,
   getOfferingStats,
   submitFeedback,
 } from './feedback.service.js';
@@ -41,4 +42,12 @@ export const offeringComments: RequestHandler = async (req, res) => {
 
 export const disciplineStats: RequestHandler = async (req, res) => {
   res.json({ professors: await getDisciplineStats(req.params.disciplineId) });
+};
+
+export const disciplineStatsBulk: RequestHandler = async (req, res) => {
+  const ids = String(req.query.ids ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+  res.json({ stats: await getDisciplineStatsBulk(ids) });
 };
