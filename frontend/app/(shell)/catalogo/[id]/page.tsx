@@ -74,9 +74,7 @@ export default function DisciplineDetail() {
 
       <div className="grid grid-cols-1 gap-8 min-[860px]:grid-cols-[1.4fr_1fr]">
         <div>
-          <div className="font-heading font-bold text-11 text-accent-2-ink mb-1.5">
-            {discipline.code} · {discipline.semester}
-          </div>
+          <div className="font-heading font-bold text-11 text-accent-2-ink mb-1.5">{discipline.code}</div>
           <h1 className="font-heading font-bold text-2xl mb-1.5">{discipline.name}</h1>
           <div className="text-13 text-ink-2 mb-4">{discipline.workload}h</div>
           <p className="text-13-5 leading-[1.6] text-ink-2 mb-5">{discipline.description}</p>
