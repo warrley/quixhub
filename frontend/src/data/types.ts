@@ -45,6 +45,15 @@ export interface FeedbackComment {
   createdAt: string;
 }
 
+export interface MyFeedback {
+  materialQuality: number | null;
+  examDifficulty: number | null;
+  workDifficulty: number | null;
+  attendance: string | null;
+  groupWork: string | null;
+  comment: string | null;
+}
+
 export interface DisciplineProfessorStats {
   professor: string;
   stats: OfferingStats;

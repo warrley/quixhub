@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { z } from 'zod';
-import { getById, listByDiscipline, search } from './offerings.service.js';
+import { findOrCreateOffering, getById, listByDiscipline, search } from './offerings.service.js';
 
 export const listOfferings: RequestHandler = async (req, res) => {
   const safeData = z.string().min(1).safeParse(req.query.disciplineId);
@@ -28,4 +28,21 @@ export const getOffering: RequestHandler = async (req, res) => {
     return;
   }
   res.json({ offering });
+};
+
+const findOrCreateSchema = z.object({
+  disciplineId: z.string().min(1),
+  professor: z.string().min(1),
+  semester: z.string().regex(/^\d{4}\.\d$/, 'expected format YYYY.N, e.g. 2026.1'),
+});
+
+export const findOrCreate: RequestHandler = async (req, res) => {
+  const safeData = findOrCreateSchema.safeParse(req.body);
+  if (!safeData.success) {
+    res.status(400).json({ error: safeData.error.flatten().fieldErrors });
+    return;
+  }
+  const { disciplineId, professor, semester } = safeData.data;
+  const offering = await findOrCreateOffering(disciplineId, professor, semester);
+  res.status(201).json({ offering });
 };

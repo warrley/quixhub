@@ -1,9 +1,11 @@
 import { RequestHandler } from 'express';
 import { z } from 'zod';
 import {
+  deleteMyFeedback,
   getComments,
   getDisciplineStats,
   getDisciplineStatsBulk,
+  getMyFeedback,
   getOfferingStats,
   submitFeedback,
 } from './feedback.service.js';
@@ -50,4 +52,18 @@ export const disciplineStatsBulk: RequestHandler = async (req, res) => {
     .map((id) => id.trim())
     .filter(Boolean);
   res.json({ stats: await getDisciplineStatsBulk(ids) });
+};
+
+export const myFeedback: RequestHandler = async (req, res) => {
+  const row = await getMyFeedback(req.user!.id, req.params.offeringId);
+  res.json({ feedback: row ?? null });
+};
+
+export const deleteFeedback: RequestHandler = async (req, res) => {
+  const row = await deleteMyFeedback(req.user!.id, req.params.offeringId);
+  if (!row) {
+    res.status(404).json({ error: 'No feedback to delete' });
+    return;
+  }
+  res.status(204).end();
 };

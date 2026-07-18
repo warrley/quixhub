@@ -65,6 +65,11 @@ export const openapiDocument = {
         parameters: [{ name: 'disciplineId', in: 'query', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'OK' } },
       },
+      post: {
+        summary: 'Find or create an offering for discipline+professor+semester (lets a student give feedback for a semester that hasn\'t been seeded/imported yet)',
+        security: [{ cookieAuth: [] }],
+        responses: { '201': { description: 'Created (or existing offering returned)' }, '400': { description: 'Invalid semester format' } },
+      },
     },
     '/offerings/search': {
       get: {
@@ -89,6 +94,18 @@ export const openapiDocument = {
     },
     '/feedback/offering/{offeringId}/comments': {
       get: { summary: 'Anonymous comments for one offering', responses: { '200': { description: 'OK' } } },
+    },
+    '/feedback/offering/{offeringId}/mine': {
+      get: {
+        summary: "This user's own feedback for one offering, if any (used to pre-fill the submission form on resubmit)",
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'OK' } },
+      },
+      delete: {
+        summary: "Delete this user's own feedback for one offering",
+        security: [{ cookieAuth: [] }],
+        responses: { '204': { description: 'Deleted' }, '404': { description: 'No feedback to delete' } },
+      },
     },
     '/feedback/discipline/{disciplineId}': {
       get: { summary: 'Feedback stats aggregated by professor across every offering of a discipline', responses: { '200': { description: 'OK' } } },

@@ -33,6 +33,24 @@ export async function submitFeedback(userId: string, offeringId: string, input: 
   return row;
 }
 
+// Lets the frontend pre-fill the feedback form with what this user already
+// submitted for this offering, instead of always opening blank.
+export async function getMyFeedback(userId: string, offeringId: string) {
+  const hash = voterHash(userId, offeringId);
+  return db.query.feedback.findFirst({
+    where: and(eq(feedback.offeringId, offeringId), eq(feedback.voterHash, hash)),
+  });
+}
+
+export async function deleteMyFeedback(userId: string, offeringId: string) {
+  const hash = voterHash(userId, offeringId);
+  const [row] = await db
+    .delete(feedback)
+    .where(and(eq(feedback.offeringId, offeringId), eq(feedback.voterHash, hash)))
+    .returning();
+  return row ?? null;
+}
+
 function average(values: (number | null)[]): number | null {
   const nums = values.filter((v): v is number => v !== null);
   if (nums.length === 0) return null;

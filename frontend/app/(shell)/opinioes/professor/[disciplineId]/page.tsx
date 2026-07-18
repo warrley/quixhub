@@ -2,14 +2,14 @@
 
 import { UnderConstruction } from '@/components/UnderConstruction';
 
-import { ArrowLeft, MessageSquare } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { redirect, useParams, useSearchParams } from 'next/navigation';
+import { redirect, useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { StatBar } from '@/components/StatBar';
 import { Tag } from '@/components/Tag';
-import { api } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import { summarizeProfessor } from '@/lib/feedbackSummary';
 import { Skeleton } from '@/components/Skeleton';
 import type { Discipline, DisciplineProfessorStats, FeedbackComment, Offering } from '@/data/types';
@@ -40,12 +40,16 @@ export default function ProfessorDiscipline() {
 
   const params = useParams<{ disciplineId: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const professor = searchParams.get('professor') ?? '';
 
   const [discipline, setDiscipline] = useState<Discipline | null | undefined>(undefined);
   const [stats, setStats] = useState<DisciplineProfessorStats | null | undefined>(undefined);
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [comments, setComments] = useState<CommentWithSemester[]>([]);
+  const [semesterInput, setSemesterInput] = useState('');
+  const [semesterError, setSemesterError] = useState('');
+  const [creatingOffering, setCreatingOffering] = useState(false);
 
   useEffect(() => {
     if (!professor) return;
@@ -87,7 +91,25 @@ export default function ProfessorDiscipline() {
   }
 
   const sortedOfferings = [...offerings].sort((a, b) => b.semester.localeCompare(a.semester));
-  const mostRecent = sortedOfferings[0];
+
+  async function handleGoToSemester(e: React.FormEvent) {
+    e.preventDefault();
+    const semester = semesterInput.trim();
+    if (!/^\d{4}\.\d$/.test(semester)) {
+      setSemesterError('Use o formato AAAA.N, ex: 2026.1');
+      return;
+    }
+    setSemesterError('');
+    setCreatingOffering(true);
+    try {
+      const offering = await api.findOrCreateOffering({ disciplineId: params.disciplineId, professor, semester });
+      router.push(`/opinioes/${offering.id}`);
+    } catch (err) {
+      setSemesterError(err instanceof ApiError && err.status === 401 ? 'Faça login para continuar.' : 'Não foi possível abrir essa turma.');
+    } finally {
+      setCreatingOffering(false);
+    }
+  }
 
   return (
     <div>
@@ -152,17 +174,22 @@ export default function ProfessorDiscipline() {
         </div>
 
         <div>
-          {mostRecent && (
-            <Link href={`/opinioes/${mostRecent.id}`}>
-              <Button block>
-                <MessageSquare size={16} /> Dar minha opinião ({mostRecent.semester})
-              </Button>
-            </Link>
-          )}
-          <p className="text-11 text-ink-3 mt-2 leading-[1.5]">
-            Sua opinião é registrada pro semestre específico que você cursou — por isso o envio abre na turma de{' '}
-            {mostRecent?.semester}, a mais recente.
+          <div className="font-heading font-bold text-12-5 mb-1.5">Dar minha opinião</div>
+          <p className="text-11 text-ink-3 mb-2 leading-[1.5]">
+            Escolha, acima, o semestre que você cursou — se não estiver na lista, digite abaixo (ele é criado na hora).
           </p>
+          <form onSubmit={handleGoToSemester} className="flex gap-1.5">
+            <input
+              value={semesterInput}
+              onChange={(e) => setSemesterInput(e.target.value)}
+              placeholder="2026.1"
+              className="flex-1 min-w-0 border border-line bg-surface rounded-md py-2 px-3 text-13 text-ink outline-none"
+            />
+            <Button type="submit" disabled={creatingOffering}>
+              {creatingOffering ? '...' : 'Ir'}
+            </Button>
+          </form>
+          {semesterError && <p className="text-11 text-danger mt-1.5">{semesterError}</p>}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { Lock } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './Button';
 import { SelectField, TextareaField } from './Field';
 import { TagButton } from './Tag';
@@ -16,7 +16,41 @@ const SCALES: { key: 'materialQuality' | 'examDifficulty' | 'workDifficulty'; la
 
 export function FeedbackForm({ offeringId, onSubmitted }: { offeringId: string; onSubmitted: () => void }) {
   const [values, setValues] = useState<SubmitFeedbackInput>({});
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'unauthenticated'>('idle');
+  const [status, setStatus] = useState<'loading' | 'idle' | 'submitting' | 'deleting' | 'error' | 'unauthenticated'>(
+    'loading',
+  );
+  const [hasExisting, setHasExisting] = useState(false);
+
+  // Pre-fill with whatever the user already submitted for this offering,
+  // instead of always opening blank — resubmitting is an upsert server-side,
+  // but without this the user can't see/revise their prior answer.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getMyFeedback(offeringId)
+      .then((existing) => {
+        if (cancelled) return;
+        if (existing) {
+          setValues({
+            materialQuality: existing.materialQuality ?? undefined,
+            examDifficulty: existing.examDifficulty ?? undefined,
+            workDifficulty: existing.workDifficulty ?? undefined,
+            attendance: (existing.attendance as SubmitFeedbackInput['attendance']) ?? undefined,
+            groupWork: (existing.groupWork as SubmitFeedbackInput['groupWork']) ?? undefined,
+            comment: existing.comment ?? undefined,
+          });
+          setHasExisting(true);
+        }
+        setStatus('idle');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStatus(err instanceof ApiError && err.status === 401 ? 'unauthenticated' : 'idle');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [offeringId]);
 
   function setScale(key: 'materialQuality' | 'examDifficulty' | 'workDifficulty', value: number) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -31,6 +65,36 @@ export function FeedbackForm({ offeringId, onSubmitted }: { offeringId: string; 
     } catch (err) {
       setStatus(err instanceof ApiError && err.status === 401 ? 'unauthenticated' : 'error');
     }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Excluir sua opinião sobre esta oferta? Essa ação não pode ser desfeita.')) return;
+    setStatus('deleting');
+    try {
+      await api.deleteMyFeedback(offeringId);
+      onSubmitted();
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  if (status === 'loading') {
+    return <p className="text-13 text-ink-2">Carregando...</p>;
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex gap-2 bg-accent-tint border border-line rounded-md py-3 px-3.5 text-13 leading-[1.5] text-ink-2">
+        <Lock size={15} style={{ flexShrink: 0, color: 'var(--color-accent)' }} />
+        <span>
+          Você precisa estar logado pra dar sua opinião —{' '}
+          <Link href="/login" className="underline font-semibold text-accent-dark">
+            clique aqui pra entrar
+          </Link>
+          .
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -95,16 +159,24 @@ export function FeedbackForm({ offeringId, onSubmitted }: { offeringId: string; 
         onChange={(e) => setValues((v) => ({ ...v, comment: e.target.value }))}
       />
 
-      {status === 'unauthenticated' && (
-        <p className="text-13 text-danger mb-3">
-          Faça <Link href="/login" className="underline font-semibold">login</Link> para enviar sua opinião.
-        </p>
-      )}
-      {status === 'error' && <p className="text-13 text-danger mb-3">Não foi possível enviar. Tente novamente.</p>}
+      {status === 'error' && <p className="text-13 text-danger mb-3">Não foi possível completar a ação. Tente novamente.</p>}
 
-      <Button type="submit" block disabled={status === 'submitting'}>
-        {status === 'submitting' ? 'Enviando...' : 'Enviar opinião'}
+      <Button type="submit" block disabled={status === 'submitting' || status === 'deleting'}>
+        {status === 'submitting' ? 'Enviando...' : hasExisting ? 'Atualizar opinião' : 'Enviar opinião'}
       </Button>
+
+      {hasExisting && (
+        <Button
+          type="button"
+          variant="ghost"
+          block
+          className="text-danger hover:bg-danger-tint mt-1"
+          disabled={status === 'submitting' || status === 'deleting'}
+          onClick={handleDelete}
+        >
+          {status === 'deleting' ? 'Excluindo...' : 'Excluir minha opinião'}
+        </Button>
+      )}
     </form>
   );
 }

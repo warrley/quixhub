@@ -3,6 +3,7 @@ import type {
   DisciplineProfessorStats,
   FeedbackComment,
   Material,
+  MyFeedback,
   Offering,
   OfferingSearchResult,
   OfferingStats,
@@ -85,6 +86,10 @@ export const api = {
     ),
   getOffering: (id: string) =>
     request<{ offering: OfferingWithDiscipline }>(`/offerings/${id}`).then((r) => r.offering),
+  findOrCreateOffering: (data: { disciplineId: string; professor: string; semester: string }) =>
+    request<{ offering: Offering }>('/offerings', { method: 'POST', body: JSON.stringify(data) }).then(
+      (r) => r.offering,
+    ),
 
   submitFeedback: (offeringId: string, data: SubmitFeedbackInput) =>
     request<{ ok: true }>('/feedback', { method: 'POST', body: JSON.stringify({ offeringId, ...data }) }),
@@ -92,6 +97,10 @@ export const api = {
     request<{ stats: OfferingStats }>(`/feedback/offering/${offeringId}/stats`).then((r) => r.stats),
   getOfferingComments: (offeringId: string) =>
     request<{ comments: FeedbackComment[] }>(`/feedback/offering/${offeringId}/comments`).then((r) => r.comments),
+  getMyFeedback: (offeringId: string) =>
+    request<{ feedback: MyFeedback | null }>(`/feedback/offering/${offeringId}/mine`).then((r) => r.feedback),
+  deleteMyFeedback: (offeringId: string) =>
+    request<void>(`/feedback/offering/${offeringId}/mine`, { method: 'DELETE' }),
   getDisciplineStats: (disciplineId: string) =>
     request<{ professors: DisciplineProfessorStats[] }>(`/feedback/discipline/${disciplineId}`).then(
       (r) => r.professors,
