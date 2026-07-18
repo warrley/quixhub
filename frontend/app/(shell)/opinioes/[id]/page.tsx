@@ -92,7 +92,15 @@ export default function OfferingDetail() {
 
           {siblings.length > 0 && (
             <div className="mb-6">
-              <div className="font-heading font-bold text-12-5 mb-1.5">Outros semestres com {offering.professor}</div>
+              <div className="flex justify-between items-baseline mb-1.5">
+                <div className="font-heading font-bold text-12-5">Outros semestres com {offering.professor}</div>
+                <Link
+                  href={`/opinioes/professor/${offering.disciplineId}?professor=${encodeURIComponent(offering.professor)}`}
+                  className="text-11 font-semibold text-accent-dark no-underline whitespace-nowrap"
+                >
+                  Ver geral →
+                </Link>
+              </div>
               <div className="flex gap-1.5 flex-wrap">
                 {siblings.map((s) => (
                   <Link key={s.id} href={`/opinioes/${s.id}`}>

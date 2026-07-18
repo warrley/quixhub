@@ -139,12 +139,10 @@ export default function Opinioes() {
               <div className="flex flex-col gap-2">
                 {group.professors.map((p) => {
                   const s = statsByProfessor.get(p.professor);
-                  // No stats yet (no feedback for any of this professor's offerings) —
-                  // still land somewhere useful: their most recent semester's offering.
-                  const defaultHref = `/opinioes/${p.semesters[0].offeringId}`;
+                  const generalHref = `/opinioes/professor/${group.disciplineId}?professor=${encodeURIComponent(p.professor)}`;
                   return (
                     <div key={p.professor} className="border border-line rounded-md py-2.5 px-3">
-                      <Link href={defaultHref} className="flex items-center justify-between gap-2.5 no-underline text-inherit">
+                      <Link href={generalHref} className="flex items-center justify-between gap-2.5 no-underline text-inherit">
                         <div>
                           <div className="font-semibold text-13">{p.professor}</div>
                           <div className="flex gap-1.5 mt-1">

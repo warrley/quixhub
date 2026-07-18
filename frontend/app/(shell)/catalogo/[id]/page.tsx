@@ -116,7 +116,7 @@ export default function DisciplineDetail() {
               {professors.map((p) => (
                 <Link
                   key={p.professor}
-                  href={`/opinioes?discipline=${discipline.id}&professor=${encodeURIComponent(p.professor)}`}
+                  href={`/opinioes/professor/${discipline.id}?professor=${encodeURIComponent(p.professor)}`}
                   className="flex items-center justify-between gap-2.5 bg-surface border border-line rounded-md py-3 px-3.5 no-underline text-inherit hover:bg-surface-sunken"
                 >
                   <div>
