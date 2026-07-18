@@ -1,11 +1,11 @@
 # Graph Report - quixhub  (2026-07-18)
 
 ## Corpus Check
-- 126 files · ~59,333 words
+- 126 files · ~59,596 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4117 nodes · 9181 edges · 407 communities (86 shown, 321 thin omitted)
+- 4119 nodes · 9186 edges · 397 communities (101 shown, 296 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 122 edges (avg confidence: 0.53)
 - Token cost: 0 input · 0 output
 
@@ -348,7 +348,6 @@
 - Present
 - Print
 - Bookend
-- PrintHighQuality
 - Zpl
 - Copies
 - Ps
@@ -360,12 +359,10 @@
 - PsProgram
 - Day
 - PsUnaryNode
-- MeridiemNames
 - ModifyAnnots
 - RenderPolicy
 - DynamicRender
 - RootElement
-- RunScripts
 - Severity
 - Embed
 - SoapAddress
@@ -379,16 +376,11 @@
 - IfEmpty
 - SubsetBelow
 - Sup
-- SuppressBanner
 - Tagged
 - TimePatterns
-- To
-- Token
 - PsArgNode
-- Trace
 - Transform
 - Traversal
-- TypeFace
 - TypeFaces
 - UnknownErrorException
 - Version
@@ -399,13 +391,11 @@
 - Xdc
 - XmlConnection
 - XRefEntryException
-- XRefParseException
 - Xsl
 - MediumInfo
 - NeverEmbed
 - NullStream
 - PsOperator
-- RefElement
 - ScriptModel
 - FormatError
 - Type
@@ -431,10 +421,10 @@
 10. `s` - 79 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `computeSemesterStats()` --indirect_call--> `average()`  [INFERRED]
-  frontend/src/lib/ira.ts → backend/src/modules/feedback/feedback.service.ts
 - `CalendarProvider()` --indirect_call--> `confirmEvent()`  [INFERRED]
   frontend/src/lib/calendarStore.tsx → backend/src/modules/calendar/calendar.controller.ts
+- `computeSemesterStats()` --indirect_call--> `average()`  [INFERRED]
+  frontend/src/lib/ira.ts → backend/src/modules/feedback/feedback.service.ts
 - `requireAuth()` --calls--> `findUserById()`  [EXTRACTED]
   backend/src/modules/auth/auth.middleware.ts → backend/src/modules/auth/auth.service.ts
 - `attachUserIfPresent()` --calls--> `findUserById()`  [EXTRACTED]
@@ -445,7 +435,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (407 total, 321 thin omitted)
+## Communities (397 total, 296 thin omitted)
 
 ### Community 0 - "Architecture"
 Cohesion: 0.25
@@ -456,56 +446,56 @@ Cohesion: 0.22
 Nodes (8): Backlog — Core (build first), Backlog — Later phases, Decisions carried from the prior iteration (Academy), Features, if the historic not have a grade, it will placeholder, normal curve, percentil, Shipped, when up another historic, exclude the existente
 
 ### Community 2 - "Vision"
-Cohesion: 0.11
-Nodes (5): 5213(), Dict, getModificationDate(), StampAnnotation, stringToAsciiOrUTF16BE()
+Cohesion: 0.10
+Nodes (8): FreeTextAnnotation, getModificationDate(), HighlightAnnotation, InkAnnotation, MarkupAnnotation, StampAnnotation, stringToAsciiOrUTF16BE(), StructTreeRoot
 
 ### Community 3 - "QuixHub"
 Cohesion: 0.33
 Nodes (5): Docs, Local development, QuixHub, Stack, Tests
 
 ### Community 4 - "CLAUDE.md"
-Cohesion: 0.10
-Nodes (35): ACCENT_GRADIENT, DisciplineDetail(), ATTENDANCE_LABEL, GROUP_WORK_LABEL, OfferingDetail(), DisciplineGroup, Opinioes(), ProfessorRow (+27 more)
+Cohesion: 0.11
+Nodes (32): ACCENT_GRADIENT, DisciplineDetail(), DisciplineGroup, Opinioes(), ProfessorRow, ATTENDANCE_LABEL, CommentWithSemester, GROUP_WORK_LABEL (+24 more)
 
 ### Community 5 - "docs-sync-reminder.sh"
 Cohesion: 0.06
 Nodes (30): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+22 more)
 
 ### Community 6 - "graphify-auto-update.sh"
-Cohesion: 0.09
-Nodes (20): metadata, Providers(), AppShell(), isActivePath(), NAV_ITEMS, AuthLayout(), Avatar(), GRADIENTS (+12 more)
+Cohesion: 0.11
+Nodes (16): metadata, Providers(), AppShell(), isActivePath(), NAV_ITEMS, AuthLayout(), Greeting(), greetingForHour() (+8 more)
 
-### Community 7 - "Tag.tsx"
-Cohesion: 0.17
-Nodes (3): ColorSpaceUtils, FeatureTest, shadow()
+### Community 8 - "Home.tsx"
+Cohesion: 0.10
+Nodes (5): AsciiHexStream, DecodeStream, DecryptStream, PredictorStream, StreamsSequenceStream
 
 ### Community 9 - "compilerOptions"
-Cohesion: 0.10
-Nodes (30): ModerationQueue(), EventDetail(), KIND_LABEL, MaterialDetail(), TYPE_GRADIENT, TYPE_LABEL, Materials(), TYPE_FILTERS (+22 more)
+Cohesion: 0.08
+Nodes (41): ModerationQueue(), EventDetail(), KIND_LABEL, Calendar(), DISCIPLINE_DOT, isoDate(), WEEKDAYS, MaterialDetail() (+33 more)
 
 ### Community 10 - "package.json"
 Cohesion: 0.05
 Nodes (37): dependencies, lucide-react, next, pdfjs-dist, react, react-dom, tailwindcss, @tailwindcss/postcss (+29 more)
 
 ### Community 11 - "QuixHub — Design Brief"
-Cohesion: 0.14
-Nodes (18): FluxogramaCanvas(), RATING_TONE, toFlowEdge(), toFlowNode(), DisciplineCard(), CardSkeleton(), Discipline, FluxogramaEdge (+10 more)
+Cohesion: 0.18
+Nodes (14): FluxogramaCanvas(), RATING_TONE, toFlowEdge(), toFlowNode(), FluxogramaEdge, FluxogramaNode, FluxogramaState, deriveCatalogEdges() (+6 more)
 
 ### Community 13 - "pdf.worker.min.mjs"
 Cohesion: 0.01
-Nodes (198): 684(), Af, Ai, al, An, Ao, ar, as (+190 more)
+Nodes (190): 684(), addState(), AdobeExtensionLevel, Af, Ai, al, An, Ao (+182 more)
 
 ### Community 14 - "plugins"
 Cohesion: 0.22
 Nodes (8): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema, oxc, typescript, warn
 
 ### Community 15 - "Vision"
-Cohesion: 0.05
-Nodes (28): addChildren(), addState(), Bi, escapePDFName(), generateFont(), getFamilyName(), getFontSubstitution(), getIndexes() (+20 more)
+Cohesion: 0.08
+Nodes (17): addChildren(), computeIDs(), escapePDFName(), getIndexes(), getPdfColorArray(), getQuadPoints(), getRgbColor(), incrementalUpdate() (+9 more)
 
 ### Community 16 - "React + TypeScript + Vite"
-Cohesion: 0.24
-Nodes (14): disciplineStats(), offeringComments(), offeringStats(), submit(), submitSchema, average(), FeedbackInput, getComments() (+6 more)
+Cohesion: 0.22
+Nodes (16): disciplineStats(), disciplineStatsBulk(), offeringComments(), offeringStats(), submit(), submitSchema, average(), FeedbackInput (+8 more)
 
 ### Community 18 - "CLAUDE.md"
 Cohesion: 0.12
@@ -513,23 +503,43 @@ Nodes (16): 1. Auth, 2. Home / Dashboard, 3. Discipline Catalog, 4. Materials, 5
 
 ### Community 22 - "getStringOption"
 Cohesion: 0.02
-Nodes (50): AppearanceFilter, BatchOutput, Bind, Calculate, Certificates, Compress, Connect, CurrencySymbol (+42 more)
+Nodes (48): AppearanceFilter, BatchOutput, Bind, Calculate, Certificates, Compress, Connect, CurrencySymbol (+40 more)
+
+### Community 23 - ".get"
+Cohesion: 0.09
+Nodes (6): getXfaFontDict(), isDict(), objectSize(), PDFDocument, stringToUTF8String(), validateCSSFont()
+
+### Community 25 - "shadow"
+Cohesion: 0.08
+Nodes (3): Catalog, FeatureTest, shadow()
 
 ### Community 26 - ".push"
-Cohesion: 0.07
-Nodes (13): Caption, CheckButton, Corner, Draw, Edge, Field, fixTextIndent(), getMeasurement() (+5 more)
+Cohesion: 0.09
+Nodes (12): Caption, CheckButton, Corner, Draw, Edge, Field, fixTextIndent(), getMeasurement() (+4 more)
 
 ### Community 27 - "Dict"
 Cohesion: 0.10
-Nodes (7): AnnotationFactory, computeIDs(), incrementalUpdate(), StructTreeRoot, updateXFA(), writeString(), XRefWrapper
+Nodes (3): 7657(), AnnotationFactory, NetworkPdfManager
 
 ### Community 28 - ".success"
 Cohesion: 0.06
 Nodes (9): BooleanElement, DateElement, DateTime, Decimal, Float, Integer, Text, Time (+1 more)
 
 ### Community 29 - "calculateSHA512"
-Cohesion: 0.06
-Nodes (21): AES128Cipher, AES256Cipher, ARCFourCipher, calculateMD5(), calculateSHA384(), calculateSHA512(), ch(), CipherTransformFactory (+13 more)
+Cohesion: 0.07
+Nodes (18): AES128Cipher, AES256Cipher, ARCFourCipher, calculateMD5(), calculateSHA384(), calculateSHA512(), ch(), CipherTransformFactory (+10 more)
+
+### Community 30 - ".getRaw"
+Cohesion: 0.10
+Nodes (3): Annotation, lookupNormalRect(), PopupAnnotation
+
+### Community 31 - "MathClamp"
+Cohesion: 0.12
+Nodes (3): CalGrayCS, DeviceCmykCS, LabCS
+
+### Community 32 - "XMLParserBase"
+Cohesion: 0.05
+Nodes (9): DatasetReader, DatasetXMLParser, decodeString(), MetadataParser, parseXFAPath(), SimpleDOMNode, SimpleXMLParser, XFAParser (+1 more)
 
 ### Community 33 - "PsWasmCompiler"
 Cohesion: 0.12
@@ -537,111 +547,123 @@ Nodes (8): encodeASCIIString(), _nodesEqual(), PsJsCompiler, PSStackToTree, PsWa
 
 ### Community 34 - "getInteger"
 Cohesion: 0.04
-Nodes (24): Arc, Break, BreakAfter, BreakBefore, ChoiceList, Comb, config_Area, DayNames (+16 more)
+Nodes (23): Arc, Break, BreakAfter, BreakBefore, Comb, config_Area, DayNames, Equate (+15 more)
 
 ### Community 35 - "getRelevant"
-Cohesion: 0.15
-Nodes (12): Calendar(), DISCIPLINE_DOT, isoDate(), WEEKDAYS, Dialog(), EventChip(), formatDate(), KIND_GRADIENT (+4 more)
+Cohesion: 0.09
+Nodes (7): 5213(), deepCompare(), Dict, getNewAnnotationsMap(), isRefsEqual(), makeArr(), ObjectLoader
 
 ### Community 36 - "PDFEditor"
 Cohesion: 0.08
-Nodes (5): 7642(), 9835(), compileGlyf(), deepCompare(), PDFEditor
+Nodes (10): 7642(), 9835(), compileGlyf(), createImage(), createImageDict(), createPNGLikeImage(), createRawImage(), paethPredictor() (+2 more)
 
 ### Community 37 - "PartialEvaluator"
-Cohesion: 0.06
-Nodes (15): addCachedImageOps(), adjustMapping(), fetchBinaryData(), getTilingPatternIR(), getTransformMatrix(), info(), isDefaultDecodeHelper(), isNumberArray() (+7 more)
+Cohesion: 0.09
+Nodes (8): addCachedImageOps(), CheckedOperatorList, getTilingPatternIR(), isPDFFunction(), lookupMatrix(), OperatorList, PartialEvaluator, textSinkWrapper()
 
 ### Community 38 - ".[wl]"
-Cohesion: 0.13
-Nodes (6): ButtonWidgetAnnotation, ChoiceWidgetAnnotation, collectActions(), getInheritableProperty(), isRefsEqual(), objectSize()
+Cohesion: 0.16
+Nodes (4): ButtonWidgetAnnotation, ChoiceWidgetAnnotation, collectActions(), getInheritableProperty()
 
 ### Community 39 - ".a"
 Cohesion: 0.03
-Nodes (147): 1072(), 1108(), 1148(), 116(), 1181(), 1291(), 1385(), 1625() (+139 more)
+Nodes (146): groupEntriesBySemester(), 1072(), 1108(), 1148(), 116(), 1181(), 1291(), 1385() (+138 more)
 
 ### Community 40 - "ChunkedStream"
 Cohesion: 0.11
 Nodes (3): arrayBuffersToBytes(), ChunkedStream, ChunkedStreamManager
 
 ### Community 42 - ".getBytes"
-Cohesion: 0.25
-Nodes (5): buildPostScriptWasmFunction(), parseDefaultAppearance(), parsePostScriptFunction(), PDFFunction, toNumberArray()
+Cohesion: 0.17
+Nodes (5): buildPostScriptWasmFunction(), CFFFont, parsePostScriptFunction(), PDFFunction, toNumberArray()
 
 ### Community 43 - "Annotation"
+Cohesion: 0.12
+Nodes (5): assert(), compileFontInfo(), DummyShading, TranslatedFont, Util
+
+### Community 44 - "r"
 Cohesion: 0.10
-Nodes (6): B, br, I, layoutText(), P, TextMeasure
+Nodes (4): fa(), Jbig2Stream, JpxImage, JpxStream
 
 ### Community 45 - ".checkAndRepair"
-Cohesion: 0.16
-Nodes (13): createCmapTable(), createNameTable(), createOS2Table(), createPostscriptName(), createPostTable(), DataBuilder, getUnicodeRangeFor(), int16() (+5 more)
+Cohesion: 0.20
+Nodes (8): createCmapTable(), createNameTable(), createOS2Table(), createPostscriptName(), createPostTable(), DataBuilder, getUnicodeRangeFor(), OpenTypeFileBuilder
 
 ### Community 46 - "._getAppearance"
-Cohesion: 0.11
-Nodes (5): AsciiHexStream, FlateStream, PredictorStream, RunLengthStream, StreamsSequenceStream
+Cohesion: 0.14
+Nodes (14): Bi, er, fetchBinaryData(), generateFont(), getFamilyName(), getFontSubstitution(), getStandardFontName(), getXfaFontName() (+6 more)
 
 ### Community 47 - "s"
-Cohesion: 0.25
-Nodes (13): materials, create(), disciplineSchema, getDiscipline(), getDisciplines(), update(), createDiscipline(), DisciplineRow (+5 more)
-
-### Community 48 - ".getOperatorList"
-Cohesion: 0.11
-Nodes (3): getNewAnnotationsMap(), makeArr(), Page
+Cohesion: 0.21
+Nodes (14): feedback, materials, create(), disciplineSchema, getDiscipline(), getDisciplines(), update(), createDiscipline() (+6 more)
 
 ### Community 49 - ".i"
-Cohesion: 0.14
-Nodes (9): InputProps, SelectField(), SelectProps, TextareaField(), TextareaProps, TextField(), ModerationBadge(), UploadDropzone() (+1 more)
+Cohesion: 0.08
+Nodes (21): ATTENDANCE_LABEL, GROUP_WORK_LABEL, OfferingDetail(), Dialog(), FeedbackForm(), SCALES, InputProps, SelectField() (+13 more)
 
 ### Community 50 - ".getArray"
 Cohesion: 0.17
-Nodes (3): createBuiltInCMap(), extendCMap(), IdentityCMap
+Nodes (3): FileSpec, MediaAnnotation, RichMediaAnnotation
 
 ### Community 51 - ".getUint16"
-Cohesion: 0.05
-Nodes (13): AlternateCS, CompositeGlyph, decodeScan(), DeviceRgbaCS, findNextFileMarker(), GlyfTable, Glyph, GlyphHeader (+5 more)
+Cohesion: 0.20
+Nodes (3): CompositeGlyph, GlyfTable, Glyph
 
 ### Community 52 - ".getRgbBuffer"
-Cohesion: 0.05
-Nodes (9): 7657(), buildHuffmanTable(), Color, Commands, Ref, RefSetCache, StateManager, Stipple (+1 more)
+Cohesion: 0.09
+Nodes (7): Commands, compileCharString(), CompiledFont, getSubroutineBias(), lookupCmap(), StateManager, Type2Compiled
+
+### Community 53 - "unreachable"
+Cohesion: 0.12
+Nodes (3): BaseStream, RadialAxialShading, unreachable()
 
 ### Community 54 - "getMeasurement"
 Cohesion: 0.06
 Nodes (8): Area, Border, ContentArea, getContainedChildren(), getRelevant(), PageArea, SubformSet, Value
 
+### Community 55 - ".getByte"
+Cohesion: 0.16
+Nodes (4): CipherTransform, Cmd, Parser, stringToBytes()
+
 ### Community 56 - ".addString"
-Cohesion: 0.06
-Nodes (19): 2360(), 9462(), codePointIter(), createImage(), createImageDict(), ErrorFont, escapeString(), FakeUnicodeFont (+11 more)
+Cohesion: 0.05
+Nodes (20): 2360(), 9462(), B, br, codePointIter(), ErrorFont, escapeString(), FakeUnicodeFont (+12 more)
 
 ### Community 57 - "page.tsx"
-Cohesion: 0.08
-Nodes (36): DraftEntry, emptyDraft(), getGradeStyle(), groupEntriesBySemester(), groupIndexedBySemester(), Ira(), isValidGrade(), SITUACAO_LABEL (+28 more)
+Cohesion: 0.10
+Nodes (30): DraftEntry, emptyDraft(), getGradeStyle(), groupIndexedBySemester(), Ira(), isValidGrade(), SITUACAO_LABEL, sortSemesters() (+22 more)
 
 ### Community 58 - ".constructor"
 Cohesion: 0.15
 Nodes (6): buildMeshVertexData(), FunctionBasedShading, getB(), LZWStream, MeshShading, MeshStreamReader
 
 ### Community 60 - "ButtonWidgetAnnotation"
-Cohesion: 0.07
-Nodes (17): adjustWidths(), amendFallbackToUnicode(), applyStandardFontGlyphMap(), buildToFontChar(), CFFFont, compileFontInfo(), convertCidString(), Font (+9 more)
+Cohesion: 0.14
+Nodes (9): amendFallbackToUnicode(), applyStandardFontGlyphMap(), buildToFontChar(), getUnicodeForGlyph(), IdentityToUnicodeMap, recoverGlyphName(), tr, type1FontGlyphMapping() (+1 more)
 
 ### Community 61 - "ExclGroup"
 Cohesion: 0.10
 Nodes (6): addHTML(), createLine(), ExclGroup, flushHTML(), getAvailableSpace(), Subform
+
+### Community 62 - ".fallbackToSystemFont"
+Cohesion: 0.24
+Nodes (8): buildHuffmanTable(), decodeScan(), findNextFileMarker(), FontRendererFactory, parseCff(), prepareComponents(), readDataBlock(), skipData()
 
 ### Community 63 - ".compile"
 Cohesion: 0.27
 Nodes (11): COOKIE_OPTIONS, login(), loginSchema, register(), registerSchema, signToken(), createUser(), findUserByEmail() (+3 more)
 
 ### Community 64 - "PDFImage"
-Cohesion: 0.10
-Nodes (23): applyAssist(), ariaLabel(), checkDimensions(), computeBbox(), createWrapper(), fixDimensions(), getBorderDims(), handleBreak() (+15 more)
+Cohesion: 0.11
+Nodes (21): applyAssist(), checkDimensions(), computeBbox(), createWrapper(), fixDimensions(), getBorderDims(), handleBreak(), handleOverflow() (+13 more)
 
 ### Community 65 - "Util"
-Cohesion: 0.08
-Nodes (8): assert(), BasePDFStream, convertBlackAndWhiteToRGBA(), convertToRGBA(), ImageResizer, PDFImage, PDFWorkerStreamRangeReader, PDFWorkerStreamReader
+Cohesion: 0.18
+Nodes (4): convertBlackAndWhiteToRGBA(), convertToRGBA(), PDFImage, RunLengthStream
 
 ### Community 67 - ".translateFont"
-Cohesion: 0.22
-Nodes (3): Lexer, stringToUTF8String(), toHexDigit()
+Cohesion: 0.14
+Nodes (7): ariaLabel(), ChoiceList, DateTimeEdit, Image, isRequired(), NumericEdit, TextEdit
 
 ### Community 68 - ".parse"
 Cohesion: 0.06
@@ -652,44 +674,64 @@ Cohesion: 0.20
 Nodes (5): Barcode, getKeyword(), getRatio(), OptionObject, Submit
 
 ### Community 70 - "MessageHandler"
-Cohesion: 0.38
-Nodes (8): IraDistributionChart(), percentileColor(), clampIra(), erf(), normalCdf(), normalPdf(), truncatedNormalCdf(), zScore()
+Cohesion: 0.31
+Nodes (9): IraDistributionChart(), percentileColor(), StatBar(), clampIra(), erf(), normalCdf(), normalPdf(), truncatedNormalCdf() (+1 more)
 
 ### Community 71 - "PDFDocument"
-Cohesion: 0.12
-Nodes (13): 616(), 8745(), 9504(), 9565(), bn, fetchSync(), getUint8ArrayMemory0(), IccColorSpace (+5 more)
+Cohesion: 0.33
+Nodes (5): getUint8ArrayMemory0(), passArray8ToWasm0(), QCMS, Tn, __wbg_get_imports()
+
+### Community 72 - "WorkerTask"
+Cohesion: 0.17
+Nodes (3): BasePDFStream, PDFWorkerStreamRangeReader, PDFWorkerStreamReader
+
+### Community 76 - ".reset"
+Cohesion: 0.09
+Nodes (6): 4576(), BrotliStream, getTransformMatrix(), lookupRect(), na, TimeSlotManager
 
 ### Community 77 - "bytesToString"
-Cohesion: 0.20
+Cohesion: 0.15
 Nodes (5): bytesToString(), findBlock(), getFontFileType(), isTrueTypeCollectionFile(), Type1Font
 
 ### Community 78 - ".parsePrivateDict"
-Cohesion: 0.29
-Nodes (9): db, queryClient, users, makeMaterial(), makeDiscipline(), makeFeedback(), makeUser(), unique() (+1 more)
+Cohesion: 0.32
+Nodes (9): db, queryClient, users, makeDiscipline(), makeFeedback(), makeOffering(), makeUser(), unique() (+1 more)
 
 ### Community 80 - ".extractCidKeyedFontProgram"
-Cohesion: 0.34
-Nodes (4): decrypt(), isHexDigit(), isSpecial(), Type1Parser
-
-### Community 81 - "RefSetCache"
-Cohesion: 0.20
-Nodes (3): CCITTFaxStream, fa(), JpxImage
+Cohesion: 0.17
+Nodes (6): decrypt(), isHexDigit(), isSpecial(), Lexer, toHexDigit(), Type1Parser
 
 ### Community 82 - "aa"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (4): aa(), clearGlobalCaches(), JBig2CCITTFaxImage, WasmImage
 
 ### Community 83 - ".process"
-Cohesion: 0.18
-Nodes (6): addHex(), BinaryCMapReader, BinaryCMapStream, hexToInt(), hexToStr(), incHex()
+Cohesion: 0.10
+Nodes (7): addHex(), BinaryCMapReader, BinaryCMapStream, hexToInt(), hexToStr(), IdentityCMap, incHex()
 
 ### Community 85 - "assert"
 Cohesion: 0.33
 Nodes (5): Constraints carried forward, Core problem, Resolved decisions, Scope, Vision
 
+### Community 86 - "._bindElement"
+Cohesion: 0.08
+Nodes (8): 616(), 8745(), 9504(), 9565(), Binder, createText(), XFAFactory, XFAObjectArray
+
+### Community 89 - "page.tsx"
+Cohesion: 0.24
+Nodes (3): CmykICCBasedCS, fetchSync(), WorkerMessageHandler
+
+### Community 91 - "ImageResizer"
+Cohesion: 0.25
+Nodes (5): a, Button, createValidAbsoluteUrl(), fixURL(), recoverJsURL()
+
 ### Community 92 - "XFAFactory"
-Cohesion: 0.11
-Nodes (18): calendarConfirmations, calendarEvents, calendarEventsRelations, calendarKindEnum, disciplineAccentEnum, disciplines, disciplinesRelations, feedback (+10 more)
+Cohesion: 0.12
+Nodes (16): calendarEventsRelations, calendarKindEnum, disciplineAccentEnum, disciplines, disciplinesRelations, feedbackRelations, materialHelpfulVotes, materialsRelations (+8 more)
+
+### Community 95 - "JpegStream"
+Cohesion: 0.27
+Nodes (4): convertCidString(), Font, ka, qa
 
 ### Community 97 - "XhtmlNamespace"
 Cohesion: 0.10
@@ -700,12 +742,20 @@ Cohesion: 0.27
 Nodes (9): calculate_sha256_ch(), calculate_sha256_littleSigma(), calculate_sha256_littleSigmaPrime(), calculate_sha256_maj(), calculate_sha256_sigma(), calculate_sha256_sigmaPrime(), calculateSHA256(), PDF17 (+1 more)
 
 ### Community 105 - "FlateStream"
-Cohesion: 0.16
-Nodes (4): Ascii85Stream, Cmd, isWhiteSpace(), Parser
+Cohesion: 0.17
+Nodes (3): Ascii85Stream, FlateStream, isWhiteSpace()
 
 ### Community 106 - "Jbig2Stream"
-Cohesion: 0.50
-Nodes (3): a, createValidAbsoluteUrl(), fixURL()
+Cohesion: 0.70
+Nodes (4): parseHistoricoPdf(), reconstructLines(), situacaoFromSituacao(), toNumber()
+
+### Community 108 - ".p"
+Cohesion: 0.18
+Nodes (7): adjustMapping(), CFF, int16(), isWinNameRecord(), signedInt16(), writeSignedInt16(), writeUint32()
+
+### Community 109 - "createValidAbsoluteUrl"
+Cohesion: 0.13
+Nodes (5): AlternateCS, bn, IccColorSpace, IndexedCS, __wbg_finalize_init()
 
 ### Community 117 - ".forEach"
 Cohesion: 0.10
@@ -716,40 +766,40 @@ Cohesion: 0.15
 Nodes (15): openapiDocument, attachUserIfPresent(), Express, Request, requireAdmin(), requireAuth(), TokenPayload, authRouter (+7 more)
 
 ### Community 126 - "StructElementNode"
-Cohesion: 0.17
-Nodes (21): materialHelpfulVotes, buildObjectKey(), ensureUploadDir(), resolveStoragePath(), UPLOAD_DIR, approve(), create(), createMaterialSchema (+13 more)
+Cohesion: 0.18
+Nodes (21): buildObjectKey(), ensureUploadDir(), resolveStoragePath(), UPLOAD_DIR, approve(), create(), createMaterialSchema, downloadMaterial() (+13 more)
 
 ### Community 128 - ".read"
 Cohesion: 0.11
 Nodes (17): compilerOptions, declaration, esModuleInterop, forceConsistentCasingInFileNames, lib, module, moduleResolution, outDir (+9 more)
 
 ### Community 129 - "FontFinder"
-Cohesion: 0.13
-Nodes (9): find(), FontFinder, FontInfo, getCurrentPara(), makeObj(), PageSet, selectFont(), setFontFamily() (+1 more)
+Cohesion: 0.09
+Nodes (10): find(), FontFinder, FontInfo, getCurrentPara(), makeObj(), PageSet, selectFont(), setFontFamily() (+2 more)
 
 ### Community 132 - "RefSet"
-Cohesion: 0.04
-Nodes (17): 7416(), Annotation, _collectJS(), fetchDest(), fetchRemoteDest(), FileSpec, isDict(), isName() (+9 more)
+Cohesion: 0.09
+Nodes (9): 7416(), _collectJS(), fetchRemoteDest(), isName(), NameOrNumberTree, ScreenAnnotation, stringToPDFString(), StructTreePage (+1 more)
 
 ### Community 142 - "Traverse"
-Cohesion: 0.26
-Nodes (11): confirmEvent(), create(), createEventSchema, getEvents(), rangeSchema, createEvent(), listEvents(), NewEvent (+3 more)
+Cohesion: 0.23
+Nodes (12): calendarConfirmations, calendarEvents, confirmEvent(), create(), createEventSchema, getEvents(), rangeSchema, createEvent() (+4 more)
 
 ### Community 144 - "PDFWorkerStream"
-Cohesion: 0.29
-Nodes (13): expectInt(), expectString(), isCmd(), Linearization, parseBfChar(), parseBfRange(), parseCidChar(), parseCidRange() (+5 more)
+Cohesion: 0.18
+Nodes (15): createBuiltInCMap(), expectInt(), expectString(), extendCMap(), isCmd(), Linearization, parseBfChar(), parseBfRange() (+7 more)
 
 ### Community 151 - "XFAParser"
-Cohesion: 0.40
-Nodes (7): getOffering(), listOfferings(), searchOfferings(), getById(), listByDiscipline(), search(), makeOffering()
+Cohesion: 0.46
+Nodes (6): getOffering(), listOfferings(), searchOfferings(), getById(), listByDiscipline(), search()
 
 ### Community 156 - ".unicodeRange"
 Cohesion: 0.18
 Nodes (11): scripts, build, db:generate, db:migrate, dev, seed:admin, seed:disciplines, start (+3 more)
 
-### Community 178 - ".p"
-Cohesion: 0.15
-Nodes (4): DatasetReader, decodeString(), parseXFAPath(), SimpleXMLParser
+### Community 228 - "RefSet"
+Cohesion: 0.08
+Nodes (6): MurmurHash3_64, parseMarkedContentProps(), _parseVisibilityExpression(), RefSet, RefSetCache, StructElementNode
 
 ### Community 237 - "package.json"
 Cohesion: 0.40
@@ -759,32 +809,32 @@ Nodes (4): name, private, type, version
 Cohesion: 0.50
 Nodes (3): Docs, graphify, QuixHub
 
+### Community 253 - "Rename"
+Cohesion: 0.16
+Nodes (6): adjustWidths(), info(), isDefaultDecodeHelper(), normalizeBlendMode(), Rename, warn()
+
 ### Community 259 - "ExcludeNS"
-Cohesion: 0.20
-Nodes (3): encodeToXmlString(), SimpleDOMNode, utf8StringToString()
+Cohesion: 0.08
+Nodes (9): 1689(), 9519(), encodeToXmlString(), MessageHandler, PDFWorkerStream, SimpleGlyph, stringToUTF16HexString(), utf8StringToString() (+1 more)
 
-### Community 262 - "FlipLabel"
+### Community 288 - "createDataNode"
 Cohesion: 0.50
-Nodes (3): compileCharString(), getSubroutineBias(), Type2Compiled
-
-### Community 286 - "createPNGLikeImage"
-Cohesion: 0.50
-Nodes (3): createPNGLikeImage(), createRawImage(), paethPredictor()
+Nodes (3): bl, createDataNode(), parseExpression()
 
 ## Knowledge Gaps
 - **364 isolated node(s):** `docs-sync-reminder.sh script`, `graphify-auto-update.sh script`, `name`, `version`, `private` (+359 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **321 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **296 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ConfigNamespace` connect `ConfigNamespace` to `PartialEvaluator`, `.compileGlyph`, `pdf.worker.min.mjs`, `.get`, `.ps`?**
-  _High betweenness centrality (0.081) - this node is a cross-community bridge._
 - **Why does `Ira()` connect `page.tsx` to `compilerOptions`, `.a`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
+  _High betweenness centrality (0.080) - this node is a cross-community bridge._
+- **Why does `ConfigNamespace` connect `ConfigNamespace` to `graphify-auto-update.sh`, `pdf.worker.min.mjs`, `.getRgbBuffer`, `.ps`, `calculateSHA512`?**
+  _High betweenness centrality (0.071) - this node is a cross-community bridge._
 - **Why does `computeSemesterStats()` connect `page.tsx` to `React + TypeScript + Vite`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `ConfigNamespace` (e.g. with `pdf.worker.min.mjs` and `.[ql]()`) actually correct?**
   _`ConfigNamespace` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `TemplateNamespace` (e.g. with `pdf.worker.min.mjs` and `.[ql]()`) actually correct?**
@@ -792,4 +842,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `docs-sync-reminder.sh script`, `graphify-auto-update.sh script`, `name` to the rest of the system?**
   _364 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Vision` be split into smaller, more focused modules?**
-  _Cohesion score 0.11260504201680673 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09663120567375887 - nodes in this community are weakly interconnected._

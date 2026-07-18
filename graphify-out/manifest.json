@@ -210,13 +210,13 @@
     "semantic_hash": ""
   },
   "frontend/app/(shell)/catalogo/[id]/page.tsx": {
-    "mtime": 1784381099.608855,
-    "ast_hash": "15b4d6cc37abdb584802f9218c613233",
+    "mtime": 1784382367.7303417,
+    "ast_hash": "6c0faf5ba64d8d484603fdcb40035e38",
     "semantic_hash": ""
   },
   "frontend/app/(shell)/catalogo/page.tsx": {
-    "mtime": 1784379316.9786983,
-    "ast_hash": "fa7a7e319d2e5502bbb7d3302b3d0ecf",
+    "mtime": 1784382386.9620342,
+    "ast_hash": "fdf5143408973f11b9de439dbe19858c",
     "semantic_hash": ""
   },
   "frontend/app/(shell)/layout.tsx": {
@@ -500,13 +500,13 @@
     "semantic_hash": ""
   },
   "frontend/app/(shell)/opinioes/[id]/page.tsx": {
-    "mtime": 1784374937.3991368,
-    "ast_hash": "707f46b1167388194d0dec11bdf8bf3a",
+    "mtime": 1784382406.1375914,
+    "ast_hash": "aeff50f3bc1a15a35c1a3f8292afb1c2",
     "semantic_hash": ""
   },
   "frontend/app/(shell)/opinioes/page.tsx": {
-    "mtime": 1784381509.6913617,
-    "ast_hash": "f45404f677e552dc7d0c78084be3b8ce",
+    "mtime": 1784382502.2119405,
+    "ast_hash": "cf2994ee9b53f3f82240b290e03d78ac",
     "semantic_hash": ""
   },
   "frontend/src/components/FeedbackForm.tsx": {
