@@ -14,7 +14,7 @@
 - `src/data/` — `types.ts` + `mock.ts`, the fixture data standing in for the backend until it exists.
 - `src/lib/theme.tsx` — light/dark theme context (persisted to `localStorage`, defaults to OS preference).
 - `src/lib/calendarStore.tsx` — in-memory context for calendar events (add/confirm), since there's no backend yet to persist them.
-- `src/lib/iraStore.tsx` + `src/lib/ira.ts` + `src/lib/iraPdfParser.ts` — IRA calculator: localStorage-persisted context, the grading formula, and the client-only SIGAA PDF parser (dynamic-imported to keep `pdfjs-dist` out of the SSR bundle; its worker is served as a static asset under `public/`).
+- `src/lib/iraStore.tsx` + `src/lib/ira.ts` + `src/lib/iraPdfParser.ts` — IRA calculator: localStorage-persisted context, the grading formula, and the client-only SIGAA PDF parser (dynamic-imported to keep `pdfjs-dist` out of the SSR bundle; its worker is served as a static asset under `public/`). `src/lib/statistics.ts` (generic normal-distribution math) plus `src/data/iraDistribution.ts` (per-course mean/std) back the `IraDistributionChart` component, which plots the student's IRA against their program's assumed grade distribution.
 - `src/lib/fluxogramaStore.tsx` + `src/lib/fluxograma.ts` — fluxograma builder: localStorage-persisted context and the catalog-prerequisite-to-edge derivation (best-effort name matching against `Discipline.prerequisites`, which stores free-text names, not IDs).
 - The discipline-detail feedback section renders both identity-policy variants (discipline-only vs. professor-level) side by side, flagged for the product owner to pick between per the open decision below.
 

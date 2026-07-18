@@ -21,7 +21,7 @@ Navigating university life is chaotic — past exams and summaries vanish into f
 
 ## Open decisions
 
-- **Professor feedback identity policy.** The prior iteration of this project (Academy) explicitly rejected any feature that let students rate or review an identifiable professor, on reputational-abuse and relationship-friction grounds — feedback was discipline-scoped only. QuixHub's "Know Before You Commit" pitch is closer to structured professor/course feedback. This needs a deliberate decision before the reviews module ships (see `quixhub-backend-module` skill, which flags this at write time).
+- **Professor feedback identity policy [RESOLVED].** Feedback is scoped to the specific offering (`discipline` + `professor` + `semester`). To avoid reputational-abuse risks, the feedback form intentionally **omits** subjective ratings of the professor's character or teaching ability (e.g., no "didactic quality" or "overall rating" stars). Instead, it exclusively measures the **structural format** of the course with that professor: exam difficulty, workload, material quality, attendance policies, and group work. This strikes a balance: students get the "Know Before You Commit" value (because exams *do* vary by professor), but professors aren't subjected to Yelp-style personal reviews.
 
 ## Constraints carried forward
 

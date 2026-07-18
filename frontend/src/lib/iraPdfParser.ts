@@ -1,12 +1,12 @@
 import type { IraEntry } from '@/data/types';
 
 export interface ParsedHistorico {
-  entries: Omit<IraEntry, 'id'>[];
+  entries: (Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' })[];
   printedIra?: number;
 }
 
 const ROW_RE =
-  /^(\d{4}\.\d)\s+(?:([#*e&@§])\s+)?([A-Z]{2,5}\d{3,4})\s+([\d.,]+)\s+(\S+)\s+([\d.,]+|--)\s+([\d.,]+|--)\s+(APROVADO|REPROVADO|TRANCAD[OA]|EM ANDAMENTO)/;
+  /^(\d{4}\.\d)\s+(?:([#*e&@§])\s+)?([A-Z]{2,5}\d{3,4})\s+([\d.,]+)\s+(\S+)\s+([\d.,]+|--)\s+([\d.,]+|--)\s+(APROVADO|REPROVADO|TRANCAD[OA]|EM ANDAMENTO|MATRICULAD[OA]|DISPENSAD[OA]|APROVEITAD[OA])/;
 
 const SECTION_START = 'Componentes Curriculares Cursados/Cursando';
 const SECTION_END = 'Componentes Curriculares Obrigatórios Pendentes';
@@ -73,7 +73,7 @@ export async function parseHistoricoPdf(file: File): Promise<ParsedHistorico> {
   }
 
   let printedIra: number | undefined;
-  const entries: Omit<IraEntry, 'id'>[] = [];
+  const entries: (Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' })[] = [];
   let inSection = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -101,7 +101,7 @@ export async function parseHistoricoPdf(file: File): Promise<ParsedHistorico> {
 
     entries.push({
       disciplineName,
-      grade: nota ?? 0,
+      grade: nota ?? '',
       workload,
       situacao: situacaoFromSituacao(situacao, nota),
       source: 'pdf',
