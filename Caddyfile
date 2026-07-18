@@ -1,0 +1,3 @@
+api.quixhub.warley.xyz {
+  reverse_proxy backend:4000
+}
