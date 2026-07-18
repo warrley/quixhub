@@ -10,6 +10,7 @@ import { Button } from '@/components/Button';
 import { StatBar } from '@/components/StatBar';
 import { Tag } from '@/components/Tag';
 import { api } from '@/lib/api';
+import { Skeleton } from '@/components/Skeleton';
 import type { Discipline, DisciplineProfessorStats, FeedbackComment, Offering } from '@/data/types';
 
 const ATTENDANCE_LABEL: Record<string, string> = {
@@ -71,7 +72,18 @@ export default function ProfessorDiscipline() {
   }, [offerings]);
 
   if (!professor || discipline === null) redirect('/opinioes');
-  if (discipline === undefined) return null;
+  if (discipline === undefined) {
+    return (
+      <div>
+        <Skeleton className="h-[120px] rounded-lg my-2 mb-6" />
+        <div className="flex flex-col gap-2.5 max-w-[500px]">
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-4/5" />
+          <Skeleton className="h-3.5 w-3/5" />
+        </div>
+      </div>
+    );
+  }
 
   const sortedOfferings = [...offerings].sort((a, b) => b.semester.localeCompare(a.semester));
   const mostRecent = sortedOfferings[0];

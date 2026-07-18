@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { MaterialCard } from '@/components/MaterialCard';
 import { api } from '@/lib/api';
+import { RowSkeleton, Skeleton } from '@/components/Skeleton';
 import type { Discipline, DisciplineProfessorStats, Material } from '@/data/types';
 
 const ACCENT_GRADIENT: Record<string, string> = {
@@ -51,7 +52,26 @@ export default function DisciplineDetail() {
   }, [params.id]);
 
   if (discipline === null) redirect('/catalogo');
-  if (discipline === undefined) return null;
+
+  if (discipline === undefined) {
+    return (
+      <div>
+        <Skeleton className="h-[150px] rounded-lg my-2 mb-6" />
+        <div className="grid grid-cols-1 gap-8 min-[860px]:grid-cols-[1.4fr_1fr]">
+          <div className="flex flex-col gap-2.5">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-2/3 mt-1" />
+            <Skeleton className="h-3 w-16 mt-1" />
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <Skeleton className="h-11 w-full rounded-md" />
+            <RowSkeleton />
+            <RowSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

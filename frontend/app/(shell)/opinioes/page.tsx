@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/Card';
+import { CardSkeleton } from '@/components/Skeleton';
 import { Tag } from '@/components/Tag';
 import { api } from '@/lib/api';
 import type { DisciplineProfessorStats, OfferingSearchResult } from '@/data/types';
@@ -38,6 +39,7 @@ export default function Opinioes() {
 
   const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<OfferingSearchResult[]>([]);
   const [statsByDiscipline, setStatsByDiscipline] = useState<Record<string, DisciplineProfessorStats[]>>({});
   const [loading, setLoading] = useState(true);
@@ -46,12 +48,17 @@ export default function Opinioes() {
   const professorFilter = searchParams.get('professor');
 
   useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  useEffect(() => {
     setLoading(true);
     api
-      .searchOfferings(query)
+      .searchOfferings(debouncedQuery)
       .then(setResults)
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [debouncedQuery]);
 
   // Groups by discipline, then by professor within it — a professor teaching
   // the same discipline across several semesters is ONE row (the "geral"
@@ -119,6 +126,14 @@ export default function Opinioes() {
         </div>
       </div>
 
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      )}
+
       {!loading && groups.length === 0 && (
         <div className="flex flex-col items-center text-center py-14 gap-3">
           <MessageSquare size={32} className="text-ink-3" />
@@ -127,7 +142,7 @@ export default function Opinioes() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {groups.map((group) => {
+        {!loading && groups.map((group) => {
           const stats = statsByDiscipline[group.disciplineId] ?? [];
           const statsByProfessor = new Map(stats.map((s) => [s.professor, s]));
           return (
