@@ -8,6 +8,12 @@
 ## Backlog — Core (build first)
 
 - **Wire remaining frontend screens to the backend API** — Opiniões and Catálogo detail are wired (see Shipped); Home, Materiais, and Fluxograma still run on `src/data/mock.ts`.
+- **Fix Opiniões professor listing to stop showing an overall rating star** — `opinioes/page.tsx`'s `professorScore()` currently averages materialQuality/examDifficulty/workDifficulty into one number shown next to the professor's name with a star icon, which is the exact "overall rating" pattern `docs/vision.md` → Resolved decisions rules out. Replace with: a small bar per structured topic (material quality, exam difficulty, work difficulty), a short text summary, and the review count — no single aggregated star/number standing in for "how good is this professor." Also sort the discipline cards on `/opinioes` by number of opinions (most-reviewed discipline first), not alphabetically.
+- **Opiniões writing-flow fixes (queued, not yet implemented)**:
+  - Unauthenticated submit: the "faça login" message should make it obvious it's a one-click way in — surface it clearly (and consider showing it proactively before the user fills the form, not only after a failed submit).
+  - Pre-fill `FeedbackForm` with the user's own previous answers for that offering when they already voted (currently upsert-on-resubmit works server-side, but the form always opens blank — no way to see/revise what you last submitted without re-answering from scratch).
+  - Fix `/opinioes/professor/[disciplineId]`'s "Dar minha opinião" always jumping to the most-recent semester's offering — instead, let the student pick any semester (not just ones with an existing offering); if no offering exists yet for that discipline+professor+semester, create it on the spot. This needs a `POST /offerings` (or an upsert inside `submitFeedback`) since today offerings can only be read, never created, from the frontend — that's the reason there's currently no way to leave feedback for a professor/semester combo that hasn't been seeded/imported yet.
+  - Add the ability to delete your own submitted opinion (currently only create/upsert exists — `submitFeedback` has no delete counterpart).
 
 ## Backlog — Later phases
 
