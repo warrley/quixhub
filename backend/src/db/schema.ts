@@ -36,7 +36,6 @@ export const disciplines = pgTable('disciplines', {
   id: text('id').primaryKey(),
   code: text('code').notNull(),
   name: text('name').notNull(),
-  professor: text('professor').notNull(),
   workload: integer('workload').notNull(),
   semester: text('semester').notNull(),
   description: text('description').notNull(),
@@ -45,11 +44,29 @@ export const disciplines = pgTable('disciplines', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// A discipline can run as several offerings across semesters/professors
+// (e.g. "Estrutura de Dados" taught by two different professors in 2026.1).
+// Feedback and materials can optionally scope to one of these.
+export const offerings = pgTable(
+  'offerings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    disciplineId: text('discipline_id')
+      .notNull()
+      .references(() => disciplines.id, { onDelete: 'cascade' }),
+    professor: text('professor').notNull(),
+    semester: text('semester').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('offering_disc_prof_sem').on(t.disciplineId, t.professor, t.semester)],
+);
+
 export const materials = pgTable('materials', {
   id: uuid('id').primaryKey().defaultRandom(),
   disciplineId: text('discipline_id')
     .notNull()
     .references(() => disciplines.id, { onDelete: 'cascade' }),
+  offeringId: uuid('offering_id').references(() => offerings.id, { onDelete: 'set null' }),
   uploaderId: uuid('uploader_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -79,31 +96,30 @@ export const materialHelpfulVotes = pgTable(
   (t) => [primaryKey({ columns: [t.materialId, t.userId] })],
 );
 
-// Structured, anonymous discipline feedback (see docs/vision.md — the
-// professor-identity policy is still undecided, so this stays
-// discipline-scoped only, no professor field). userId is stored only to
-// enforce one submission per student per discipline and is never returned
-// by the API — "anonymous" is an API-surface guarantee.
+// Structured, anonymous feedback scoped to a discipline+professor+semester
+// offering (see docs/vision.md — the professor-identity policy resolution).
+// Deliberately no field judges the professor directly (no "teaching
+// quality"/"rating" of the person) — only workload/logistics signals about
+// the course as taught in that offering. voterHash = sha256(userId +
+// offeringId + FEEDBACK_SALT) so the identity of the voter is irreversible
+// without the server-only salt, and userId itself is never stored.
 export const feedback = pgTable(
   'feedback',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    disciplineId: text('discipline_id')
+    offeringId: uuid('offering_id')
       .notNull()
-      .references(() => disciplines.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    rating: smallint('rating'),
-    workload: text('workload').notNull(),
-    examFormats: text('exam_formats').array().notNull().default([]),
-    groupWork: boolean('group_work'),
-    teachingStyle: text('teaching_style'),
+      .references(() => offerings.id, { onDelete: 'cascade' }),
+    voterHash: text('voter_hash').notNull(),
+    materialQuality: smallint('material_quality'),
+    examDifficulty: smallint('exam_difficulty'),
+    workDifficulty: smallint('work_difficulty'),
     attendance: text('attendance'),
+    groupWork: text('group_work'),
     comment: text('comment'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('feedback_discipline_user_unique').on(t.disciplineId, t.userId)],
+  (t) => [uniqueIndex('feedback_offering_voter_unique').on(t.offeringId, t.voterHash)],
 );
 
 export const calendarEvents = pgTable('calendar_events', {
@@ -139,25 +155,30 @@ export const calendarConfirmations = pgTable(
 
 export const usersRelations = relations(users, ({ many }) => ({
   materials: many(materials),
-  feedback: many(feedback),
   calendarEvents: many(calendarEvents),
 }));
 
 export const disciplinesRelations = relations(disciplines, ({ many }) => ({
+  offerings: many(offerings),
   materials: many(materials),
-  feedback: many(feedback),
   calendarEvents: many(calendarEvents),
+}));
+
+export const offeringsRelations = relations(offerings, ({ one, many }) => ({
+  discipline: one(disciplines, { fields: [offerings.disciplineId], references: [disciplines.id] }),
+  feedback: many(feedback),
+  materials: many(materials),
 }));
 
 export const materialsRelations = relations(materials, ({ one, many }) => ({
   discipline: one(disciplines, { fields: [materials.disciplineId], references: [disciplines.id] }),
+  offering: one(offerings, { fields: [materials.offeringId], references: [offerings.id] }),
   uploader: one(users, { fields: [materials.uploaderId], references: [users.id] }),
   helpfulVotes: many(materialHelpfulVotes),
 }));
 
 export const feedbackRelations = relations(feedback, ({ one }) => ({
-  discipline: one(disciplines, { fields: [feedback.disciplineId], references: [disciplines.id] }),
-  user: one(users, { fields: [feedback.userId], references: [users.id] }),
+  offering: one(offerings, { fields: [feedback.offeringId], references: [offerings.id] }),
 }));
 
 export const calendarEventsRelations = relations(calendarEvents, ({ one, many }) => ({

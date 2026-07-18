@@ -1,4 +1,4 @@
-import type { CalendarEvent, Discipline, FeedbackStat, Material } from './types';
+import type { CalendarEvent, Discipline, Material } from './types';
 
 export const currentUser = {
   name: 'Guilherme Farias',
@@ -11,7 +11,6 @@ export const disciplines: Discipline[] = [
     id: 'estrutura-de-dados',
     code: 'QXD0248',
     name: 'Estrutura de Dados',
-    professor: 'David Sena Oliveira',
     workload: 64,
     semester: '2025.2',
     description: 'Listas, pilhas, filas, árvores, grafos e análise de complexidade de algoritmos.',
@@ -27,7 +26,6 @@ export const disciplines: Discipline[] = [
     id: 'banco-de-dados',
     code: 'QXD0251',
     name: 'Fundamentos de Banco de Dados',
-    professor: 'Francisco Victor da Silva Pinheiro',
     workload: 64,
     semester: '2025.2',
     description: 'Modelagem relacional, SQL, normalização e transações.',
@@ -43,7 +41,6 @@ export const disciplines: Discipline[] = [
     id: 'sistemas-operacionais',
     code: 'QXD0253',
     name: 'Sistemas Operacionais',
-    professor: 'Pedro Henrique Magalhães Botelho',
     workload: 64,
     semester: '2025.2',
     description: 'Processos, threads, escalonamento, memória e sistemas de arquivos.',
@@ -59,7 +56,6 @@ export const disciplines: Discipline[] = [
     id: 'linguagens-de-programacao',
     code: 'QXD0260',
     name: 'Linguagens de Programação',
-    professor: 'Lucas I. Bezerra Freitas',
     workload: 64,
     semester: '2025.2',
     description: 'Paradigmas de programação, semântica formal e implementação de interpretadores.',
@@ -75,7 +71,6 @@ export const disciplines: Discipline[] = [
     id: 'programacao-funcional',
     code: 'QXD0262',
     name: 'Programação Funcional',
-    professor: 'Ricardo Reis Pereira',
     workload: 32,
     semester: '2025.2',
     description: 'Funções puras, imutabilidade, recursão e tipos algébricos com Haskell.',
@@ -91,7 +86,6 @@ export const disciplines: Discipline[] = [
     id: 'requisitos-de-software',
     code: 'QXD0270',
     name: 'Requisitos de Software',
-    professor: 'Rainara Maia Carvalho',
     workload: 64,
     semester: '2025.2',
     description: 'Elicitação, especificação, validação e gestão de requisitos.',
@@ -227,21 +221,6 @@ export const calendarEvents: CalendarEvent[] = [
     linkedMaterialId: 'mat-5',
   },
 ];
-
-export const feedbackStats: Record<string, FeedbackStat[]> = {
-  'sistemas-operacionais': [
-    { label: 'Carga de trabalho', value: 'alta', percent: 72, tone: 'var(--color-warn)' },
-    { label: 'Trabalho em grupo', value: 'frequente', percent: 58, tone: 'var(--color-accent-2)' },
-    { label: 'Uso de slides', value: 'predominante', percent: 80, tone: 'var(--color-accent-3)' },
-    { label: 'Frequência cobrada', value: 'às vezes', percent: 40, tone: 'var(--color-accent)' },
-  ],
-  'estrutura-de-dados': [
-    { label: 'Carga de trabalho', value: 'média', percent: 55, tone: 'var(--color-warn)' },
-    { label: 'Trabalho em grupo', value: 'raro', percent: 22, tone: 'var(--color-accent-2)' },
-    { label: 'Uso de slides', value: 'quadro e slides', percent: 60, tone: 'var(--color-accent-3)' },
-    { label: 'Frequência cobrada', value: 'sempre', percent: 90, tone: 'var(--color-accent)' },
-  ],
-};
 
 export function disciplineById(id: string) {
   return disciplines.find((d) => d.id === id);

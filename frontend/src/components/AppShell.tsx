@@ -1,6 +1,19 @@
 'use client';
 
-import { Bell, Calculator, CalendarDays, FolderOpen, Home, LayoutGrid, Moon, Search, Sun, User, Workflow } from 'lucide-react';
+import {
+  Bell,
+  Calculator,
+  CalendarDays,
+  FolderOpen,
+  Home,
+  LayoutGrid,
+  MessageSquare,
+  Moon,
+  Search,
+  Sun,
+  User,
+  Workflow,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -10,6 +23,7 @@ import { useTheme } from '../lib/theme';
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/catalogo', label: 'Catálogo', icon: LayoutGrid },
+  { to: '/opinioes', label: 'Opiniões', icon: MessageSquare },
   { to: '/materiais', label: 'Materiais', icon: FolderOpen },
   { to: '/calendario', label: 'Calendário', icon: CalendarDays },
   { to: '/ira', label: 'IRA', icon: Calculator },

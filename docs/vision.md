@@ -10,7 +10,7 @@ Navigating university life is chaotic — past exams and summaries vanish into f
 
 **Shipping first (core):**
 1. **Study materials** — upload, discover, and access past exams, summaries, assignments, and code samples, organized by course/discipline.
-2. **Course/professor feedback** — structured, anonymous signal on what a discipline is actually like (workload, exam format, group projects, teaching style). **Policy undecided**: whether feedback can reference a professor by name/identity, or must stay scoped to the discipline only, is an open decision — see "Open decisions" below.
+2. **Course/professor feedback ("Opiniões")** — structured, anonymous signal on what a discipline is like under a specific professor (material quality, exam/workload difficulty, attendance, group work). Feedback is scoped to a discipline+professor+semester **offering**, so it is professor-identified — see "Open decisions" below for why this is safe.
 3. **Collaborative calendar** — shared agenda for exam dates, assignment deadlines, and review sessions across disciplines, with materials linkable to specific events.
 
 **Deferred (later phases):**
@@ -19,9 +19,9 @@ Navigating university life is chaotic — past exams and summaries vanish into f
 - Professor contact directory, prioritized by preferred communication channel (email, Discord, Telegram).
 - Structured forum + virtual study rooms, including scheduling monitorias.
 
-## Open decisions
+## Resolved decisions
 
-- **Professor feedback identity policy.** The prior iteration of this project (Academy) explicitly rejected any feature that let students rate or review an identifiable professor, on reputational-abuse and relationship-friction grounds — feedback was discipline-scoped only. QuixHub's "Know Before You Commit" pitch is closer to structured professor/course feedback. This needs a deliberate decision before the reviews module ships (see `quixhub-backend-module` skill, which flags this at write time).
+- **Professor feedback identity policy (resolved 2026-07-17).** The prior iteration of this project (Academy) rejected identifiable-professor reviews on reputational-abuse and relationship-friction grounds. QuixHub resolves this by scoping feedback to a discipline+professor+semester **offering**, but deliberately excluding any field that judges the professor as a person — no "teaching quality" rating, no free-text-only professor review. The fields are workload/logistics signals about the course as taught (material quality, exam difficulty, work difficulty, attendance, group work) plus an optional comment. Voter identity is hashed (`sha256(userId + offeringId + FEEDBACK_SALT)`, salt server-only) so feedback is anonymous and non-attributable back to a student, mitigating the retaliation-risk half of the original concern; the reputational-abuse half is mitigated by the structured-fields constraint rather than by hiding the professor's name.
 
 ## Constraints carried forward
 

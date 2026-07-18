@@ -26,7 +26,6 @@ export function DisciplineCard({ discipline }: { discipline: Discipline }) {
             <div className="font-heading font-bold text-14-5 text-ink">{discipline.name}</div>
             <div className="font-body font-semibold text-10-5 text-ink-3 whitespace-nowrap">{discipline.code}</div>
           </div>
-          <div className="text-xs text-ink-2">{discipline.professor}</div>
           <div className="flex justify-between items-center">
             <span className="text-11-5 font-semibold text-ink-2 flex items-center gap-5px">
               <BookOpen size={13} />
