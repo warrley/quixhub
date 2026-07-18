@@ -437,13 +437,13 @@ export default function Ira() {
                       </div>
                     ) : (
                       <div key={e.id} className={ENTRY_ROW}>
-                        <span>{e.disciplineName}</span>
-                        <span
-                          className="font-mono font-medium rounded px-1.5 py-0.5 w-fit"
+                        <span 
+                          className="font-medium rounded px-1.5 py-0.5 w-fit -ml-1.5"
                           style={getGradeStyle(e.grade)}
                         >
-                          {e.grade}
+                          {e.disciplineName}
                         </span>
+                        <span>{e.grade}</span>
                         <span>{e.workload}h</span>
                         <span className={BADGE}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
                         <div className="flex gap-1">
