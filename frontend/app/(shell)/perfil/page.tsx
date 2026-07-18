@@ -8,14 +8,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
 import { currentUser, disciplines } from '@/data/mock';
-
-const ACCENT_DOT: Record<string, string> = {
-  accent: 'var(--color-accent)',
-  accent2: 'var(--color-accent-2)',
-  accent3: 'var(--color-accent-3)',
-  accent4: 'var(--color-accent-4)',
-};
+import { ACCENT_VAR } from '@/lib/accent';
+import { clampIra } from '@/lib/statistics';
+import { useIra } from '@/lib/iraStore';
 
 function Switch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -39,6 +36,7 @@ export default function Profile() {
   }
 
   const router = useRouter();
+  const { ira } = useIra();
   const [trackedIds, setTrackedIds] = useState(new Set(disciplines.filter((d) => d.tracked).map((d) => d.id)));
   const [notifs, setNotifs] = useState({ emailDeadlines: true, pushDeadlines: true, weeklyDigest: false });
 
@@ -55,6 +53,17 @@ export default function Profile() {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 mb-8 max-w-[560px]">
+        <Card padding="sm" className="flex flex-col items-center justify-center text-center">
+          <div className="font-heading font-bold text-22 mb-0.5 text-ink">{tracked.length}</div>
+          <div className="text-11-5 text-ink-3 uppercase tracking-wider font-semibold">Turmas acompanhadas</div>
+        </Card>
+        <Card padding="sm" className="flex flex-col items-center justify-center text-center">
+          <div className="font-heading font-bold text-22 mb-0.5 text-ink">{ira ? clampIra(ira).toFixed(2) : '—'}</div>
+          <div className="text-11-5 text-ink-3 uppercase tracking-wider font-semibold">IRA atual</div>
+        </Card>
+      </div>
+
       <div className="mb-8 max-w-[560px]">
         <div className="font-heading font-bold text-14-5 mb-3">Disciplinas acompanhadas</div>
         {tracked.length === 0 && (
@@ -62,25 +71,28 @@ export default function Profile() {
             Nenhuma disciplina acompanhada. <Link href="/catalogo">Explorar catálogo</Link>
           </p>
         )}
-        {tracked.map((d) => (
-          <div key={d.id} className="flex items-center justify-between gap-3 py-3 px-3.5 border border-line rounded-md bg-surface mb-2">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ACCENT_DOT[d.accent] }} />
-            <span className="font-semibold text-13 flex-1">{d.name}</span>
-            <button
-              style={{ all: 'unset', cursor: 'pointer', color: 'var(--color-ink-3)', display: 'flex' }}
-              onClick={() =>
-                setTrackedIds((cur) => {
-                  const next = new Set(cur);
-                  next.delete(d.id);
-                  return next;
-                })
-              }
-              aria-label={`Deixar de acompanhar ${d.name}`}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        ))}
+        <div className="flex flex-col gap-2">
+          {tracked.map((d) => (
+            <Card key={d.id} padding="md" accent={ACCENT_VAR[d.accent]} className="flex items-center justify-between gap-3">
+              <Link href={`/catalogo/${d.id}`} className="font-semibold text-13 flex-1 no-underline text-inherit hover:underline">
+                {d.name}
+              </Link>
+              <button
+                style={{ all: 'unset', cursor: 'pointer', color: 'var(--color-ink-3)', display: 'flex' }}
+                onClick={() =>
+                  setTrackedIds((cur) => {
+                    const next = new Set(cur);
+                    next.delete(d.id);
+                    return next;
+                  })
+                }
+                aria-label={`Deixar de acompanhar ${d.name}`}
+              >
+                <X size={16} />
+              </button>
+            </Card>
+          ))}
+        </div>
       </div>
 
       <div className="mb-8 max-w-[560px]">

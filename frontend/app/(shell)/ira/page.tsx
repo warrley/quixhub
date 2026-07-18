@@ -437,7 +437,7 @@ export default function Ira() {
                       </div>
                     ) : (
                       <div key={e.id} className={ENTRY_ROW}>
-                        <span 
+                        <span
                           className="font-medium rounded px-1.5 py-0.5 w-fit -ml-1.5"
                           style={getGradeStyle(e.grade)}
                         >
