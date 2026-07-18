@@ -2,15 +2,15 @@
 
 import { UnderConstruction } from '@/components/UnderConstruction';
 
-import { AlertTriangle, ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Star } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { MaterialCard } from '@/components/MaterialCard';
-import { StatBar } from '@/components/StatBar';
-import { TagButton } from '@/components/Tag';
-import { disciplineById, feedbackStats, materialsByDiscipline } from '@/data/mock';
+import { api } from '@/lib/api';
+import { materialsByDiscipline } from '@/data/mock';
+import type { Discipline, DisciplineProfessorStats } from '@/data/types';
 
 const ACCENT_GRADIENT: Record<string, string> = {
   accent: 'var(--gradient-cta)',
@@ -19,19 +19,36 @@ const ACCENT_GRADIENT: Record<string, string> = {
   accent4: 'linear-gradient(135deg, var(--color-accent-4), var(--color-accent-2))',
 };
 
+function professorScore(stats: DisciplineProfessorStats['stats']) {
+  const values = [stats.materialQuality, stats.examDifficulty, stats.workDifficulty].filter((v) => v > 0);
+  if (values.length === 0) return 0;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
 export default function DisciplineDetail() {
   if (process.env.NODE_ENV === 'production') {
     return <UnderConstruction />;
   }
 
   const params = useParams<{ id: string }>();
-  const discipline = disciplineById(params.id);
-  const [tracked, setTracked] = useState(discipline?.tracked ?? false);
-  const [variant, setVariant] = useState<'discipline' | 'professor'>('discipline');
+  const [discipline, setDiscipline] = useState<Discipline | null | undefined>(undefined);
+  const [professors, setProfessors] = useState<DisciplineProfessorStats[]>([]);
+  const [tracked, setTracked] = useState(false);
 
-  if (!discipline) redirect('/catalogo');
+  useEffect(() => {
+    api
+      .getDiscipline(params.id)
+      .then(setDiscipline)
+      .catch(() => setDiscipline(null));
+    api
+      .getDisciplineStats(params.id)
+      .then(setProfessors)
+      .catch(() => setProfessors([]));
+  }, [params.id]);
 
-  const stats = feedbackStats[discipline.id] ?? feedbackStats['estrutura-de-dados'];
+  if (discipline === null) redirect('/catalogo');
+  if (discipline === undefined) return null;
+
   const relatedMaterials = materialsByDiscipline(discipline.id);
 
   return (
@@ -59,9 +76,7 @@ export default function DisciplineDetail() {
             {discipline.code} · {discipline.semester}
           </div>
           <h1 className="font-heading font-bold text-2xl mb-1.5">{discipline.name}</h1>
-          <div className="text-13 text-ink-2 mb-4">
-            {discipline.professor} · {discipline.workload}h
-          </div>
+          <div className="text-13 text-ink-2 mb-4">{discipline.workload}h</div>
           <p className="text-13-5 leading-[1.6] text-ink-2 mb-5">{discipline.description}</p>
 
           <div className="font-heading font-bold text-12-5 mb-1.5">Pré-requisitos</div>
@@ -89,39 +104,39 @@ export default function DisciplineDetail() {
 
           <div className="mb-6">
             <div className="flex justify-between items-baseline mb-3">
-              <span className="font-heading font-bold text-12-5">Feedback (agregado)</span>
+              <span className="font-heading font-bold text-12-5">Opiniões por professor</span>
               <span className="text-11 font-semibold text-ink-3">{discipline.responses} respostas</span>
             </div>
 
-            <div className="flex gap-1.5 mb-4">
-              <TagButton tone={variant === 'discipline' ? 'selected' : 'outline'} onClick={() => setVariant('discipline')}>
-                Só disciplina
-              </TagButton>
-              <TagButton tone={variant === 'professor' ? 'selected' : 'outline'} onClick={() => setVariant('professor')}>
-                Com professor
-              </TagButton>
-            </div>
-
-            {variant === 'professor' && (
-              <div className="flex items-center gap-2.5 bg-surface border border-line rounded-md py-3 px-3.5 mb-4">
-                <div>
-                  <div className="font-semibold text-13">{discipline.professor}</div>
-                  <div className="text-11 text-ink-3">Feedback identificado por professor</div>
-                </div>
-              </div>
+            {professors.length === 0 && (
+              <p className="text-13 text-ink-2 mb-4">Nenhuma opinião registrada ainda para esta disciplina.</p>
             )}
 
-            {stats.map((s) => (
-              <StatBar key={s.label} label={s.label} value={s.value} percent={s.percent} tone={s.tone} />
-            ))}
-
-            <div className="flex gap-2 bg-warn-tint border border-[color-mix(in_oklab,var(--color-warn)_40%,transparent)] text-ink-2 rounded-md py-3 px-3.5 text-xs leading-[1.5] mt-4">
-              <AlertTriangle size={15} style={{ flexShrink: 0, color: 'var(--color-warn)' }} />
-              <span>
-                Política de identidade do feedback ainda em aberto — as duas variantes acima (só disciplina vs.
-                com professor) estão aqui para o product owner decidir com mockups reais em mãos.
-              </span>
+            <div className="flex flex-col gap-2 mb-4">
+              {professors.map((p) => (
+                <Link
+                  key={p.professor}
+                  href={`/opinioes?discipline=${discipline.id}&professor=${encodeURIComponent(p.professor)}`}
+                  className="flex items-center justify-between gap-2.5 bg-surface border border-line rounded-md py-3 px-3.5 no-underline text-inherit hover:bg-surface-sunken"
+                >
+                  <div>
+                    <div className="font-semibold text-13">{p.professor}</div>
+                    <div className="text-11 text-ink-3">{p.stats.totalReviews} opiniões · {p.semesters.join(', ')}</div>
+                  </div>
+                  <span className="text-12-5 font-bold flex items-center gap-3px text-accent">
+                    <Star size={13} fill="currentColor" strokeWidth={0} />
+                    {professorScore(p.stats).toFixed(1)}
+                  </span>
+                </Link>
+              ))}
             </div>
+
+            <Link
+              href={`/opinioes?discipline=${discipline.id}`}
+              className="flex items-center gap-1.5 text-13 font-semibold text-accent-dark no-underline"
+            >
+              Ver todas as opiniões <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
       </div>

@@ -21,9 +21,7 @@ export default function Catalog() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return disciplines;
-    return disciplines.filter(
-      (d) => d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q) || d.professor.toLowerCase().includes(q),
-    );
+    return disciplines.filter((d) => d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q));
   }, [query]);
 
   return (

@@ -9,6 +9,7 @@ import { calendarRouter } from "./modules/calendar/calendar.routes.js";
 import { disciplinesRouter } from "./modules/disciplines/disciplines.routes.js";
 import { feedbackRouter } from "./modules/feedback/feedback.routes.js";
 import { materialsRouter } from "./modules/materials/materials.routes.js";
+import { offeringsRouter } from "./modules/offerings/offerings.routes.js";
 import { openapiDocument } from "./docs/openapi.js";
 
 const server = express();
@@ -26,6 +27,7 @@ server.get('/api/docs', (_req, res) => res.json(openapiDocument));
 server.use('/api/auth', authRouter);
 server.use('/api/disciplines', disciplinesRouter);
 server.use('/api/materials', materialsRouter);
+server.use('/api/offerings', offeringsRouter);
 server.use('/api/feedback', feedbackRouter);
 server.use('/api/calendar', calendarRouter);
 

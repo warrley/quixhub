@@ -1,21 +1,21 @@
 import { RequestHandler } from 'express';
 import { z } from 'zod';
-import { getFeedbackStats, submitFeedback } from './feedback.service.js';
+import {
+  getComments,
+  getDisciplineStats,
+  getOfferingStats,
+  submitFeedback,
+} from './feedback.service.js';
 
 const submitSchema = z.object({
-  disciplineId: z.string().min(1),
-  rating: z.number().int().min(1).max(5).optional(),
-  workload: z.string().min(1),
-  examFormats: z.array(z.string()).default([]),
-  groupWork: z.boolean().optional(),
-  teachingStyle: z.string().optional(),
-  attendance: z.string().optional(),
-  comment: z.string().optional(),
+  offeringId: z.string().uuid(),
+  materialQuality: z.number().int().min(1).max(5).optional(),
+  examDifficulty: z.number().int().min(1).max(5).optional(),
+  workDifficulty: z.number().int().min(1).max(5).optional(),
+  attendance: z.enum(['sempre', 'as_vezes', 'nao_cobra']).optional(),
+  groupWork: z.enum(['frequente', 'raro', 'nao_tem']).optional(),
+  comment: z.string().max(2000).optional(),
 });
-
-export const getStats: RequestHandler = async (req, res) => {
-  res.json({ stats: await getFeedbackStats(req.params.disciplineId) });
-};
 
 export const submit: RequestHandler = async (req, res) => {
   const safeData = submitSchema.safeParse(req.body);
@@ -24,8 +24,21 @@ export const submit: RequestHandler = async (req, res) => {
     return;
   }
 
-  // One submission per student per discipline — resubmitting updates it
-  // rather than creating a duplicate (see feedback.service submitFeedback).
-  await submitFeedback({ ...safeData.data, userId: req.user!.id });
+  const { offeringId, ...input } = safeData.data;
+  // One submission per student per offering — resubmitting updates it rather
+  // than creating a duplicate (see feedback.service submitFeedback).
+  await submitFeedback(req.user!.id, offeringId, input);
   res.status(201).json({ ok: true });
+};
+
+export const offeringStats: RequestHandler = async (req, res) => {
+  res.json({ stats: await getOfferingStats(req.params.offeringId) });
+};
+
+export const offeringComments: RequestHandler = async (req, res) => {
+  res.json({ comments: await getComments(req.params.offeringId) });
+};
+
+export const disciplineStats: RequestHandler = async (req, res) => {
+  res.json({ professors: await getDisciplineStats(req.params.disciplineId) });
 };
