@@ -1,7 +1,5 @@
 'use client';
 
-import { UnderConstruction } from '@/components/UnderConstruction';
-
 import { Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { DisciplineCard } from '@/components/DisciplineCard';

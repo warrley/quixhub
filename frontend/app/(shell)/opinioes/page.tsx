@@ -1,11 +1,9 @@
 'use client';
 
-import { UnderConstruction } from '@/components/UnderConstruction';
-
 import { MessageSquare, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/Card';
 import { MiniBars } from '@/components/MiniBars';
 import { CardSkeleton } from '@/components/Skeleton';
@@ -30,7 +28,27 @@ interface DisciplineGroup {
   professors: ProfessorRow[];
 }
 
+function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// useSearchParams() (used below to seed the search box from ?q=) requires a
+// Suspense boundary, or Next.js can't statically prerender this page.
 export default function Opinioes() {
+  return (
+    <Suspense fallback={<SkeletonGrid />}>
+      <OpinioesContent />
+    </Suspense>
+  );
+}
+
+function OpinioesContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(initialQuery);
@@ -136,13 +154,7 @@ export default function Opinioes() {
         </div>
       </div>
 
-      {showSkeleton && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </div>
-      )}
+      {showSkeleton && <SkeletonGrid />}
 
       {!showSkeleton && groups.length === 0 && (
         <div className="flex flex-col items-center text-center py-14 gap-3">

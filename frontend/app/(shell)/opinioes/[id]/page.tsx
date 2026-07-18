@@ -1,7 +1,5 @@
 'use client';
 
-import { UnderConstruction } from '@/components/UnderConstruction';
-
 import { ArrowLeft, Lock, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams } from 'next/navigation';
