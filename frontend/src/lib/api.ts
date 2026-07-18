@@ -10,6 +10,21 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+function flattenError(error: unknown): string {
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const firstField = Object.values(error as Record<string, unknown>)[0];
+    if (Array.isArray(firstField) && typeof firstField[0] === 'string') return firstField[0];
+  }
+  return 'Algo deu errado.';
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -18,9 +33,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
+    throw new ApiError(res.status, body.error ? flattenError(body.error) : `Request failed: ${res.status}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+export interface CurrentUser {
+  id: string;
+  name: string;
+  email: string;
+  course: string | null;
+  role: string;
 }
 
 export interface SubmitFeedbackInput {
@@ -33,6 +57,15 @@ export interface SubmitFeedbackInput {
 }
 
 export const api = {
+  register: (data: { name: string; email: string; password: string; course?: string }) =>
+    request<{ user: CurrentUser }>('/auth/register', { method: 'POST', body: JSON.stringify(data) }).then(
+      (r) => r.user,
+    ),
+  login: (data: { email: string; password: string }) =>
+    request<{ user: CurrentUser }>('/auth/login', { method: 'POST', body: JSON.stringify(data) }).then((r) => r.user),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  me: () => request<{ user: CurrentUser }>('/auth/me').then((r) => r.user),
+
   getDisciplines: () => request<{ disciplines: Discipline[] }>('/disciplines').then((r) => r.disciplines),
   getDiscipline: (id: string) => request<{ discipline: Discipline }>(`/disciplines/${id}`).then((r) => r.discipline),
 
