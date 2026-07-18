@@ -50,7 +50,7 @@ export function UploadDropzone({
         <UploadCloud size={22} />
       </div>
       <div className="font-heading font-bold text-sm text-ink">{fileName ?? 'Arraste um arquivo ou clique para escolher'}</div>
-      <div className="text-xs text-ink-3">PDF, imagem ou ZIP · até 25MB</div>
+      <div className="text-xs text-ink-3">PDF · até 25MB</div>
     </div>
   );
 }

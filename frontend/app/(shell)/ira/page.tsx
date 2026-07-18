@@ -14,7 +14,7 @@ import type { IraEntry } from '@/data/types';
 import { computeIra, computeSemesterStats } from '@/lib/ira';
 import { useIra } from '@/lib/iraStore';
 
-type DraftEntry = Omit<IraEntry, 'id'>;
+type DraftEntry = Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' };
 
 const SITUACAO_LABEL: Record<NonNullable<IraEntry['situacao']>, string> = {
   aprovado: 'Aprovado',
@@ -28,12 +28,12 @@ const SITUACAO_LABEL: Record<NonNullable<IraEntry['situacao']>, string> = {
 // aren't restricted, since real transcripts can list other values).
 const WORKLOAD_OPTIONS = [32, 64, 96];
 
-function isValidGrade(grade: number): boolean {
-  return grade >= 0 && grade <= 10;
+function isValidGrade(grade: number | ''): boolean {
+  return typeof grade === 'number' && grade >= 0 && grade <= 10;
 }
 
 function emptyDraft(): DraftEntry {
-  return { disciplineName: '', grade: 0, workload: 64, situacao: 'aprovado', source: 'manual' };
+  return { disciplineName: '', grade: '', workload: 64, situacao: 'aprovado', source: 'manual' };
 }
 
 function sortSemesters(semesters: string[]): string[] {
@@ -86,7 +86,6 @@ export default function Ira() {
 
   const [comparisonCourse, setComparisonCourse] = useState(currentUser.course);
   const comparisonDist = IRA_DISTRIBUTIONS[comparisonCourse];
-  const comparisonAvailable = comparisonDist && comparisonDist.mean !== null && comparisonDist.std !== null;
 
   const [draft, setDraft] = useState<DraftEntry>(emptyDraft());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -114,11 +113,19 @@ export default function Ira() {
   const [review, setReview] = useState<DraftEntry[] | null>(null);
   const [printedIra, setPrintedIra] = useState<number | undefined>();
 
-  const previewIra = review ? computeIra(review.map((e, i) => ({ ...e, id: `preview-${i}` }))) : null;
+  const previewIra = review
+    ? computeIra(
+        review.map((e, i) => ({
+          ...e,
+          id: `preview-${i}`,
+          grade: typeof e.grade === 'number' ? e.grade : 0,
+        })),
+      )
+    : null;
 
   function handleAddManual() {
     if (!activeSemester || !draft.disciplineName || draft.workload <= 0 || !isValidGrade(draft.grade)) return;
-    addEntry({ ...draft, semester: activeSemester });
+    addEntry({ ...draft, semester: activeSemester, grade: draft.grade as number });
     setDraft(emptyDraft());
   }
 
@@ -152,7 +159,11 @@ export default function Ira() {
 
   function confirmReview() {
     if (!review) return;
-    addEntries(review);
+    if (review.some((e) => !isValidGrade(e.grade))) {
+      show('Preencha ou remova as disciplinas sem nota.');
+      return;
+    }
+    addEntries(review as Omit<IraEntry, 'id'>[]);
     setReview(null);
     setFileName(undefined);
     setPrintedIra(undefined);
@@ -171,29 +182,20 @@ export default function Ira() {
       {ira !== null && (
         <Card className="mb-6" padding="md">
           <CardKicker>Comparativo</CardKicker>
-          <div className="flex items-center justify-between flex-wrap gap-x-4">
+          <div className="flex items-center justify-between flex-wrap gap-x-4 mb-3">
             <CardTitle>Sua posição no curso</CardTitle>
-            <SelectField label="Comparar com" value={comparisonCourse} onChange={(e) => setComparisonCourse(e.target.value)}>
-              {Object.keys(IRA_DISTRIBUTIONS).map((course) => (
-                <option key={course} value={course}>
-                  {course}
-                </option>
-              ))}
-            </SelectField>
           </div>
-          {comparisonAvailable ? (
-            <div className="mt-3">
-              <IraDistributionChart
-                ira={ira}
-                courseName={comparisonCourse}
-                mean={comparisonDist.mean as number}
-                std={comparisonDist.std as number}
-                students={comparisonDist.students}
-              />
-            </div>
-          ) : (
-            <p className="text-13 text-ink-3 mt-2">Ainda não temos dados de distribuição para este curso.</p>
-          )}
+          <div>
+            <IraDistributionChart
+              ira={ira}
+              courseName={comparisonCourse}
+              mean={comparisonDist?.mean ?? null}
+              std={comparisonDist?.std ?? null}
+              students={comparisonDist?.students}
+              courses={Object.keys(IRA_DISTRIBUTIONS)}
+              onCourseChange={setComparisonCourse}
+            />
+          </div>
         </Card>
       )}
 
@@ -275,9 +277,9 @@ export default function Ira() {
             max={10}
             step={0.1}
             disabled={!activeSemester}
-            value={draft.grade || ''}
-            error={draft.grade !== 0 && !isValidGrade(draft.grade) ? 'Nota deve estar entre 0 e 10.' : undefined}
-            onChange={(e) => setDraft((d) => ({ ...d, grade: Number(e.target.value) }))}
+            value={draft.grade}
+            error={draft.grade !== '' && !isValidGrade(draft.grade) ? 'Nota deve estar entre 0 e 10.' : undefined}
+            onChange={(e) => setDraft((d) => ({ ...d, grade: e.target.value === '' ? '' : Number(e.target.value) }))}
           />
           <SelectField
             label="CH"
@@ -373,7 +375,7 @@ export default function Ira() {
                           step={0.1}
                           value={editDraft.grade}
                           error={!isValidGrade(editDraft.grade) ? 'Nota deve estar entre 0 e 10.' : undefined}
-                          onChange={(ev) => setEditDraft((d) => d && { ...d, grade: Number(ev.target.value) })}
+                          onChange={(ev) => setEditDraft((d) => d && { ...d, grade: ev.target.value === '' ? '' : Number(ev.target.value) })}
                         />
                         <SelectField
                           value={editDraft.workload}
@@ -403,7 +405,7 @@ export default function Ira() {
                             size="icon"
                             disabled={!isValidGrade(editDraft.grade)}
                             onClick={() => {
-                              updateEntry(e.id, editDraft);
+                              updateEntry(e.id, { ...editDraft, grade: editDraft.grade as number });
                               setEditingId(null);
                               setEditDraft(null);
                             }}
@@ -470,52 +472,98 @@ export default function Ira() {
 
         {review && review.length > 0 && (
           <>
-            <div className="font-heading font-bold text-sm mb-3 mt-5">
-              Revisar antes de salvar ({review.length} disciplinas · IRA prévio: {previewIra?.toFixed(4) ?? '—'})
-            </div>
-            {printedIra !== undefined && (
-              <div className="text-12-5 text-ink-3 mt-2">
-                Valor impresso no histórico: {printedIra} — o QuixHub calcula o seu de forma independente e permite
-                ajustes.
+            <div className="bg-surface-sunken border border-line rounded-xl p-5 mb-6 shadow-sm">
+              <div className="font-heading font-bold text-16 mb-2">
+                Revisar importação ({review.length} disciplinas)
               </div>
-            )}
-            {groupIndexedBySemester(review).map(([semester, items]) => (
-              <div key={semester}>
-                <div className="font-heading font-bold text-12-5 text-ink-2">{semester === OUTROS ? OUTROS : `Semestre ${semester}`}</div>
-                <div className={TABLE}>
-                  {items.map(({ index: i, entry: e }) => (
-                    <div key={i} className={ENTRY_ROW}>
-                      <TextField
-                        value={e.disciplineName}
-                        onChange={(ev) => updateReviewRow(i, { disciplineName: ev.target.value })}
-                      />
-                      <TextField
-                        type="number"
-                        min={0}
-                        max={10}
-                        step={0.1}
-                        value={e.grade}
-                        onChange={(ev) => updateReviewRow(i, { grade: Number(ev.target.value) })}
-                      />
-                      <TextField
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={e.workload}
-                        onChange={(ev) => updateReviewRow(i, { workload: Number(ev.target.value) })}
-                      />
-                      <span className={BADGE}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
-                      <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  ))}
+              <div className="flex flex-wrap gap-4 text-13 text-ink-3 mb-6 pb-4 border-b border-line">
+                <div>
+                  IRA prévio estimado:{' '}
+                  <b className="text-ink">{previewIra !== null && previewIra !== undefined ? previewIra.toFixed(4) : '—'}</b>
                 </div>
+                {printedIra !== undefined && (
+                  <div>
+                    Valor impresso no PDF:{' '}
+                    <b className="text-ink">{printedIra}</b>
+                  </div>
+                )}
               </div>
-            ))}
-            <Button block onClick={confirmReview} className="mt-3">
-              Confirmar e salvar
-            </Button>
+              {groupIndexedBySemester(review).map(([semester, items]) => (
+                <div key={semester} className="mb-6 last:mb-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="font-heading font-bold text-14 text-ink-2">
+                      {semester === OUTROS ? OUTROS : `Semestre ${semester}`}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger hover:text-danger hover:bg-danger-tint h-7 text-12 px-2.5"
+                      onClick={() => {
+                        const indicesToRemove = new Set(items.map(i => i.index));
+                        setReview(cur => cur?.filter((_, i) => !indicesToRemove.has(i)) ?? cur);
+                      }}
+                    >
+                      Remover semestre
+                    </Button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {items.map(({ index: i, entry: e }) => (
+                      <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-center py-2 px-3 rounded-md bg-surface border border-line text-13 shadow-sm hover:border-line-strong transition-colors">
+                        <TextField
+                          value={e.disciplineName}
+                          onChange={(ev) => updateReviewRow(i, { disciplineName: ev.target.value })}
+                        />
+                        <TextField
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={0.1}
+                          value={e.grade}
+                          error={e.grade === '' ? 'Obrigatório' : (!isValidGrade(e.grade) ? 'Inválido' : undefined)}
+                          onChange={(ev) => {
+                            const val = ev.target.value;
+                            const grade = val === '' ? '' : Number(val);
+                            let situacao = e.situacao;
+                            if (val !== '' && situacao === 'em_andamento') {
+                              situacao = (grade as number) >= 5 ? 'aprovado' : 'reprovado';
+                            }
+                            updateReviewRow(i, { grade, situacao });
+                          }}
+                        />
+                        <SelectField
+                          value={e.workload}
+                          onChange={(ev) => updateReviewRow(i, { workload: Number(ev.target.value) })}
+                        >
+                          {WORKLOAD_OPTIONS.map((h) => (
+                            <option key={h} value={h}>
+                              {h}h
+                            </option>
+                          ))}
+                        </SelectField>
+                        <SelectField
+                          value={e.situacao ?? 'outro'}
+                          onChange={(ev) => updateReviewRow(i, { situacao: ev.target.value as IraEntry['situacao'] })}
+                        >
+                          {Object.entries(SITUACAO_LABEL).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </SelectField>
+                        <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
+                          <Trash2 size={16} className="text-danger opacity-70 hover:opacity-100" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="mt-6 pt-4 border-t border-line flex justify-end">
+                <Button onClick={confirmReview} className="px-8 shadow-md">
+                  Confirmar e salvar
+                </Button>
+              </div>
+            </div>
           </>
         )}
       </div>
