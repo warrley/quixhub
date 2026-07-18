@@ -2,7 +2,6 @@ export interface Discipline {
   id: string;
   code: string;
   name: string;
-  professor: string;
   workload: number;
   semester: string;
   description: string;
@@ -13,6 +12,42 @@ export interface Discipline {
   responses: number;
   tracked: boolean;
   accent: 'accent' | 'accent2' | 'accent3' | 'accent4';
+}
+
+export interface Offering {
+  id: string;
+  disciplineId: string;
+  professor: string;
+  semester: string;
+}
+
+export interface OfferingSearchResult extends Offering {
+  disciplineName: string;
+  disciplineCode: string;
+}
+
+export interface OfferingWithDiscipline extends Offering {
+  discipline: { id: string; name: string; code: string };
+}
+
+export interface OfferingStats {
+  materialQuality: number;
+  examDifficulty: number;
+  workDifficulty: number;
+  attendance: string;
+  groupWork: string;
+  totalReviews: number;
+}
+
+export interface FeedbackComment {
+  comment: string;
+  createdAt: string;
+}
+
+export interface DisciplineProfessorStats {
+  professor: string;
+  stats: OfferingStats;
+  semesters: string[];
 }
 
 export type MaterialType = 'prova' | 'resumo' | 'codigo' | 'trabalho';
@@ -39,13 +74,6 @@ export interface CalendarEvent {
   confirmations: number;
   confirmed: boolean;
   linkedMaterialId?: string;
-}
-
-export interface FeedbackStat {
-  label: string;
-  value: string;
-  percent: number;
-  tone: string;
 }
 
 export interface IraEntry {

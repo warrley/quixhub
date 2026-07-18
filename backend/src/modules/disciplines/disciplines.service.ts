@@ -1,6 +1,6 @@
 import { and, avg, count, eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { disciplines, feedback, materials } from '../../db/schema.js';
+import { disciplines, feedback, materials, offerings } from '../../db/schema.js';
 
 type DisciplineRow = typeof disciplines.$inferSelect;
 type NewDiscipline = typeof disciplines.$inferInsert;
@@ -11,10 +11,14 @@ async function withAggregates(row: DisciplineRow) {
     .from(materials)
     .where(and(eq(materials.disciplineId, row.id), eq(materials.status, 'published')));
 
+  // "rating" aggregates material-quality across every offering (professor +
+  // semester) of this discipline — the discipline-level layer of the 3-layer
+  // aggregation (discipline / professor / semester).
   const [feedbackAgg] = await db
-    .select({ responses: count(), rating: avg(feedback.rating) })
+    .select({ responses: count(), rating: avg(feedback.materialQuality) })
     .from(feedback)
-    .where(eq(feedback.disciplineId, row.id));
+    .innerJoin(offerings, eq(feedback.offeringId, offerings.id))
+    .where(eq(offerings.disciplineId, row.id));
 
   const rating = feedbackAgg?.rating ? Number(feedbackAgg.rating) : 0;
 

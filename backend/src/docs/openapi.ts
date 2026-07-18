@@ -59,15 +59,39 @@ export const openapiDocument = {
       post: { summary: 'Reject a pending material (admin)', security: [{ cookieAuth: [] }], responses: { '200': { description: 'OK' } } },
     },
 
+    '/offerings': {
+      get: {
+        summary: 'List offerings (discipline+professor+semester) for a discipline',
+        parameters: [{ name: 'disciplineId', in: 'query', required: true, schema: { type: 'string' } }],
+        responses: { '200': { description: 'OK' } },
+      },
+    },
+    '/offerings/search': {
+      get: {
+        summary: 'Search offerings by discipline name or professor name (empty q lists everything)',
+        parameters: [{ name: 'q', in: 'query', required: false, schema: { type: 'string' } }],
+        responses: { '200': { description: 'OK' } },
+      },
+    },
+    '/offerings/{id}': {
+      get: { summary: 'Get offering by id', responses: { '200': { description: 'OK' }, '404': { description: 'Not found' } } },
+    },
+
     '/feedback': {
       post: {
-        summary: 'Submit structured, anonymous discipline feedback (one per user per discipline; resubmitting updates it)',
+        summary: 'Submit structured, anonymous feedback for an offering (one per user per offering, voter identity hashed with FEEDBACK_SALT; resubmitting updates it)',
         security: [{ cookieAuth: [] }],
         responses: { '201': { description: 'Created' } },
       },
     },
-    '/feedback/{disciplineId}/stats': {
-      get: { summary: 'Aggregated feedback stats for a discipline', responses: { '200': { description: 'OK' } } },
+    '/feedback/offering/{offeringId}/stats': {
+      get: { summary: 'Aggregated feedback stats for one offering', responses: { '200': { description: 'OK' } } },
+    },
+    '/feedback/offering/{offeringId}/comments': {
+      get: { summary: 'Anonymous comments for one offering', responses: { '200': { description: 'OK' } } },
+    },
+    '/feedback/discipline/{disciplineId}': {
+      get: { summary: 'Feedback stats aggregated by professor across every offering of a discipline', responses: { '200': { description: 'OK' } } },
     },
 
     '/calendar': {

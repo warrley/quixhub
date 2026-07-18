@@ -11,7 +11,6 @@ const disciplineSchema = z.object({
   id: z.string().min(1),
   code: z.string().min(1),
   name: z.string().min(1),
-  professor: z.string().min(1),
   workload: z.number().int().positive(),
   semester: z.string().min(1),
   description: z.string().min(1),

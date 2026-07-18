@@ -1,65 +1,103 @@
-import { eq } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { feedback } from '../../db/schema.js';
+import { feedback, offerings } from '../../db/schema.js';
 
-type NewFeedback = typeof feedback.$inferInsert;
+export interface FeedbackInput {
+  materialQuality?: number;
+  examDifficulty?: number;
+  workDifficulty?: number;
+  attendance?: string;
+  groupWork?: string;
+  comment?: string;
+}
 
-export async function submitFeedback(input: NewFeedback) {
+// Irreversible without FEEDBACK_SALT (server-only secret) — this is the only
+// link between a student and their vote, and it is never stored elsewhere.
+function voterHash(userId: string, offeringId: string) {
+  const salt = process.env.FEEDBACK_SALT;
+  if (!salt) throw new Error('FEEDBACK_SALT is not set');
+  return createHash('sha256').update(`${userId}${offeringId}${salt}`).digest('hex');
+}
+
+export async function submitFeedback(userId: string, offeringId: string, input: FeedbackInput) {
+  const hash = voterHash(userId, offeringId);
   const [row] = await db
     .insert(feedback)
-    .values(input)
+    .values({ offeringId, voterHash: hash, ...input })
     .onConflictDoUpdate({
-      target: [feedback.disciplineId, feedback.userId],
-      set: {
-        rating: input.rating,
-        workload: input.workload,
-        examFormats: input.examFormats,
-        groupWork: input.groupWork,
-        teachingStyle: input.teachingStyle,
-        attendance: input.attendance,
-        comment: input.comment,
-      },
+      target: [feedback.offeringId, feedback.voterHash],
+      set: input,
     })
     .returning();
   return row;
 }
 
-function mode(values: string[]): { value: string; percent: number } | null {
-  if (values.length === 0) return null;
-  const counts = new Map<string, number>();
-  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
-  const [value, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-  return { value, percent: Math.round((n / values.length) * 100) };
+function average(values: (number | null)[]): number | null {
+  const nums = values.filter((v): v is number => v !== null);
+  if (nums.length === 0) return null;
+  return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
 }
 
-// Mirrors frontend/src/data/types.ts FeedbackStat — one row per category,
-// showing the most common answer and what share of respondents gave it.
-export async function getFeedbackStats(disciplineId: string) {
-  const rows = await db.query.feedback.findMany({ where: eq(feedback.disciplineId, disciplineId) });
-  if (rows.length === 0) return [];
+function mode(values: (string | null)[]): string | null {
+  const present = values.filter((v): v is string => v !== null);
+  if (present.length === 0) return null;
+  const counts = new Map<string, number>();
+  for (const v of present) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
 
-  const stats: { label: string; value: string; percent: number; tone: string }[] = [];
+function summarize(rows: (typeof feedback.$inferSelect)[]) {
+  return {
+    materialQuality: average(rows.map((r) => r.materialQuality)) ?? 0,
+    examDifficulty: average(rows.map((r) => r.examDifficulty)) ?? 0,
+    workDifficulty: average(rows.map((r) => r.workDifficulty)) ?? 0,
+    attendance: mode(rows.map((r) => r.attendance)) ?? '',
+    groupWork: mode(rows.map((r) => r.groupWork)) ?? '',
+    totalReviews: rows.length,
+  };
+}
 
-  const workload = mode(rows.map((r) => r.workload));
-  if (workload) stats.push({ label: 'Carga de trabalho', ...workload, tone: 'var(--color-warn)' });
+export async function getOfferingStats(offeringId: string) {
+  const rows = await db.query.feedback.findMany({ where: eq(feedback.offeringId, offeringId) });
+  return summarize(rows);
+}
 
-  const groupWorkRows = rows.filter((r) => r.groupWork !== null);
-  if (groupWorkRows.length > 0) {
-    const yes = groupWorkRows.filter((r) => r.groupWork).length;
-    const percent = Math.round((yes / groupWorkRows.length) * 100);
-    stats.push({
-      label: 'Trabalho em grupo',
-      value: percent >= 50 ? 'frequente' : 'raro',
-      percent: percent >= 50 ? percent : 100 - percent,
-      tone: 'var(--color-accent-2)',
-    });
+export async function getComments(offeringId: string) {
+  const rows = await db.query.feedback.findMany({
+    where: and(eq(feedback.offeringId, offeringId), isNotNull(feedback.comment)),
+    orderBy: (f, { desc }) => desc(f.createdAt),
+  });
+  return rows.map((r) => ({ comment: r.comment as string, createdAt: r.createdAt.toISOString() }));
+}
+
+// Aggregates by professor — every offering of this discipline, across
+// semesters, grouped so the catalog can show "ED com David Sena: 3.8".
+export async function getDisciplineStats(disciplineId: string) {
+  const disciplineOfferings = await db.query.offerings.findMany({
+    where: eq(offerings.disciplineId, disciplineId),
+  });
+
+  const byProfessor = new Map<string, typeof disciplineOfferings>();
+  for (const o of disciplineOfferings) {
+    const list = byProfessor.get(o.professor) ?? [];
+    list.push(o);
+    byProfessor.set(o.professor, list);
   }
 
-  const teachingStyle = mode(rows.map((r) => r.teachingStyle).filter((v): v is string => !!v));
-  if (teachingStyle) stats.push({ label: 'Uso de slides', ...teachingStyle, tone: 'var(--color-accent-3)' });
-
-  const attendance = mode(rows.map((r) => r.attendance).filter((v): v is string => !!v));
-  if (attendance) stats.push({ label: 'Frequência cobrada', ...attendance, tone: 'var(--color-accent)' });
-
-  return stats;
+  const result = [];
+  for (const [professor, profOfferings] of byProfessor) {
+    const rows = (
+      await Promise.all(
+        profOfferings.map((o) => db.query.feedback.findMany({ where: eq(feedback.offeringId, o.id) })),
+      )
+    ).flat();
+    if (rows.length === 0) continue;
+    result.push({
+      professor,
+      stats: summarize(rows),
+      semesters: [...new Set(profOfferings.map((o) => o.semester))],
+    });
+  }
+  return result;
 }

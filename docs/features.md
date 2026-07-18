@@ -2,12 +2,12 @@
 
 ## Shipped
 
-- **Frontend UI for the three core features, against mock data (no backend yet)** — Auth (login/register), Home dashboard, discipline catalog + detail, materials browse/detail/upload + admin moderation queue, structured feedback submission, collaborative calendar, and profile/settings. See `docs/architecture.md` → Frontend structure.
+- **Frontend UI for the three core features, against mock data (no backend yet)** — Auth (login/register), Home dashboard, discipline catalog + detail, materials browse/detail/upload + admin moderation queue, collaborative calendar, and profile/settings. See `docs/architecture.md` → Frontend structure.
+- **Opiniões (course/professor feedback), wired end-to-end** — `/opinioes` (search + browse by discipline/professor) and `/opinioes/[offeringId]` (stats, anonymous comments, submission form), backed by the real API (`offerings` + `feedback` modules). Feedback is scoped to a discipline+professor+semester offering with a cryptographically anonymous voter hash — see `docs/vision.md` → Resolved decisions. Catálogo detail's "Opiniões por professor" section is wired to the same API.
 
 ## Backlog — Core (build first)
 
-- **Wire frontend to the backend API** — the Express/Drizzle/MinIO backend (auth, disciplines, materials, feedback, calendar) is built and verified end-to-end (see `docs/architecture.md` → Data model), but `frontend/` still runs entirely against `src/data/mock.ts`. Remaining work is replacing the mock-data calls with real `fetch`/API-client calls per screen.
-- **Course/professor feedback identity policy** — the feedback backend stays discipline-scoped and anonymous (no professor field) per the still-**open decision** in `docs/vision.md`; the frontend renders both variants side by side until it's resolved.
+- **Wire remaining frontend screens to the backend API** — Opiniões and Catálogo detail are wired (see Shipped); Home, Materiais, and Fluxograma still run on `src/data/mock.ts`.
 
 ## Backlog — Later phases
 
@@ -19,7 +19,7 @@
 
 ## Decisions carried from the prior iteration (Academy)
 
-- **Professor/teacher ratings were previously rejected** — reputational-abuse and relationship-friction risk from publicly rating identifiable staff. QuixHub's course/professor feedback feature needs to explicitly revisit this before shipping (see `docs/vision.md` → Open decisions).
+- **Professor/teacher ratings were previously rejected** — reputational-abuse and relationship-friction risk from publicly rating identifiable staff. Revisited and resolved for QuixHub's Opiniões feature by scoping to structured workload/logistics fields only (no rating of the professor as a person) plus a cryptographic voter-anonymity hash — see `docs/vision.md` → Resolved decisions.
 - **Grade privacy** — grade-related data should stay local-first by default with opt-in sync, not required auth, per the prior privacy model.
 
 ## if the historic not have a grade, it will placeholder
