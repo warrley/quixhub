@@ -38,6 +38,16 @@ npm run dev
 
 The API listens on `http://localhost:4000` (see `/api/health` and `/api/docs`).
 
+## Tests
+
+Backend service-layer tests (Vitest) run against a dedicated `quixhub_test` Postgres database in the same local instance — created and migrated automatically on first run, truncated between tests, never touches your dev data:
+
+```bash
+cd backend
+npm test          # single run
+npm run test:watch
+```
+
 ## Docs
 
 - `docs/vision.md` — product vision, scope, and open decisions
