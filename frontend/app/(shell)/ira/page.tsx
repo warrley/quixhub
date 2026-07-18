@@ -79,15 +79,6 @@ const TABLE = 'flex flex-col gap-2 mt-3';
 const ENTRY_ROW = 'grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-center py-2.5 px-3 rounded-md bg-surface border border-line text-13';
 const BADGE = 'text-11 font-semibold py-0.5 px-2 rounded-full bg-accent-tint text-accent-dark justify-self-start';
 
-function getGradeStyle(grade: number | string | undefined) {
-  if (typeof grade !== 'number' || !Number.isFinite(grade)) return {};
-  const hue = Math.max(0, Math.min(120, (grade / 10) * 120));
-  return {
-    backgroundColor: `hsl(${hue}, 80%, 50%, 0.15)`,
-    color: `hsl(${hue}, 80%, 35%)`,
-  };
-}
-
 export default function Ira() {
   const { state, ira, addEntry, addEntries, updateEntry, removeEntry, removeEntries } = useIra();
   const { show } = useToast();
@@ -437,12 +428,7 @@ export default function Ira() {
                       </div>
                     ) : (
                       <div key={e.id} className={ENTRY_ROW}>
-                        <span
-                          className="font-medium rounded px-1.5 py-0.5 w-fit -ml-1.5"
-                          style={getGradeStyle(e.grade)}
-                        >
-                          {e.disciplineName}
-                        </span>
+                        <span className="font-medium">{e.disciplineName}</span>
                         <span>{e.grade}</span>
                         <span>{e.workload}h</span>
                         <span className={BADGE}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
