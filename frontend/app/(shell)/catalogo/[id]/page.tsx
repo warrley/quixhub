@@ -22,10 +22,6 @@ const ACCENT_GRADIENT: Record<string, string> = {
 };
 
 export default function DisciplineDetail() {
-  if (process.env.NODE_ENV === 'production') {
-    return <UnderConstruction />;
-  }
-
   const params = useParams<{ id: string }>();
   const [discipline, setDiscipline] = useState<Discipline | null | undefined>(undefined);
   const [professors, setProfessors] = useState<DisciplineProfessorStats[]>([]);

@@ -10,10 +10,6 @@ import { api } from '@/lib/api';
 import type { Discipline } from '@/data/types';
 
 export default function Catalog() {
-  if (process.env.NODE_ENV === 'production') {
-    return <UnderConstruction />;
-  }
-
   const [query, setQuery] = useState('');
   const [disciplines, setDisciplines] = useState<Discipline[] | null>(null);
 

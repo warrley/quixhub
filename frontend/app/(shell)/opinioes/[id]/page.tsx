@@ -28,10 +28,6 @@ const GROUP_WORK_LABEL: Record<string, string> = {
 };
 
 export default function OfferingDetail() {
-  if (process.env.NODE_ENV === 'production') {
-    return <UnderConstruction />;
-  }
-
   const params = useParams<{ id: string }>();
   const [offering, setOffering] = useState<OfferingWithDiscipline | null | undefined>(undefined);
   const [stats, setStats] = useState<OfferingStats | null>(null);

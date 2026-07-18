@@ -31,10 +31,6 @@ interface DisciplineGroup {
 }
 
 export default function Opinioes() {
-  if (process.env.NODE_ENV === 'production') {
-    return <UnderConstruction />;
-  }
-
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(initialQuery);
