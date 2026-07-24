@@ -218,7 +218,7 @@ export function IraDistributionChart({
 
             <div className="mt-2">
               <StatBar
-                label="Percentil no curso"
+                label="Alunos que você supera"
                 value={`${percentile.toFixed(2)}%`}
                 percent={Math.min(100, Math.max(0, percentile))}
                 tone="var(--color-accent-3)"
@@ -312,7 +312,7 @@ export function IraDistributionChart({
 
         {rank !== null && (
           <p className="text-13 text-ink">
-            <b>{rank}º</b> <span className="text-ink-3">de {students} alunos · posição estimada ({IRA_DATA_UPDATED_AT})</span>
+            <b>{rank}º</b> <span className="text-ink-3">de {students} alunos · posição estimada - {IRA_DATA_UPDATED_AT}</span>
           </p>
         )}
       </div>

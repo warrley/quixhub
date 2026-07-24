@@ -17,4 +17,4 @@ export const IRA_DISTRIBUTIONS: Record<string, { mean: number | null; std: numbe
 };
 
 // Data da extração dos alunos ativos via planilha da graduação
-export const IRA_DATA_UPDATED_AT = '23/07/2025';
+export const IRA_DATA_UPDATED_AT = '2025.2';
