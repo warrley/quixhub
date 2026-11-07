@@ -214,11 +214,13 @@ export default function Ira() {
       show('Corrija as notas destacadas ou remova essas disciplinas.');
       return;
     }
+    const previousPdfIds = state.entries.filter((e) => e.source === 'pdf').map((e) => e.id);
+    if (previousPdfIds.length > 0) removeEntries(previousPdfIds);
     addEntries(review.map(toEntry));
     setReview(null);
     setFileName(undefined);
     setPrintedIra(undefined);
-    show('Histórico importado com sucesso!');
+    show(previousPdfIds.length > 0 ? 'Histórico atualizado com sucesso!' : 'Histórico importado com sucesso!');
   }
 
   return (
