@@ -15,6 +15,8 @@ Bem-vindo ao QuixHub! Leia primeiro `README.md` (como rodar), `docs/vision.md` (
 
 ## Tarefa 1 — Gráfico de IRA com dados reais (histograma) em vez da curva normal
 
+Issue #2 · branch: `feat/ira-real-distribution-chart`
+
 **Hoje:** `frontend/src/components/IraDistributionChart.tsx` desenha uma curva normal teórica usando só `mean` e `std` de `frontend/src/data/iraDistribution.ts`, e calcula percentil/posição pela CDF normal (`src/lib/statistics.ts`).
 
 **Objetivo:** usar as notas reais dos alunos do campus (ativos e formados) para mostrar a distribuição de verdade: barras (histograma) + uma silhueta suave por cima. Não será uma curva perfeita, mas deve lembrar uma normal.
@@ -36,6 +38,8 @@ Bem-vindo ao QuixHub! Leia primeiro `README.md` (como rodar), `docs/vision.md` (
 ---
 
 ## Tarefa 2 — Lógica de situação (aprovado / reprovado / trancado / em andamento) na calculadora de IRA
+
+Issue #3 · branch: `feat/ira-grade-status-sync`
 
 **Arquivo:** `frontend/app/(shell)/ira/page.tsx`. A situação existe em 3 fluxos: adição manual, edição inline e revisão da importação do PDF.
 
@@ -65,6 +69,8 @@ Bem-vindo ao QuixHub! Leia primeiro `README.md` (como rodar), `docs/vision.md` (
 
 ## Tarefa 3 — Povoar o banco com semestres anteriores do SIGAA
 
+Issue #4 · branch: `feat/sigaa-past-semesters-seed`
+
 **Objetivo:** ter `disciplines` e `offerings` de 2025.2, 2025.1 etc., hoje só existe 2026.1 (`backend/src/db/data/sigaa-2026-1.json`).
 
 **Passos**
@@ -86,6 +92,21 @@ Bem-vindo ao QuixHub! Leia primeiro `README.md` (como rodar), `docs/vision.md` (
 5. Fazer `seed-disciplines.ts` ler todos os `sigaa-*.json` (hoje lê só o de 2026.1). Como usa `onConflictDoNothing`, é seguro reexecutar.
 
 **Atenção:** em `disciplines`, `semester` é uma coluna única por disciplina. Disciplina que já existe de 2026.1 mantém esse valor (o insert ignora a repetida). Confirmar se isso é aceitável ou se precisa de ajuste.
+
+---
+
+## Tarefa 4 — Ranking de IRA na tela `/ira`
+
+Issue #5 · branch: `feat/ira-ranking`
+
+Seção em `/ira` (`frontend/app/(shell)/ira/page.tsx`, abaixo do comparativo) com o ranking de IRA. A Home fica para depois (feita pelo Warley), então o componente deve receber o IRA por prop e ser reutilizável:
+
+- Escopo: **Global** (todo o campus) ou **Por curso**.
+- Toggle "Apenas alunos ativos" (ligado) × todos (desligado).
+- Mostra até **5 posições** e, em seguida, a linha do próprio aluno com a posição real, ex.: `40º Você — 9.6`.
+- Sem IRA calculado: sem linha "Você", com mensagem orientando a adicionar disciplinas ou importar o histórico.
+- Usa os dados reais da Tarefa 1: combinar o formato dos dados com quem fizer a Tarefa 1 antes de começar.
+- Só posição e nota, sem nomes. Decidir se as notas exatas do top 5 podem ser públicas (ver a issue).
 
 ---
 
