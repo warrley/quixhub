@@ -1,20 +1,22 @@
 'use client';
 
-import { GraduationCap, Hourglass, TrendingUp } from 'lucide-react';
-import { useMemo } from 'react';
+import { BarChart3, GraduationCap, TrendingUp } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
+import { Segmented } from '@/components/Segmented';
+import type { IraEntry } from '@/data/types';
+import { computeDisciplineImpacts, computeSemesterImpacts } from '@/lib/ira';
 import {
   MIN_GROUP_SIZE,
-  graduationForecast,
   iraByStage,
   kde,
   semestersAttended,
   summarize,
 } from '@/lib/iraCampus';
-import { CAMPUS_GRADUATION, CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, groupIras } from '@/lib/iraCampusData';
+import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, groupIras } from '@/lib/iraCampusData';
 import { clampIra } from '@/lib/statistics';
 import { EmptyChart } from './chartKit';
-import { fmt, linePath, plural } from './chartFormat';
+import { fmt, linePath } from './chartFormat';
 
 const W = 280;
 const H = 135;
@@ -239,67 +241,77 @@ function StageTimelineCard({
   );
 }
 
-// ── 3. Graduation time forecast ─────────────────────────────────────────
+// ── 3. Marginal impact (Disciplines & Semesters) ────────────────────────
 
-function GraduationForecastCard({ ira, course }: { ira: number; course: string | null }) {
-  const displayIra = clampIra(ira);
-  const table = CAMPUS_GRADUATION[course ?? 'Campus'];
-  const forecast = useMemo(() => graduationForecast(table, displayIra, 0.5), [table, displayIra]);
-  const maxCount = forecast ? Math.max(...forecast.counts.map(([, c]) => c)) : 1;
+function ImpactCard({ entries }: { entries: IraEntry[] }) {
+  const [by, setBy] = useState<'disciplinas' | 'semestres'>('disciplinas');
+
+  const items = useMemo(
+    () => (by === 'disciplinas' ? computeDisciplineImpacts(entries) : computeSemesterImpacts(entries)),
+    [by, entries],
+  );
+
+  const positives = items.filter((i) => i.delta > 0).slice(0, 3);
+  const negatives = items.filter((i) => i.delta < 0).slice(0, 3);
+  const shown = [...positives, ...negatives].sort((a, b) => b.delta - a.delta);
+  const maxAbs = Math.max(0.0001, ...shown.map((i) => Math.abs(i.delta)));
 
   return (
     <Card padding="md" className="flex flex-col">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <CardKicker>Previsão empírica</CardKicker>
-          <CardTitle>Tempo até a formatura</CardTitle>
+          <CardKicker>Impacto marginal</CardKicker>
+          <CardTitle>O que mais puxou seu IRA</CardTitle>
         </div>
-        <Hourglass size={18} className="text-accent-2-dark shrink-0 mt-1" aria-hidden />
+        <BarChart3 size={18} className="text-accent-3 shrink-0 mt-1" aria-hidden />
       </div>
 
-      {forecast ? (
-        <>
-          <div className="rounded-md px-3.5 py-2.5 mb-3 flex items-baseline justify-between gap-2" style={{ background: 'var(--color-accent-2-tint)' }}>
-            <div>
-              <span className="font-heading font-extrabold text-22 text-accent-2-dark tabular-nums">
-                {Number.isInteger(forecast.median) ? forecast.median : fmt(forecast.median, 1)} semestres
-              </span>
-              <span className="text-11-5 text-ink-2 ml-1.5">(mediana)</span>
-            </div>
-            <span className="text-11 text-ink-2 tabular-nums">
-              típico: {fmt(forecast.q1, 0)}–{fmt(forecast.q3, 0)}
-            </span>
-          </div>
+      <div className="mb-3">
+        <Segmented<'disciplinas' | 'semestres'>
+          size="sm"
+          ariaLabel="Agrupar impacto por"
+          value={by}
+          onChange={setBy}
+          options={[
+            { value: 'disciplinas', label: 'Disciplinas' },
+            { value: 'semestres', label: 'Semestres' },
+          ]}
+        />
+      </div>
 
-          <p className="text-12 text-ink-3 mb-2.5">
-            Entre {plural(forecast.n, 'formado', 'formados')} de {course ?? 'todo o campus'} com IRA entre{' '}
-            <b className="text-ink">{fmt(forecast.from, 1)}</b> e <b className="text-ink">{fmt(forecast.to, 1)}</b>:
-          </p>
-
-          <div className="flex flex-col gap-1 flex-1 justify-center">
-            {forecast.counts.slice(0, 7).map(([semesters, count]) => {
-              const isMedian = Math.round(forecast.median) === semesters;
-              return (
-                <div key={semesters} className="grid grid-cols-[54px_1fr_28px] items-center gap-2 text-11">
-                  <span className={isMedian ? 'font-heading font-bold text-ink' : 'text-ink-3'}>{semesters} sem.</span>
-                  <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${(count / maxCount) * 100}%`,
-                        background: isMedian ? 'var(--color-accent-2-dark)' : 'var(--color-accent)',
-                        opacity: isMedian ? 1 : 0.65,
-                      }}
-                    />
-                  </div>
-                  <span className="text-right text-ink-2 tabular-nums">{count}</span>
+      {shown.length > 0 ? (
+        <div className="flex flex-col gap-2 flex-1 justify-center">
+          {shown.map((item) => {
+            const positive = item.delta >= 0;
+            const widthPct = Math.max(6, (Math.abs(item.delta) / maxAbs) * 100);
+            return (
+              <div key={item.id} className="flex flex-col gap-0.5">
+                <div className="flex items-baseline justify-between gap-2 text-11-5">
+                  <span className="font-medium text-ink truncate" title={`${item.label} (${item.sublabel})`}>
+                    {item.label}
+                  </span>
+                  <span className={`font-heading font-bold tabular-nums shrink-0 ${positive ? 'text-good' : 'text-danger'}`}>
+                    {positive ? '+' : ''}
+                    {fmt(item.delta, 4)}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        </>
+                <div className="h-1.5 rounded-full bg-surface-sunken overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${widthPct}%`,
+                      background: positive ? 'var(--color-good)' : 'var(--color-danger)',
+                      opacity: item.simulated ? 0.6 : 0.85,
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-10-5 text-ink-3 mt-1">Quanto seu IRA subiria ou cairia sem cada item.</p>
+        </div>
       ) : (
-        <EmptyChart>Poucos formados nessa faixa de IRA para estimar o tempo de formatura.</EmptyChart>
+        <EmptyChart>Adicione pelo menos 2 disciplinas com nota para ver o impacto de cada uma.</EmptyChart>
       )}
     </Card>
   );
@@ -307,10 +319,12 @@ function GraduationForecastCard({ ira, course }: { ira: number; course: string |
 
 export function IraInsightsGrid({
   ira,
+  entries,
   course,
   ingresso,
 }: {
   ira: number;
+  entries: IraEntry[];
   course: string | null;
   ingresso: string | null;
 }) {
@@ -318,7 +332,7 @@ export function IraInsightsGrid({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <SurvivalCard ira={ira} course={course} />
       <StageTimelineCard ira={ira} course={course} ingresso={ingresso} />
-      <GraduationForecastCard ira={ira} course={course} />
+      <ImpactCard entries={entries} />
     </div>
   );
 }

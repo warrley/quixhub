@@ -226,6 +226,7 @@ export interface RankingRow {
   /** Competition ranking: ties share the better position (1, 2, 2, 4…). */
   position: number;
   ira: number;
+  ingresso?: string;
   isYou: boolean;
 }
 
@@ -248,33 +249,60 @@ export interface Ranking {
  * ranked as one more student: the export is anonymous, so there's no way
  * to tell which row (if any) is you.
  */
-export function buildRanking(others: number[], myIra: number, size = 5): Ranking {
-  const desc = [...others].sort((a, b) => b - a);
+export function buildRanking(
+  others: (number | { ira: number; ingresso?: string })[],
+  myIra: number,
+  size = 5,
+  myIngresso?: string | null,
+): Ranking {
+  const normalized = others.map((o) => (typeof o === 'number' ? { ira: o } : o));
+  const desc = [...normalized].sort((a, b) => b.ira - a.ira);
   // How many others sit strictly above x (desc is sorted, so stop early).
   const above = (x: number) => {
     let n = 0;
-    while (n < desc.length && desc[n] > x) n++;
+    while (n < desc.length && desc[n].ira > x) n++;
     return n;
   };
 
-  const you: RankingRow = { position: above(myIra) + 1, ira: myIra, isYou: true };
+  const you: RankingRow = {
+    position: above(myIra) + 1,
+    ira: myIra,
+    ingresso: myIngresso ?? undefined,
+    isYou: true,
+  };
   const youInTop = you.position <= size;
 
   let rows: RankingRow[];
   if (youInTop) {
     // You go before anyone you tie with — same position, listed first.
-    const merged = [...desc.slice(0, you.position - 1), myIra, ...desc.slice(you.position - 1)];
-    rows = merged.slice(0, size).map((ira, i) =>
-      i === you.position - 1 ? you : { position: above(ira) + (myIra > ira ? 1 : 0) + 1, ira, isYou: false },
+    const merged = [
+      ...desc.slice(0, you.position - 1),
+      { ira: myIra, ingresso: myIngresso ?? undefined },
+      ...desc.slice(you.position - 1),
+    ];
+    rows = merged.slice(0, size).map((item, i) =>
+      i === you.position - 1
+        ? you
+        : {
+            position: above(item.ira) + (myIra > item.ira ? 1 : 0) + 1,
+            ira: item.ira,
+            ingresso: item.ingresso,
+            isYou: false,
+          },
     );
   } else {
-    rows = desc.slice(0, size).map((ira) => ({ position: above(ira) + 1, ira, isYou: false }));
+    rows = desc.slice(0, size).map((item) => ({
+      position: above(item.ira) + 1,
+      ira: item.ira,
+      ingresso: item.ingresso,
+      isYou: false,
+    }));
   }
 
   let nextStep: Ranking['nextStep'];
   if (you.position > 1) {
     let next = Number.POSITIVE_INFINITY;
-    for (const v of desc) if (v > myIra && v < next) next = v;
+    for (const v of desc) if (v.ira > myIra && v.ira < next) next = v.ira;
     if (Number.isFinite(next)) nextStep = { ira: next, places: you.position - (above(next) + 1) };
   }
 
@@ -283,7 +311,7 @@ export function buildRanking(others: number[], myIra: number, size = 5): Ranking
     you,
     total: desc.length + 1,
     youInTop,
-    podiumIra: youInTop || desc.length < size ? undefined : desc[size - 1],
+    podiumIra: youInTop || desc.length < size ? undefined : desc[size - 1].ira,
     nextStep,
   };
 }

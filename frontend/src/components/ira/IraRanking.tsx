@@ -59,7 +59,17 @@ function PositionBadge({ position, isYou }: { position: number; isYou: boolean }
   );
 }
 
-function Row({ row, max, displayName }: { row: RankingRow; max: number; displayName?: string | null }) {
+function Row({
+  row,
+  max,
+  displayName,
+  isEstimate,
+}: {
+  row: RankingRow;
+  max: number;
+  displayName?: string | null;
+  isEstimate?: boolean;
+}) {
   const label = row.isYou
     ? displayName
       ? displayName
@@ -68,17 +78,32 @@ function Row({ row, max, displayName }: { row: RankingRow; max: number; displayN
 
   return (
     <li
-      className={`flex items-center gap-3 h-11 px-2.5 rounded-md border ${
+      className={`flex items-center gap-2.5 h-11 px-2.5 rounded-md border ${
         row.isYou ? 'border-accent bg-accent-tint shadow-sm' : 'border-transparent'
       }`}
     >
       <PositionBadge position={row.position} isYou={row.isYou} />
-      <span
-        className={`text-13 w-[112px] shrink-0 truncate ${row.isYou ? 'font-heading font-bold text-accent-dark' : 'text-ink-2'}`}
-        title={label}
-      >
-        {label}
-      </span>
+      <div className="flex items-center gap-1.5 min-w-0 w-[132px] shrink-0">
+        <span
+          className={`text-13 truncate ${row.isYou ? 'font-heading font-bold text-accent-dark' : 'text-ink-2'}`}
+          title={label}
+        >
+          {label}
+        </span>
+        {row.ingresso && (
+          <span
+            className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface-sunken text-ink-3 shrink-0 tabular-nums"
+            title={`Ingresso em ${row.ingresso}`}
+          >
+            {row.ingresso}
+          </span>
+        )}
+        {row.isYou && isEstimate && (
+          <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0">
+            prev.
+          </span>
+        )}
+      </div>
       <span className="flex-1 h-1.5 rounded-full bg-surface-sunken overflow-hidden" aria-hidden>
         <span
           className="block h-full rounded-full [transition:width_0.4s_ease]"
@@ -107,6 +132,8 @@ export function IraRanking({
   onFilterChange,
   claimedStudent = null,
   displayName = null,
+  isEstimate = false,
+  officialIra = null,
 }: {
   ira: number;
   /** The user's own course, already mapped onto the export's names. */
@@ -118,13 +145,18 @@ export function IraRanking({
   onFilterChange: (filter: RankingFilter) => void;
   claimedStudent?: CampusStudent | null;
   displayName?: string | null;
+  isEstimate?: boolean;
+  officialIra?: number | null;
 }) {
   const myIra = clampIra(ira);
   const me = useMemo(() => ({ course: myCourse, ingresso }), [myCourse, ingresso]);
   const blocker = rankingFilterBlocker(filter, me);
   const pool = useMemo(() => excludeClaimedStudent(CAMPUS_STUDENTS, claimedStudent), [claimedStudent]);
   const group = useMemo(() => filterForRanking(pool, filter, me), [pool, filter, me]);
-  const ranking = useMemo(() => buildRanking(group.map((s) => s.ira), myIra, PODIUM_SIZE), [group, myIra]);
+  const ranking = useMemo(
+    () => buildRanking(group.map((s) => ({ ira: s.ira, ingresso: s.ingresso })), myIra, PODIUM_SIZE, ingresso),
+    [group, myIra, ingresso],
+  );
   const tooSmall = !blocker && group.length < MIN_GROUP_SIZE;
   const max = Math.max(10, ...ranking.rows.map((r) => r.ira));
 
@@ -224,7 +256,7 @@ export function IraRanking({
         <>
           <ol className="flex flex-col gap-0.5" aria-label={`Top ${PODIUM_SIZE}`}>
             {ranking.rows.map((row, i) => (
-              <Row key={i} row={row} max={max} displayName={displayName} />
+              <Row key={i} row={row} max={max} displayName={displayName} isEstimate={isEstimate} />
             ))}
           </ol>
 
@@ -241,11 +273,19 @@ export function IraRanking({
               >
                 <PositionBadge position={ranking.you.position} isYou />
                 <div className="flex-1 min-w-0">
-                  <div className="font-heading font-bold text-14-5 text-accent-dark leading-tight truncate">
-                    {displayName ? displayName : 'Você'}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-heading font-bold text-14-5 text-accent-dark leading-tight truncate">
+                      {displayName ? displayName : 'Você'}
+                    </span>
+                    {isEstimate && (
+                      <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0">
+                        Previsão
+                      </span>
+                    )}
                   </div>
                   <div className="text-11 text-ink-2">
                     {ordinal(ranking.you.position)} de {ranking.total.toLocaleString('pt-BR')}
+                    {isEstimate && officialIra !== null && ` · oficial: ${fmt(clampIra(officialIra), 4)}`}
                   </div>
                 </div>
                 <span className="font-heading font-extrabold text-21 tabular-nums text-accent-dark">{fmt(myIra, 4)}</span>

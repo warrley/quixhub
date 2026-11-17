@@ -42,6 +42,7 @@ export function QuickAddDisciplineForm({
   const [grade, setGrade] = useState<number | ''>('');
   const [workload, setWorkload] = useState(64);
   const [situacao, setSituacao] = useState<Situacao>(() => situacaoFromGrade(''));
+  const [simulated, setSimulated] = useState(false);
 
   const error = gradeSituacaoError(grade, situacao);
   const canAdd = Boolean(disciplineName.trim() && workload > 0 && error === null);
@@ -74,6 +75,7 @@ export function QuickAddDisciplineForm({
       workload,
       situacao,
       source: 'manual',
+      ...(simulated ? { simulated: true } : {}),
       semester,
     });
     setDisciplineName('');
@@ -163,7 +165,18 @@ export function QuickAddDisciplineForm({
         </Button>
       </div>
 
-      {error && <p className="text-11-5 font-semibold text-danger">{error}</p>}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <label className="inline-flex items-center gap-1.5 text-11-5 text-ink-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={simulated}
+            onChange={(e) => setSimulated(e.target.checked)}
+            className="accent-[var(--color-accent-2-dark)] w-3.5 h-3.5 cursor-pointer"
+          />
+          <span>Marcar como previsão (não altera seu IRA oficial)</span>
+        </label>
+        {error && <p className="text-11-5 font-semibold text-danger">{error}</p>}
+      </div>
     </form>
   );
 }

@@ -1,13 +1,13 @@
 'use client';
 
-import { Check, ChevronDown, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, ChevronUp, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { useToast } from '@/components/Toast';
-import { IraCourseRidgeline } from '@/components/ira/IraCourseRidgeline';
+import { IraEvolutionChart } from '@/components/ira/IraEvolutionChart';
 import { IraIdentityMatch } from '@/components/ira/IraIdentityMatch';
 import { IraInsightsGrid } from '@/components/ira/IraInsightsGrid';
 import { IraPrivacyModal } from '@/components/ira/IraPrivacyModal';
@@ -159,6 +159,7 @@ export default function Ira() {
   const [showNameInRanking, setShowNameInRanking] = useState(false);
 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showStats, setShowStats] = useState(true);
 
   useEffect(() => {
     try {
@@ -171,10 +172,24 @@ export default function Ira() {
       if (!localStorage.getItem('quixhub-ira-privacy-ack')) {
         setShowPrivacyModal(true);
       }
+      const statsPref = localStorage.getItem('quixhub-ira-show-stats');
+      if (statsPref === '0') setShowStats(false);
     } catch {
       // ignore invalid stored state
     }
   }, []);
+
+  function toggleStats() {
+    setShowStats((cur) => {
+      const next = !cur;
+      try {
+        localStorage.setItem('quixhub-ira-show-stats', next ? '1' : '0');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
 
   function acceptPrivacy() {
     setShowPrivacyModal(false);
@@ -238,8 +253,15 @@ export default function Ira() {
     ]);
   }, [simActive, state.entries, simGrade, simWorkload]);
 
+  const hasSimulated = useMemo(() => state.entries.some((e) => e.simulated), [state.entries]);
+  const officialIra = useMemo(
+    () => (hasSimulated ? computeIra(state.entries.filter((e) => !e.simulated)) : ira),
+    [hasSimulated, state.entries, ira],
+  );
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftEntry | null>(null);
+  const [editingWasInProgress, setEditingWasInProgress] = useState(false);
 
   const [knownSemesters, setKnownSemesters] = useState<string[]>([]);
   const [openAddSemester, setOpenAddSemester] = useState<string | null>(null);
@@ -346,48 +368,9 @@ export default function Ira() {
 
       {ira !== null && (
         <>
-          <Card className="mb-6" padding="md">
-            <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-              <div>
-                <CardKicker>Comparativo</CardKicker>
-                <CardTitle>Sua posição no curso</CardTitle>
-              </div>
-              <Segmented<StatusGroup>
-                size="sm"
-                ariaLabel="Grupo de comparação"
-                value={statusGroup}
-                onChange={setStatusGroup}
-                options={[
-                  { value: 'ativos', label: 'Ativos' },
-                  { value: 'todos', label: 'Todos' },
-                ]}
-              />
-            </div>
-
-            <IraRealDistributionChart
-              ira={ira}
-              ghostIra={simulatedIra}
-              course={comparisonCourse}
-              group={statusGroup}
-              onCourseChange={setComparisonCourse}
-            />
-            <IraWhatIfSimulator
-              entries={state.entries}
-              currentIra={ira}
-              course={comparisonCourse}
-              group={statusGroup}
-              active={simActive}
-              grade={simGrade}
-              workload={simWorkload}
-              onToggle={setSimActive}
-              onGradeChange={setSimGrade}
-              onWorkloadChange={setSimWorkload}
-            />
-          </Card>
-
           <IraIdentityMatch
             entries={state.entries}
-            ira={ira}
+            ira={officialIra ?? ira}
             myCourse={myCourse}
             inferredIngresso={inferredIngresso}
             userName={currentUser.name}
@@ -400,27 +383,87 @@ export default function Ira() {
             onToggleShowName={(next) => updateIdentity(claimedStudent, next)}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <IraRanking
-              ira={ira}
-              myCourse={myCourse}
-              ingresso={ingresso}
-              ingressoOptions={ingressoOptions}
-              onIngressoChange={setManualIngresso}
-              filter={rankingFilter}
-              onFilterChange={setRankingFilter}
-              claimedStudent={claimedStudent}
-              displayName={showNameInRanking ? currentUser.name : null}
-            />
-            <IraCourseRidgeline
-              ira={ira}
-              selectedCourse={comparisonCourse}
-              group={statusGroup}
-              onSelectCourse={setComparisonCourse}
-            />
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-heading font-bold text-13 text-ink-2">Estatísticas, ranking e evolução</span>
+              {hasSimulated && (
+                <span className="text-11 font-heading font-semibold px-2.5 py-0.5 rounded-full bg-accent-2-tint text-accent-2-dark">
+                  Estimativa com notas previstas{officialIra !== null ? ` · IRA oficial: ${officialIra.toFixed(4)}` : ''}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={toggleStats}
+              className="inline-flex items-center gap-1.5 text-12 font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+            >
+              <BarChart3 size={14} aria-hidden />
+              {showStats ? 'Ocultar estatísticas' : 'Mostrar estatísticas'}
+              {showStats ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
+            </button>
           </div>
 
-          <IraInsightsGrid ira={ira} course={comparisonCourse} ingresso={ingresso} />
+          {showStats && (
+            <>
+              <Card className="mb-6" padding="md">
+                <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+                  <div>
+                    <CardKicker>Comparativo</CardKicker>
+                    <CardTitle>Sua posição no curso</CardTitle>
+                  </div>
+                  <Segmented<StatusGroup>
+                    size="sm"
+                    ariaLabel="Grupo de comparação"
+                    value={statusGroup}
+                    onChange={setStatusGroup}
+                    options={[
+                      { value: 'ativos', label: 'Ativos' },
+                      { value: 'todos', label: 'Todos' },
+                    ]}
+                  />
+                </div>
+
+                <IraRealDistributionChart
+                  ira={ira}
+                  ghostIra={simulatedIra}
+                  course={comparisonCourse}
+                  group={statusGroup}
+                  onCourseChange={setComparisonCourse}
+                />
+                <IraWhatIfSimulator
+                  entries={state.entries}
+                  currentIra={ira}
+                  course={comparisonCourse}
+                  group={statusGroup}
+                  active={simActive}
+                  grade={simGrade}
+                  workload={simWorkload}
+                  onToggle={setSimActive}
+                  onGradeChange={setSimGrade}
+                  onWorkloadChange={setSimWorkload}
+                />
+              </Card>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <IraRanking
+                  ira={ira}
+                  myCourse={myCourse}
+                  ingresso={ingresso}
+                  ingressoOptions={ingressoOptions}
+                  onIngressoChange={setManualIngresso}
+                  filter={rankingFilter}
+                  onFilterChange={setRankingFilter}
+                  claimedStudent={claimedStudent}
+                  displayName={showNameInRanking ? currentUser.name : null}
+                  isEstimate={hasSimulated}
+                  officialIra={officialIra}
+                />
+                <IraEvolutionChart entries={state.entries} />
+              </div>
+
+              <IraInsightsGrid ira={ira} entries={state.entries} course={comparisonCourse} ingresso={ingresso} />
+            </>
+          )}
         </>
       )}
 
@@ -695,7 +738,13 @@ export default function Ira() {
                                 value={editDraft.grade}
                                 onChange={(ev) => {
                                   const patch = gradeChange(ev.target.value);
-                                  setEditDraft((d) => d && { ...d, ...patch });
+                                  setEditDraft((d) =>
+                                    d && {
+                                      ...d,
+                                      ...patch,
+                                      ...(editingWasInProgress && patch.grade !== '' ? { simulated: true } : {}),
+                                    },
+                                  );
                                 }}
                                 className={`${COMPACT_CTRL} tabular-nums ${editError ? 'border-danger focus-visible:border-danger' : ''}`}
                               />
@@ -734,14 +783,35 @@ export default function Ira() {
                               </div>
                             </label>
                           </div>
-                          {editError && <p className="text-11 font-semibold text-danger">{editError}</p>}
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="inline-flex items-center gap-1.5 text-11 text-ink-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(editDraft.simulated)}
+                                onChange={(ev) => setEditDraft((d) => d && { ...d, simulated: ev.target.checked })}
+                                className="accent-[var(--color-accent-2-dark)] w-3.5 h-3.5 cursor-pointer"
+                              />
+                              <span>Previsão (não altera o IRA oficial)</span>
+                            </label>
+                            {editError && <p className="text-11 font-semibold text-danger">{editError}</p>}
+                          </div>
                         </div>
                       );
                     })() : (
                       <div key={e.id} className={ENTRY_ROW}>
-                        <span className="font-medium truncate" title={e.disciplineName}>
-                          {e.disciplineName}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium truncate" title={e.disciplineName}>
+                            {e.disciplineName}
+                          </span>
+                          {e.simulated && (
+                            <span
+                              className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0"
+                              title="Nota prevista — não entra no IRA oficial"
+                            >
+                              Previsão
+                            </span>
+                          )}
+                        </div>
                         {requiresGrade(e.situacao) ? (
                           <span className="tabular-nums font-medium">{e.grade}</span>
                         ) : (
@@ -757,12 +827,14 @@ export default function Ira() {
                             size="icon"
                             onClick={() => {
                               setEditingId(e.id);
+                              setEditingWasInProgress(e.situacao === 'em_andamento');
                               setEditDraft({
                                 disciplineName: e.disciplineName,
                                 grade: requiresGrade(e.situacao) ? e.grade : '',
                                 workload: e.workload,
                                 situacao: e.situacao,
                                 source: e.source,
+                                simulated: e.simulated,
                                 semester: e.semester,
                               });
                             }}

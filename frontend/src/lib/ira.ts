@@ -149,3 +149,93 @@ export function resolveDisciplineId(name: string): string | undefined {
   const target = normalize(name);
   return disciplines.find((d) => normalize(d.name) === target)?.id;
 }
+
+export interface EvolutionPoint {
+  semester: string;
+  cumulativeIra: number;
+  semesterAverage: number | null;
+  simulated: boolean;
+}
+
+/**
+ * Cumulative IRA after each chronological semester plus that semester's own
+ * grade average — drives the personal evolution chart.
+ */
+export function computeEvolution(entries: IraEntry[]): EvolutionPoint[] {
+  const semesters = chronologicalSemesters(entries);
+  const stats = new Map(computeSemesterStats(entries).map((s) => [s.semester, s]));
+  const points: EvolutionPoint[] = [];
+
+  for (let i = 0; i < semesters.length; i++) {
+    const sem = semesters[i];
+    const upTo = entries.filter((e) => e.semester && e.semester.localeCompare(sem) <= 0);
+    const cumulativeIra = computeIra(upTo);
+    if (cumulativeIra === null) continue;
+    const inSem = entries.filter((e) => e.semester === sem && e.situacao !== 'em_andamento');
+    if (inSem.length === 0) continue;
+    points.push({
+      semester: sem,
+      cumulativeIra,
+      semesterAverage: stats.get(sem)?.average ?? null,
+      simulated: inSem.some((e) => e.simulated),
+    });
+  }
+  return points;
+}
+
+export interface IraImpactItem {
+  id: string;
+  label: string;
+  sublabel: string;
+  /** How much removing this item would *drop* your IRA (positive = helped,
+   * negative = pulled down). */
+  delta: number;
+  simulated: boolean;
+}
+
+/** Exact marginal IRA impact (`IRA(all) − IRA(without e)`) of every
+ * graded or trancado discipline, sorted largest absolute impact first. */
+export function computeDisciplineImpacts(entries: IraEntry[]): IraImpactItem[] {
+  const base = computeIra(entries);
+  if (base === null) return [];
+  const items: IraImpactItem[] = [];
+  for (const e of entries) {
+    if (e.situacao === 'em_andamento') continue;
+    const without = computeIra(entries.filter((x) => x.id !== e.id));
+    if (without === null) continue;
+    const delta = Number((base - without).toFixed(4));
+    if (delta === 0) continue;
+    items.push({
+      id: e.id,
+      label: e.disciplineName,
+      sublabel: e.situacao === 'trancado' ? `${e.semester ?? ''} · Trancado`.trim() : `${e.semester ?? ''} · Nota ${e.grade}`.trim(),
+      delta,
+      simulated: Boolean(e.simulated),
+    });
+  }
+  return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+}
+
+/** Exact marginal IRA impact of each semester. */
+export function computeSemesterImpacts(entries: IraEntry[]): IraImpactItem[] {
+  const base = computeIra(entries);
+  if (base === null) return [];
+  const semesters = chronologicalSemesters(entries);
+  const items: IraImpactItem[] = [];
+  for (const sem of semesters) {
+    const inSem = entries.filter((e) => e.semester === sem && e.situacao !== 'em_andamento');
+    if (inSem.length === 0) continue;
+    const without = computeIra(entries.filter((e) => e.semester !== sem));
+    if (without === null) continue;
+    const delta = Number((base - without).toFixed(4));
+    if (delta === 0) continue;
+    items.push({
+      id: sem,
+      label: `Semestre ${sem}`,
+      sublabel: `${inSem.length} ${inSem.length === 1 ? 'disciplina' : 'disciplinas'}`,
+      delta,
+      simulated: inSem.some((e) => e.simulated),
+    });
+  }
+  return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+}

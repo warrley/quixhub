@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { IraEntry } from '@/data/types';
-import { computeIra, gradeSituacaoError, MIN_PASSING_GRADE, requiresGrade, situacaoFromGrade } from './ira';
+import {
+  computeDisciplineImpacts,
+  computeEvolution,
+  computeIra,
+  computeSemesterImpacts,
+  gradeSituacaoError,
+  MIN_PASSING_GRADE,
+  requiresGrade,
+  situacaoFromGrade,
+} from './ira';
 
 function entry(patch: Partial<IraEntry>): IraEntry {
   return { id: 'x', disciplineName: 'X', grade: 0, workload: 64, situacao: 'aprovado', source: 'manual', ...patch };
@@ -104,5 +113,31 @@ describe('computeIra', () => {
     const entries = [entry({ semester: '2024.1', grade: 9 }), entry({ semester: '2024.2', grade: 3 })];
     const relabeled = entries.map((e) => ({ ...e, situacao: situacaoFromGrade(e.grade) }));
     assert.equal(computeIra(entries), computeIra(relabeled));
+  });
+});
+
+describe('computeEvolution / impacts', () => {
+  const transcript = [
+    entry({ id: 'a', semester: '2024.1', grade: 8, workload: 64 }),
+    entry({ id: 'b', semester: '2024.2', grade: 10, workload: 64 }),
+    entry({ id: 'c', semester: '2024.2', grade: 4, workload: 64, situacao: 'reprovado' }),
+  ];
+
+  it('tracks cumulative IRA and semester averages chronologically', () => {
+    const evo = computeEvolution(transcript);
+    assert.equal(evo.length, 2);
+    assert.equal(evo[0].semester, '2024.1');
+    assert.equal(evo[0].cumulativeIra, 8);
+    assert.equal(evo[1].semester, '2024.2');
+    assert.equal(evo[1].semesterAverage, 7);
+    assert.equal(evo[1].cumulativeIra, 7.2);
+  });
+
+  it('computes positive and negative marginal discipline impacts', () => {
+    const impacts = computeDisciplineImpacts(transcript);
+    const byId = Object.fromEntries(impacts.map((i) => [i.id, i.delta]));
+    assert.ok(byId.b > 0);
+    assert.ok(byId.c < 0);
+    assert.equal(computeSemesterImpacts(transcript).length, 2);
   });
 });
