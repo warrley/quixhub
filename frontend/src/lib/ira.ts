@@ -105,6 +105,38 @@ export function computeSemesterStats(entries: IraEntry[]): SemesterStat[] {
   });
 }
 
+export type Situacao = NonNullable<IraEntry['situacao']>;
+
+/** Final grades below this are always a failure — never "aprovado". */
+export const MIN_PASSING_GRADE = 4;
+
+/**
+ * The single grade → situação rule shared by every IRA entry flow (manual
+ * add, inline edit, PDF import review): no grade yet → em andamento, below
+ * MIN_PASSING_GRADE → reprovado, otherwise aprovado. Callers re-derive the
+ * situação with this whenever the grade changes; the user can still pick
+ * "reprovado" afterwards for a passing grade (e.g. reprovado por falta).
+ */
+export function situacaoFromGrade(grade: number | ''): Situacao {
+  if (grade === '') return 'em_andamento';
+  return grade < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado';
+}
+
+/** Trancado / em andamento have no final grade — computeIra never reads
+ * their `grade`, so they can be saved without one. */
+export function requiresGrade(situacao: Situacao | undefined): boolean {
+  return situacao !== 'trancado' && situacao !== 'em_andamento';
+}
+
+/** Why a (grade, situação) pair can't be saved, or null when it can. */
+export function gradeSituacaoError(grade: number | '', situacao: Situacao | undefined): string | null {
+  if (!requiresGrade(situacao)) return null;
+  if (grade === '') return 'Informe a nota';
+  if (!Number.isFinite(grade) || grade < 0 || grade > 10) return 'Nota entre 0 e 10';
+  if (grade < MIN_PASSING_GRADE && situacao !== 'reprovado') return `Nota < ${MIN_PASSING_GRADE} é reprovação`;
+  return null;
+}
+
 const DIACRITICS = /[̀-ͯ]/g;
 
 function normalize(s: string) {
