@@ -1,20 +1,49 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import 'dotenv/config';
 import { db } from './client.js';
 import { disciplines, offerings } from './schema.js';
 
-// Real SIGAA 2026.1 catalog (104 disciplines, 134 offerings), cleaned from
-// the raw SIGAA export by hand — see backend/src/db/data/sigaa-2026-1.json.
-const dataPath = new URL('./data/sigaa-2026-1.json', import.meta.url);
-const { disciplines: CATALOG, offerings: OFFERINGS } = JSON.parse(await readFile(dataPath, 'utf-8'));
+type Catalog = {
+  disciplines: (typeof disciplines.$inferInsert)[];
+  offerings: (typeof offerings.$inferInsert)[];
+};
 
-await db.insert(disciplines).values(CATALOG).onConflictDoNothing({ target: disciplines.id });
-console.log(`Seeded ${CATALOG.length} disciplines (existing rows left untouched).`);
+// Real SIGAA catalog, one file per semester (data/sigaa-AAAA-S.json), each
+// extracted from the "Consulta Geral de Turmas" export and reviewed by hand.
+// Files are read newest-first: `disciplines.semester` is a single column and
+// the insert keeps whichever row it sees first for an id, so on a fresh
+// database it records the most recent semester the discipline was offered.
+const dataDir = new URL('./data/', import.meta.url);
+const files = (await readdir(dataDir))
+  .filter((f) => /^sigaa-\d{4}-\d\.json$/.test(f))
+  .sort()
+  .reverse();
+const catalogs: Catalog[] = await Promise.all(
+  files.map(async (f) => JSON.parse(await readFile(new URL(f, dataDir), 'utf-8'))),
+);
 
-await db
+const catalog = new Map<string, Catalog['disciplines'][number]>();
+for (const c of catalogs) for (const d of c.disciplines) if (!catalog.has(d.id)) catalog.set(d.id, d);
+const allOfferings = catalogs.flatMap((c) => c.offerings);
+
+console.log(`Reading ${files.join(', ')}`);
+
+const insertedDisciplines = await db
+  .insert(disciplines)
+  .values([...catalog.values()])
+  .onConflictDoNothing({ target: disciplines.id })
+  .returning({ id: disciplines.id });
+console.log(
+  `Disciplines: ${insertedDisciplines.length} inserted, ${catalog.size - insertedDisciplines.length} already existed.`,
+);
+
+const insertedOfferings = await db
   .insert(offerings)
-  .values(OFFERINGS)
-  .onConflictDoNothing({ target: [offerings.disciplineId, offerings.professor, offerings.semester] });
-console.log(`Seeded ${OFFERINGS.length} offerings (existing rows left untouched).`);
+  .values(allOfferings)
+  .onConflictDoNothing({ target: [offerings.disciplineId, offerings.professor, offerings.semester] })
+  .returning({ id: offerings.id });
+console.log(
+  `Offerings: ${insertedOfferings.length} inserted, ${allOfferings.length - insertedOfferings.length} already existed.`,
+);
 
 process.exit(0);
