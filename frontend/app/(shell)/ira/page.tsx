@@ -191,17 +191,25 @@ export default function Ira() {
     localStorage.setItem('quixhub-ira-identity', JSON.stringify({ claimed, showName }));
   }
 
-  const ingresso = manualIngresso ?? claimedStudent?.ingresso ?? inferredIngresso;
+  const rawIngresso = manualIngresso ?? claimedStudent?.ingresso ?? inferredIngresso;
+  const ingresso =
+    rawIngresso && rawIngresso !== '2007.2' && rawIngresso.endsWith('.2')
+      ? rawIngresso.replace(/\.2$/, '.1')
+      : rawIngresso;
 
   const ingressoOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const s of CAMPUS_STUDENTS) set.add(s.ingresso);
+    for (const s of CAMPUS_STUDENTS) {
+      if (s.ingresso.endsWith('.1') || s.ingresso === '2007.2') set.add(s.ingresso);
+    }
     return [...set].sort((a, b) => b.localeCompare(a));
   }, []);
 
   const [rankingFilter, setRankingFilter] = useState<RankingFilter>({
     scope: myCourse ? 'curso' : 'campus',
     cohort: 'ativos',
+    fromIngresso: '2023.1',
+    toIngresso: '2026.1',
   });
 
   const [simActive, setSimActive] = useState(false);
@@ -351,7 +359,6 @@ export default function Ira() {
                 onChange={setStatusGroup}
                 options={[
                   { value: 'ativos', label: 'Ativos' },
-                  { value: 'formados', label: 'Formados' },
                   { value: 'todos', label: 'Todos' },
                 ]}
               />

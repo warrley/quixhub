@@ -29,9 +29,10 @@ const COHORT_OPTIONS: { value: RankingCohort; label: string; title: string }[] =
   { value: 'turma', label: 'Minha turma', title: 'Ativos que entraram no mesmo semestre que você' },
   {
     value: 'turmaAoFim',
-    label: 'Minha turma → formatura',
-    title: 'Ativos da sua turma e de todas as turmas mais adiantadas, até quem está se formando (sem calouros atrás de você)',
+    label: 'Da minha turma em diante',
+    title: 'Ativos da sua turma e de turmas anteriores (veteranos até a formatura, sem calouros)',
   },
+  { value: 'periodo', label: 'Por período', title: 'Ativos que ingressaram dentro de um intervalo de semestres' },
   { value: 'todos', label: 'Todos', title: 'Ativos, formados e trancados' },
 ];
 
@@ -158,21 +159,58 @@ export function IraRanking({
           options={COHORT_OPTIONS}
         />
         {(filter.cohort === 'turma' || filter.cohort === 'turmaAoFim') && (
-          <label className="flex items-center gap-2 text-11-5 text-ink-2">
-            Entrei em
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-11-5 text-ink-2">
+              Entrei em
+              <select
+                value={ingresso ?? ''}
+                onChange={(e) => onIngressoChange(e.target.value || null)}
+                className="font-heading font-semibold text-12 text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
+              >
+                <option value="">semestre…</option>
+                {ingressoOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {filter.cohort === 'turmaAoFim' && ingresso && (
+              <span className="text-10-5 text-ink-3">
+                Inclui ativos de {ingresso} e de turmas anteriores (veteranos até a formatura, sem calouros).
+              </span>
+            )}
+          </div>
+        )}
+        {filter.cohort === 'periodo' && (
+          <div className="flex items-center gap-2 flex-wrap text-11-5 text-ink-2">
+            <span>Ingresso de</span>
             <select
-              value={ingresso ?? ''}
-              onChange={(e) => onIngressoChange(e.target.value || null)}
+              value={filter.fromIngresso ?? ''}
+              onChange={(e) => onFilterChange({ ...filter, fromIngresso: e.target.value || null })}
               className="font-heading font-semibold text-12 text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
             >
-              <option value="">semestre…</option>
+              <option value="">início…</option>
               {ingressoOptions.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
             </select>
-          </label>
+            <span>até</span>
+            <select
+              value={filter.toIngresso ?? ''}
+              onChange={(e) => onFilterChange({ ...filter, toIngresso: e.target.value || null })}
+              className="font-heading font-semibold text-12 text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
+            >
+              <option value="">fim…</option>
+              {ingressoOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 

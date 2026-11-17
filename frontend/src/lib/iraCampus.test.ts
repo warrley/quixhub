@@ -88,6 +88,15 @@ describe('filterForRanking', () => {
     assert.deepEqual(filterForRanking(pool, { scope: 'curso', cohort: 'turmaAoFim' }, me).map((s) => s.ira), [9, 8]);
   });
 
+  it('periodo filters ativos inside an inclusive ingresso range', () => {
+    assert.deepEqual(
+      filterForRanking(pool, { scope: 'curso', cohort: 'periodo', fromIngresso: '2023.1', toIngresso: '2024.1' }, me).map(
+        (s) => s.ira,
+      ),
+      [8, 7.5],
+    );
+  });
+
   it('todos includes formados', () => {
     assert.equal(filterForRanking(pool, { scope: 'curso', cohort: 'todos' }, me).length, 4);
   });

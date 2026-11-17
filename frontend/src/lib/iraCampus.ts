@@ -161,13 +161,16 @@ export type RankingScope = 'campus' | 'curso';
  * - turmaAoFim: ativos from your semester onward to the end of the course —
  *   your turma plus everyone further along (entered earlier), formandos
  *   included; no calouros behind you.
+ * - periodo: ativos whose ingresso falls between `fromIngresso` and `toIngresso`.
  * - todos: ativos, formados and trancados.
  */
-export type RankingCohort = 'ativos' | 'turma' | 'turmaAoFim' | 'todos';
+export type RankingCohort = 'ativos' | 'turma' | 'turmaAoFim' | 'periodo' | 'todos';
 
 export interface RankingFilter {
   scope: RankingScope;
   cohort: RankingCohort;
+  fromIngresso?: string | null;
+  toIngresso?: string | null;
 }
 
 export interface RankingContext {
@@ -181,12 +184,20 @@ export function rankingFilterBlocker(filter: RankingFilter, me: RankingContext):
   if ((filter.cohort === 'turma' || filter.cohort === 'turmaAoFim') && semesterIndex(me.ingresso) === null) {
     return 'Informe seu semestre de ingresso para comparar com a sua turma.';
   }
+  if (
+    filter.cohort === 'periodo' &&
+    (semesterIndex(filter.fromIngresso) === null || semesterIndex(filter.toIngresso) === null)
+  ) {
+    return 'Escolha o período inicial e final para filtrar o ranking.';
+  }
   return null;
 }
 
 export function filterForRanking(students: CampusStudent[], filter: RankingFilter, me: RankingContext): CampusStudent[] {
   if (rankingFilterBlocker(filter, me)) return [];
   const myIngresso = semesterIndex(me.ingresso);
+  const fromIdx = semesterIndex(filter.fromIngresso);
+  const toIdx = semesterIndex(filter.toIngresso);
   return students.filter((s) => {
     if (filter.scope === 'curso' && s.course !== me.course) return false;
     switch (filter.cohort) {
@@ -197,6 +208,13 @@ export function filterForRanking(students: CampusStudent[], filter: RankingFilte
       case 'turmaAoFim': {
         const idx = semesterIndex(s.ingresso);
         return s.status === 'ativo' && idx !== null && myIngresso !== null && idx <= myIngresso;
+      }
+      case 'periodo': {
+        const idx = semesterIndex(s.ingresso);
+        if (idx === null || fromIdx === null || toIdx === null) return false;
+        const lo = Math.min(fromIdx, toIdx);
+        const hi = Math.max(fromIdx, toIdx);
+        return s.status === 'ativo' && idx >= lo && idx <= hi;
       }
       case 'todos':
         return true;
