@@ -11,12 +11,20 @@ import { useToast } from '@/components/Toast';
 import { currentUser } from '@/data/mock';
 import { IRA_DISTRIBUTIONS } from '@/data/iraDistribution';
 import type { IraEntry } from '@/data/types';
-import { computeIra, computeSemesterStats } from '@/lib/ira';
+import {
+  computeIra,
+  computeSemesterStats,
+  gradeSituacaoError,
+  requiresGrade,
+  situacaoFromGrade,
+  type Situacao,
+} from '@/lib/ira';
 import { useIra } from '@/lib/iraStore';
 
 type DraftEntry = Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' };
+type GradeAndSituacao = Pick<DraftEntry, 'grade' | 'situacao'>;
 
-const SITUACAO_LABEL: Record<NonNullable<IraEntry['situacao']>, string> = {
+const SITUACAO_LABEL: Record<Situacao, string> = {
   aprovado: 'Aprovado',
   reprovado: 'Reprovado',
   em_andamento: 'Em andamento',
@@ -24,16 +32,64 @@ const SITUACAO_LABEL: Record<NonNullable<IraEntry['situacao']>, string> = {
   outro: 'Outro',
 };
 
+const SITUACAO_BADGE: Record<Situacao, string> = {
+  aprovado: 'bg-good-tint text-good',
+  reprovado: 'bg-danger-tint text-danger',
+  em_andamento: 'bg-accent-tint text-accent-dark',
+  trancado: 'bg-accent-2-tint text-accent-2-ink',
+  outro: 'bg-surface-sunken text-ink-2',
+};
+
+// "Outro" only comes from PDF rows SIGAA marks some other way (aproveitado,
+// dispensado...) — it's shown for those rows but never offered as a choice.
+const SITUACAO_CHOICES: Situacao[] = ['aprovado', 'reprovado', 'em_andamento', 'trancado'];
+
+function SituacaoOptions({ current }: { current: Situacao | undefined }) {
+  const options = current === undefined || current === 'outro' ? [...SITUACAO_CHOICES, 'outro' as const] : SITUACAO_CHOICES;
+  return (
+    <>
+      {options.map((s) => (
+        <option key={s} value={s}>
+          {SITUACAO_LABEL[s]}
+        </option>
+      ))}
+    </>
+  );
+}
+
+// The same two transitions drive all three flows (manual add, inline edit,
+// PDF review), so grade and situação can't drift apart in any of them.
+// Typing a grade re-derives the situação from it...
+function gradeChange(raw: string): GradeAndSituacao {
+  const grade = raw === '' ? '' : Number(raw);
+  return { grade, situacao: situacaoFromGrade(grade) };
+}
+
+// ...and picking trancado / em andamento clears the grade, while picking
+// aprovado / reprovado keeps it for gradeSituacaoError to check.
+function situacaoChange(situacao: Situacao, grade: number | ''): GradeAndSituacao {
+  return { situacao, grade: requiresGrade(situacao) ? grade : '' };
+}
+
+// Only trancado locks the grade input. Em andamento keeps it editable on
+// purpose: clearing a grade derives em andamento, so locking it would freeze
+// the field mid-edit — and typing a grade back promotes it to aprovado/reprovado.
+function gradeLocked(situacao: Situacao | undefined): boolean {
+  return situacao === 'trancado';
+}
+
+// Grade-less entries (trancado / em andamento) are stored with a 0
+// placeholder: computeIra never reads their grade, and the list shows "—".
+function toEntry(draft: DraftEntry): Omit<IraEntry, 'id'> {
+  return { ...draft, grade: requiresGrade(draft.situacao) && draft.grade !== '' ? draft.grade : 0 };
+}
+
 // Manual entry only accepts these three workloads (imported PDF entries
 // aren't restricted, since real transcripts can list other values).
 const WORKLOAD_OPTIONS = [32, 64, 96];
 
-function isValidGrade(grade: number | ''): boolean {
-  return typeof grade === 'number' && grade >= 0 && grade <= 10;
-}
-
 function emptyDraft(): DraftEntry {
-  return { disciplineName: '', grade: '', workload: 64, situacao: 'aprovado', source: 'manual' };
+  return { disciplineName: '', grade: '', workload: 64, situacao: situacaoFromGrade(''), source: 'manual' };
 }
 
 function sortSemesters(semesters: string[]): string[] {
@@ -77,7 +133,7 @@ const BUTTON_FIELD_LABEL = 'font-heading font-semibold text-xs invisible';
 const BUTTON_FIELD_SPACER = 'text-xs min-h-[16px] invisible';
 const TABLE = 'flex flex-col gap-2 mt-3';
 const ENTRY_ROW = 'grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-center py-2.5 px-3 rounded-md bg-surface border border-line text-13';
-const BADGE = 'text-11 font-semibold py-0.5 px-2 rounded-full bg-accent-tint text-accent-dark justify-self-start';
+const BADGE = 'text-11 font-semibold py-0.5 px-2 rounded-full justify-self-start';
 
 export default function Ira() {
   const { state, ira, addEntry, addEntries, updateEntry, removeEntry, removeEntries } = useIra();
@@ -113,19 +169,14 @@ export default function Ira() {
   const [review, setReview] = useState<DraftEntry[] | null>(null);
   const [printedIra, setPrintedIra] = useState<number | undefined>();
 
-  const previewIra = review
-    ? computeIra(
-        review.map((e, i) => ({
-          ...e,
-          id: `preview-${i}`,
-          grade: typeof e.grade === 'number' ? e.grade : 0,
-        })),
-      )
-    : null;
+  const previewIra = review ? computeIra(review.map((e, i) => ({ ...toEntry(e), id: `preview-${i}` }))) : null;
+
+  const draftError = gradeSituacaoError(draft.grade, draft.situacao);
+  const canAddManual = Boolean(activeSemester && draft.disciplineName && draft.workload > 0 && draftError === null);
 
   function handleAddManual() {
-    if (!activeSemester || !draft.disciplineName || draft.workload <= 0 || !isValidGrade(draft.grade)) return;
-    addEntry({ ...draft, semester: activeSemester, grade: draft.grade as number });
+    if (!canAddManual) return;
+    addEntry({ ...toEntry(draft), semester: activeSemester });
     setDraft(emptyDraft());
   }
 
@@ -159,11 +210,11 @@ export default function Ira() {
 
   function confirmReview() {
     if (!review) return;
-    if (review.some((e) => !isValidGrade(e.grade))) {
-      show('Preencha ou remova as disciplinas sem nota.');
+    if (review.some((e) => gradeSituacaoError(e.grade, e.situacao) !== null)) {
+      show('Corrija as notas destacadas ou remova essas disciplinas.');
       return;
     }
-    addEntries(review as Omit<IraEntry, 'id'>[]);
+    addEntries(review.map(toEntry));
     setReview(null);
     setFileName(undefined);
     setPrintedIra(undefined);
@@ -262,7 +313,7 @@ export default function Ira() {
             </span>
           </div>
         )}
-        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-3 items-end">
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-end">
           <TextField
             label="Disciplina"
             placeholder="Nome da disciplina"
@@ -276,10 +327,11 @@ export default function Ira() {
             min={0}
             max={10}
             step={0.1}
-            disabled={!activeSemester}
+            placeholder={requiresGrade(draft.situacao) ? undefined : '—'}
+            disabled={!activeSemester || gradeLocked(draft.situacao)}
             value={draft.grade}
-            error={draft.grade !== '' && !isValidGrade(draft.grade) ? 'Nota deve estar entre 0 e 10.' : undefined}
-            onChange={(e) => setDraft((d) => ({ ...d, grade: e.target.value === '' ? '' : Number(e.target.value) }))}
+            error={activeSemester ? (draftError ?? undefined) : undefined}
+            onChange={(e) => setDraft((d) => ({ ...d, ...gradeChange(e.target.value) }))}
           />
           <SelectField
             label="CH"
@@ -296,12 +348,20 @@ export default function Ira() {
               </option>
             ))}
           </SelectField>
+          <SelectField
+            label="Situação"
+            disabled={!activeSemester}
+            value={draft.situacao}
+            onChange={(e) => {
+              const situacao = e.target.value as Situacao;
+              setDraft((d) => ({ ...d, ...situacaoChange(situacao, d.grade) }));
+            }}
+          >
+            <SituacaoOptions current={draft.situacao} />
+          </SelectField>
           <div className={BUTTON_FIELD}>
             <span className={BUTTON_FIELD_LABEL}>Adicionar</span>
-            <Button
-              onClick={handleAddManual}
-              disabled={!activeSemester || !draft.disciplineName || draft.workload <= 0 || !isValidGrade(draft.grade)}
-            >
+            <Button onClick={handleAddManual} disabled={!canAddManual}>
               Adicionar
             </Button>
             <span className={BUTTON_FIELD_SPACER}>spacer</span>
@@ -373,9 +433,14 @@ export default function Ira() {
                           min={0}
                           max={10}
                           step={0.1}
+                          placeholder={requiresGrade(editDraft.situacao) ? undefined : '—'}
+                          disabled={gradeLocked(editDraft.situacao)}
                           value={editDraft.grade}
-                          error={!isValidGrade(editDraft.grade) ? 'Nota deve estar entre 0 e 10.' : undefined}
-                          onChange={(ev) => setEditDraft((d) => d && { ...d, grade: ev.target.value === '' ? '' : Number(ev.target.value) })}
+                          error={gradeSituacaoError(editDraft.grade, editDraft.situacao) ?? undefined}
+                          onChange={(ev) => {
+                            const patch = gradeChange(ev.target.value);
+                            setEditDraft((d) => d && { ...d, ...patch });
+                          }}
                         />
                         <SelectField
                           value={editDraft.workload}
@@ -388,24 +453,22 @@ export default function Ira() {
                           ))}
                         </SelectField>
                         <SelectField
-                          value={editDraft.situacao}
-                          onChange={(ev) =>
-                            setEditDraft((d) => d && { ...d, situacao: ev.target.value as IraEntry['situacao'] })
-                          }
+                          value={editDraft.situacao ?? 'outro'}
+                          onChange={(ev) => {
+                            const situacao = ev.target.value as Situacao;
+                            setEditDraft((d) => d && { ...d, ...situacaoChange(situacao, d.grade) });
+                          }}
                         >
-                          {Object.entries(SITUACAO_LABEL).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
+                          <SituacaoOptions current={editDraft.situacao} />
                         </SelectField>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            disabled={!isValidGrade(editDraft.grade)}
+                            disabled={gradeSituacaoError(editDraft.grade, editDraft.situacao) !== null}
                             onClick={() => {
-                              updateEntry(e.id, { ...editDraft, grade: editDraft.grade as number });
+                              if (gradeSituacaoError(editDraft.grade, editDraft.situacao) !== null) return;
+                              updateEntry(e.id, toEntry(editDraft));
                               setEditingId(null);
                               setEditDraft(null);
                             }}
@@ -429,9 +492,11 @@ export default function Ira() {
                     ) : (
                       <div key={e.id} className={ENTRY_ROW}>
                         <span className="font-medium">{e.disciplineName}</span>
-                        <span>{e.grade}</span>
+                        {requiresGrade(e.situacao) ? <span>{e.grade}</span> : <span className="text-ink-3">—</span>}
                         <span>{e.workload}h</span>
-                        <span className={BADGE}>{SITUACAO_LABEL[e.situacao ?? 'outro']}</span>
+                        <span className={`${BADGE} ${SITUACAO_BADGE[e.situacao ?? 'outro']}`}>
+                          {SITUACAO_LABEL[e.situacao ?? 'outro']}
+                        </span>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -440,7 +505,7 @@ export default function Ira() {
                               setEditingId(e.id);
                               setEditDraft({
                                 disciplineName: e.disciplineName,
-                                grade: e.grade,
+                                grade: requiresGrade(e.situacao) ? e.grade : '',
                                 workload: e.workload,
                                 situacao: e.situacao,
                                 source: e.source,
@@ -518,17 +583,11 @@ export default function Ira() {
                           min={0}
                           max={10}
                           step={0.1}
+                          placeholder={requiresGrade(e.situacao) ? undefined : '—'}
+                          disabled={gradeLocked(e.situacao)}
                           value={e.grade}
-                          error={e.grade === '' ? 'Obrigatório' : (!isValidGrade(e.grade) ? 'Inválido' : undefined)}
-                          onChange={(ev) => {
-                            const val = ev.target.value;
-                            const grade = val === '' ? '' : Number(val);
-                            let situacao = e.situacao;
-                            if (val !== '' && situacao === 'em_andamento') {
-                              situacao = (grade as number) >= 5 ? 'aprovado' : 'reprovado';
-                            }
-                            updateReviewRow(i, { grade, situacao });
-                          }}
+                          error={gradeSituacaoError(e.grade, e.situacao) ?? undefined}
+                          onChange={(ev) => updateReviewRow(i, gradeChange(ev.target.value))}
                         />
                         <SelectField
                           value={e.workload}
@@ -542,13 +601,9 @@ export default function Ira() {
                         </SelectField>
                         <SelectField
                           value={e.situacao ?? 'outro'}
-                          onChange={(ev) => updateReviewRow(i, { situacao: ev.target.value as IraEntry['situacao'] })}
+                          onChange={(ev) => updateReviewRow(i, situacaoChange(ev.target.value as Situacao, e.grade))}
                         >
-                          {Object.entries(SITUACAO_LABEL).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
+                          <SituacaoOptions current={e.situacao} />
                         </SelectField>
                         <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
                           <Trash2 size={16} className="text-danger opacity-70 hover:opacity-100" />

@@ -2,10 +2,17 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { IraEntry, IraState } from '../data/types';
-import { computeIra } from './ira';
+import { computeIra, situacaoFromGrade } from './ira';
 
 const STORAGE_KEY = 'quixhub-ira';
 const EMPTY_STATE: IraState = { entries: [], updatedAt: '' };
+
+// Manual entries used to be saved as "aprovado" whatever the grade. Re-derive
+// those on load so a failing grade never shows as approved — the IRA itself
+// is unaffected, since computeIra weighs aprovado and reprovado the same.
+function normalizeEntry(entry: IraEntry): IraEntry {
+  return entry.situacao === 'aprovado' ? { ...entry, situacao: situacaoFromGrade(entry.grade) } : entry;
+}
 
 interface IraContextValue {
   state: IraState;
@@ -26,7 +33,8 @@ export function IraProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return;
     try {
-      setState(JSON.parse(stored) as IraState);
+      const parsed = JSON.parse(stored) as IraState;
+      setState({ ...parsed, entries: parsed.entries.map(normalizeEntry) });
     } catch {
       // corrupt/old data — ignore and keep the empty state
     }
