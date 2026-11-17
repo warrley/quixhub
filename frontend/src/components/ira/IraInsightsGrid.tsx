@@ -245,6 +245,7 @@ function StageTimelineCard({
 
 function ImpactCard({ entries }: { entries: IraEntry[] }) {
   const [by, setBy] = useState<'disciplinas' | 'semestres'>('disciplinas');
+  const [hoverId, setHoverId] = useState<string | null>(null);
 
   const items = useMemo(
     () => (by === 'disciplinas' ? computeDisciplineImpacts(entries) : computeSemesterImpacts(entries)),
@@ -255,6 +256,17 @@ function ImpactCard({ entries }: { entries: IraEntry[] }) {
   const negatives = items.filter((i) => i.delta < 0).slice(0, 3);
   const shown = [...positives, ...negatives].sort((a, b) => b.delta - a.delta);
   const maxAbs = Math.max(0.0001, ...shown.map((i) => Math.abs(i.delta)));
+  const hovered = shown.find((i) => i.id === hoverId) ?? null;
+
+  const chartW = 280;
+  const rowH = 22;
+  const topPad = 14;
+  const chartH = topPad + shown.length * rowH + 8;
+  const labelW = 108;
+  const plotLeft = labelW + 6;
+  const plotRight = chartW - 8;
+  const midX = (plotLeft + plotRight) / 2;
+  const halfW = (plotRight - plotLeft) / 2 - 34;
 
   return (
     <Card padding="md" className="flex flex-col">
@@ -266,7 +278,7 @@ function ImpactCard({ entries }: { entries: IraEntry[] }) {
         <BarChart3 size={18} className="text-accent-3 shrink-0 mt-1" aria-hidden />
       </div>
 
-      <div className="mb-3">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <Segmented<'disciplinas' | 'semestres'>
           size="sm"
           ariaLabel="Agrupar impacto por"
@@ -280,36 +292,107 @@ function ImpactCard({ entries }: { entries: IraEntry[] }) {
       </div>
 
       {shown.length > 0 ? (
-        <div className="flex flex-col gap-2 flex-1 justify-center">
-          {shown.map((item) => {
-            const positive = item.delta >= 0;
-            const widthPct = Math.max(6, (Math.abs(item.delta) / maxAbs) * 100);
-            return (
-              <div key={item.id} className="flex flex-col gap-0.5">
-                <div className="flex items-baseline justify-between gap-2 text-11-5">
-                  <span className="font-medium text-ink truncate" title={`${item.label} (${item.sublabel})`}>
-                    {item.label}
-                  </span>
-                  <span className={`font-heading font-bold tabular-nums shrink-0 ${positive ? 'text-good' : 'text-danger'}`}>
-                    {positive ? '+' : ''}
-                    {fmt(item.delta, 4)}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-surface-sunken overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${widthPct}%`,
-                      background: positive ? 'var(--color-good)' : 'var(--color-danger)',
-                      opacity: item.simulated ? 0.6 : 0.85,
-                    }}
+        <>
+          <div className="text-11 text-ink-3 min-h-[16px] mb-1 truncate">
+            {hovered ? (
+              <>
+                <b className="text-ink">{hovered.label}</b> · {hovered.sublabel}
+              </>
+            ) : (
+              'Quanto seu IRA subiria ou cairia sem cada item:'
+            )}
+          </div>
+
+          <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto my-auto select-none">
+            {/* Soft shaded left/right halves */}
+            <rect
+              x={plotLeft}
+              y={topPad}
+              width={midX - plotLeft}
+              height={shown.length * rowH}
+              fill="var(--color-danger-tint)"
+              opacity={0.35}
+              rx={2}
+            />
+            <rect
+              x={midX}
+              y={topPad}
+              width={plotRight - midX}
+              height={shown.length * rowH}
+              fill="var(--color-good-tint)"
+              opacity={0.35}
+              rx={2}
+            />
+
+            {/* Zero axis */}
+            <text x={midX} y={9} textAnchor="middle" fontSize={6.5} fill="var(--color-ink-3)">
+              0
+            </text>
+            <line
+              x1={midX}
+              y1={topPad - 2}
+              x2={midX}
+              y2={topPad + shown.length * rowH}
+              stroke="var(--color-line-strong)"
+              strokeWidth={1}
+            />
+
+            {shown.map((item, idx) => {
+              const positive = item.delta >= 0;
+              const y = topPad + idx * rowH + rowH / 2;
+              const len = Math.max(4, (Math.abs(item.delta) / maxAbs) * halfW);
+              const tipX = positive ? midX + len : midX - len;
+              const color = positive ? 'var(--color-good)' : 'var(--color-danger)';
+              const isHover = hoverId === item.id;
+              const shortLabel = item.label.length > 17 ? `${item.label.slice(0, 16)}…` : item.label;
+
+              return (
+                <g
+                  key={item.id}
+                  onMouseEnter={() => setHoverId(item.id)}
+                  onMouseLeave={() => setHoverId(null)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {isHover && (
+                    <rect x={0} y={y - rowH / 2} width={chartW} height={rowH} fill="var(--color-surface-sunken)" opacity={0.6} rx={3} />
+                  )}
+                  <text
+                    x={labelW}
+                    y={y + 2.5}
+                    textAnchor="end"
+                    fontSize={7.5}
+                    fontWeight={isHover ? 700 : 500}
+                    fill={isHover ? 'var(--color-ink)' : 'var(--color-ink-2)'}
+                  >
+                    {shortLabel}
+                  </text>
+                  <line
+                    x1={midX}
+                    y1={y}
+                    x2={tipX}
+                    y2={y}
+                    stroke={color}
+                    strokeWidth={isHover ? 3 : 2.2}
+                    strokeLinecap="round"
+                    opacity={item.simulated ? 0.65 : 0.9}
                   />
-                </div>
-              </div>
-            );
-          })}
-          <p className="text-10-5 text-ink-3 mt-1">Quanto seu IRA subiria ou cairia sem cada item.</p>
-        </div>
+                  <circle cx={tipX} cy={y} r={isHover ? 3.5 : 2.8} fill={color} />
+                  <text
+                    x={positive ? tipX + 5 : tipX - 5}
+                    y={y + 2.5}
+                    textAnchor={positive ? 'start' : 'end'}
+                    fontSize={7}
+                    fontWeight={700}
+                    fill={color}
+                  >
+                    {positive ? '+' : ''}
+                    {fmt(item.delta, 3)}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </>
       ) : (
         <EmptyChart>Adicione pelo menos 2 disciplinas com nota para ver o impacto de cada uma.</EmptyChart>
       )}

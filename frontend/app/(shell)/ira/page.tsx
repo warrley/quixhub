@@ -458,7 +458,7 @@ export default function Ira() {
                   isEstimate={hasSimulated}
                   officialIra={officialIra}
                 />
-                <IraEvolutionChart entries={state.entries} />
+                <IraEvolutionChart entries={state.entries} course={comparisonCourse} />
               </div>
 
               <IraInsightsGrid ira={ira} entries={state.entries} course={comparisonCourse} ingresso={ingresso} />
