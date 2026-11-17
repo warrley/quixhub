@@ -91,12 +91,25 @@ function Row({
   return (
     <li className={`flex items-center gap-2.5 h-11 px-2.5 rounded-md border ${rowClass}`}>
       <PositionBadge position={row.position} isYou={row.isYou} isEstimate={isEstimate} />
-      <div className="flex items-center gap-1.5 min-w-0 w-[136px] shrink-0">
+      <div className="flex items-center gap-1.5 min-w-0 w-[148px] sm:w-[164px] shrink-0">
         <span
           className={`text-13 truncate ${row.isYou ? `font-heading font-bold ${textClass}` : 'text-ink-2'}`}
           title={label}
         >
           {label}
+        </span>
+        {row.isYou && isEstimate && (
+          <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface text-accent-2-dark shrink-0">
+            prev.
+          </span>
+        )}
+      </div>
+      <div className="flex-1 flex items-center gap-1.5 min-w-0">
+        <span className="flex-1 h-1.5 rounded-full bg-surface-sunken overflow-hidden min-w-[16px]" aria-hidden>
+          <span
+            className="block h-full rounded-full [transition:width_0.4s_ease]"
+            style={{ width: `${(row.ira / max) * 100}%`, background: barColor }}
+          />
         </span>
         {row.ingresso && (
           <span
@@ -106,18 +119,7 @@ function Row({
             {row.ingresso}
           </span>
         )}
-        {row.isYou && isEstimate && (
-          <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface text-accent-2-dark shrink-0">
-            prev.
-          </span>
-        )}
       </div>
-      <span className="flex-1 h-1.5 rounded-full bg-surface-sunken overflow-hidden" aria-hidden>
-        <span
-          className="block h-full rounded-full [transition:width_0.4s_ease]"
-          style={{ width: `${(row.ira / max) * 100}%`, background: barColor }}
-        />
-      </span>
       <span
         className={`font-heading font-bold text-13-5 tabular-nums w-[60px] text-right ${
           row.isYou ? textClass : 'text-ink'

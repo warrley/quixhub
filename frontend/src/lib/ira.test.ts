@@ -6,6 +6,8 @@ import {
   computeDisciplineImpacts,
   computeEvolution,
   computeIra,
+  computeIraSensitivity,
+  computeSemesterComposition,
   computeSemesterImpacts,
   gradeSituacaoError,
   isEntryPredicted,
@@ -159,5 +161,16 @@ describe('computeEvolution / impacts', () => {
     assert.equal(isEntryPredicted({ semester: '2026.2', situacao: 'aprovado' }, nov2026), true);
     assert.equal(isEntryPredicted({ semester: '2026.2', situacao: 'em_andamento' }, nov2026), false);
     assert.equal(isEntryPredicted({ semester: '2026.1', situacao: 'aprovado' }, nov2026), false);
+  });
+
+  it('computes IRA sensitivity and semester composition', () => {
+    const sens = computeIraSensitivity(transcript)!;
+    assert.ok(sens.deltaGrade10_64h > 0);
+    assert.ok(sens.deltaLock64h < 0);
+    assert.equal(sens.iraWithoutLocks, null);
+    const comp = computeSemesterComposition(transcript);
+    assert.equal(comp.length, 2);
+    assert.equal(comp[1].weight, 2);
+    assert.equal(comp[1].disciplines.length, 2);
   });
 });

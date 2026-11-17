@@ -7,9 +7,10 @@ import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { useToast } from '@/components/Toast';
-import { IraForceMapCard } from '@/components/ira/IraForceMapCard';
+import { IraCourseProjectionCard } from '@/components/ira/IraCourseProjectionCard';
 import { IraIdentityMatch } from '@/components/ira/IraIdentityMatch';
 import { IraInsightsGrid } from '@/components/ira/IraInsightsGrid';
+import { IraPersonalAnalytics } from '@/components/ira/IraPersonalAnalytics';
 import { IraPrivacyModal } from '@/components/ira/IraPrivacyModal';
 import { IraRanking } from '@/components/ira/IraRanking';
 import { IraRealDistributionChart } from '@/components/ira/IraRealDistributionChart';
@@ -428,7 +429,7 @@ export default function Ira() {
 
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-heading font-bold text-13 text-ink-2">Ranking, evolução e mapa de força</span>
+              <span className="font-heading font-bold text-13 text-ink-2">Estatísticas do curso e ranking</span>
               {hasSimulated && officialIra !== null && (
                 <span className="text-11 font-heading font-semibold px-2.5 py-0.5 rounded-full bg-accent-2-tint text-accent-2-dark">
                   Com previsão ({ira.toFixed(4)}) · Real: {officialIra.toFixed(4)}
@@ -441,7 +442,7 @@ export default function Ira() {
               className="inline-flex items-center gap-1.5 text-12 font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
             >
               <BarChart3 size={14} aria-hidden />
-              {showStats ? 'Ocultar estatísticas' : 'Mostrar estatísticas'}
+              {showStats ? 'Ocultar estatísticas do curso' : 'Mostrar estatísticas do curso'}
               {showStats ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
             </button>
           </div>
@@ -462,12 +463,19 @@ export default function Ira() {
                   isEstimate={hasSimulated}
                   officialIra={officialIra}
                 />
-                <IraForceMapCard ira={ira} entries={state.entries} />
+                <IraCourseProjectionCard
+                  ira={officialIra ?? ira}
+                  entries={state.entries}
+                  course={comparisonCourse}
+                  ingresso={ingresso}
+                />
               </div>
 
-              <IraInsightsGrid ira={ira} entries={state.entries} course={comparisonCourse} ingresso={ingresso} />
+              <IraInsightsGrid ira={officialIra ?? ira} course={comparisonCourse} ingresso={ingresso} />
             </>
           )}
+
+          <IraPersonalAnalytics ira={ira} entries={state.entries} course={comparisonCourse} />
         </>
       )}
 

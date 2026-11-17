@@ -342,3 +342,183 @@ export function computeSemesterImpacts(entries: IraEntry[]): IraImpactItem[] {
   }
   return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 }
+
+export interface IraSensitivity {
+  currentIra: number;
+  gradedHours: number;
+  lockedHours: number;
+  /** How much a single 64h discipline with grade 10 next semester moves IRA. */
+  deltaGrade10_64h: number;
+  /** How much a single 64h discipline with grade 8 next semester moves IRA. */
+  deltaGrade8_64h: number;
+  /** How much a 64h trancamento next semester drops IRA. */
+  deltaLock64h: number;
+  /** IRA if you hadn't withdrawn from any disciplines (null when no trancados). */
+  iraWithoutLocks: number | null;
+  /** Negative points lost solely due to trancado penalty. */
+  lockPenaltyCost: number;
+  /** Average needed across `nextSemesterHours` to raise IRA by `targetDelta` (null if impossible even with 10). */
+  neededAvgForTarget: number | null;
+  /** Weighted average of the student's latest up to 2 graded semesters. */
+  recentAverage: number | null;
+  /** Where IRA converges at `targetTotalHours` if the student keeps `recentAverage`. */
+  projectedAtGraduation: number | null;
+}
+
+/**
+ * Actionable forward-looking sensitivity metrics derived directly from the
+ * UFC IRA formula (`computeIra`).
+ */
+export function computeIraSensitivity(
+  entries: IraEntry[],
+  nextSemesterHours = 256,
+  targetDelta = 0.1,
+  targetTotalHours = 3200,
+): IraSensitivity | null {
+  const currentIra = computeIra(entries);
+  if (currentIra === null) return null;
+
+  const semesters = chronologicalSemesters(entries);
+  const lastSem = semesters[semesters.length - 1];
+  const nextSem = lastSem ? `${lastSem}_next` : '9999.1';
+
+  const synth = (grade: number, workload: number, situacao: IraEntry['situacao'] = 'aprovado'): IraEntry => ({
+    id: '__sens__',
+    disciplineName: 'Sim',
+    grade,
+    workload,
+    situacao,
+    source: 'manual',
+    semester: nextSem,
+  });
+
+  const with10 = computeIra([...entries, synth(10, 64)]) ?? currentIra;
+  const with8 = computeIra([...entries, synth(8, 64)]) ?? currentIra;
+  const withLock = computeIra([...entries, synth(0, 64, 'trancado')]) ?? currentIra;
+
+  let gradedHours = 0;
+  let lockedHours = 0;
+  for (const e of entries) {
+    if (e.situacao === 'em_andamento') continue;
+    if (e.situacao === 'trancado') lockedHours += e.workload;
+    else if (Number.isFinite(e.grade) && e.workload > 0) gradedHours += e.workload;
+  }
+
+  const iraWithoutLocks = lockedHours > 0 ? computeIra(entries.filter((e) => e.situacao !== 'trancado')) : null;
+  const lockPenaltyCost = iraWithoutLocks !== null ? Number((currentIra - iraWithoutLocks).toFixed(4)) : 0;
+
+  // Binary search exact grade in `nextSemesterHours` to achieve currentIra + targetDelta.
+  const target = currentIra + targetDelta;
+  let neededAvgForTarget: number | null = null;
+  const at10 = computeIra([...entries, synth(10, nextSemesterHours)]);
+  if (at10 !== null && at10 >= target) {
+    let lo = 0;
+    let hi = 10;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      const val = computeIra([...entries, synth(mid, nextSemesterHours, mid < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado')]);
+      if (val !== null && val >= target) hi = mid;
+      else lo = mid;
+    }
+    neededAvgForTarget = Number(hi.toFixed(2));
+  }
+
+  // Recent average across up to the last 2 graded semesters.
+  const stats = computeSemesterStats(entries).filter((s) => s.average !== null && s.hours > 0);
+  const recent = stats.slice(-2);
+  let recentAverage: number | null = null;
+  let projectedAtGraduation: number | null = null;
+  if (recent.length > 0) {
+    const rHours = recent.reduce((s, x) => s + x.hours, 0);
+    recentAverage = Number((recent.reduce((s, x) => s + x.average! * x.hours, 0) / rHours).toFixed(2));
+    const remaining = Math.max(0, targetTotalHours - (gradedHours + lockedHours));
+    if (remaining > 0) {
+      const steps = Math.max(1, Math.round(remaining / 256));
+      const perStep = remaining / steps;
+      const futureEntries = Array.from({ length: steps }, (_, i) => ({
+        ...synth(recentAverage!, perStep, recentAverage! < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado'),
+        id: `__proj_${i}`,
+        semester: `9999.${i + 1}`,
+      }));
+      projectedAtGraduation = computeIra([...entries, ...futureEntries]);
+    } else {
+      projectedAtGraduation = currentIra;
+    }
+  }
+
+  return {
+    currentIra,
+    gradedHours,
+    lockedHours,
+    deltaGrade10_64h: Number((with10 - currentIra).toFixed(4)),
+    deltaGrade8_64h: Number((with8 - currentIra).toFixed(4)),
+    deltaLock64h: Number((withLock - currentIra).toFixed(4)),
+    iraWithoutLocks,
+    lockPenaltyCost,
+    neededAvgForTarget,
+    recentAverage,
+    projectedAtGraduation,
+  };
+}
+
+export interface TreemapDiscipline {
+  id: string;
+  name: string;
+  workload: number;
+  grade: number;
+  situacao: IraEntry['situacao'];
+  effectiveWeight: number;
+  delta: number;
+  simulated: boolean;
+}
+
+export interface TreemapSemester {
+  semester: string;
+  weight: number;
+  effectiveWeight: number;
+  average: number | null;
+  delta: number;
+  simulated: boolean;
+  disciplines: TreemapDiscipline[];
+}
+
+/** Groups graded/trancado entries chronologically with effective weights and
+ * marginal IRA deltas for Treemap and Tug-of-War visualizations. */
+export function computeSemesterComposition(entries: IraEntry[], now = new Date()): TreemapSemester[] {
+  const base = computeIra(entries);
+  if (base === null) return [];
+  const bubbles = computeDisciplineBubbles(entries, now);
+  const stats = new Map(computeSemesterStats(entries).map((s) => [s.semester, s]));
+  const semImpacts = new Map(computeSemesterImpacts(entries).map((s) => [s.id, s.delta]));
+  const bySem = new Map<string, TreemapDiscipline[]>();
+
+  for (const b of bubbles) {
+    const list = bySem.get(b.semester) ?? [];
+    list.push({
+      id: b.id,
+      name: b.name,
+      workload: b.workload,
+      grade: b.grade,
+      situacao: b.situacao,
+      effectiveWeight: b.effectiveWeight,
+      delta: b.delta,
+      simulated: b.simulated,
+    });
+    bySem.set(b.semester, list);
+  }
+
+  return [...bySem.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([semester, list]) => {
+      const weight = stats.get(semester)?.weight ?? 1;
+      return {
+        semester,
+        weight,
+        effectiveWeight: list.reduce((s, d) => s + d.effectiveWeight, 0),
+        average: stats.get(semester)?.average ?? null,
+        delta: semImpacts.get(semester) ?? 0,
+        simulated: list.some((d) => d.simulated),
+        disciplines: list.sort((a, b) => b.effectiveWeight - a.effectiveWeight || b.grade - a.grade),
+      };
+    });
+}

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildRanking,
+  computeCourseCohorts,
+  computeCourseTrajectory,
   excludeClaimedStudent,
   filterForRanking,
   findStudentMatches,
@@ -208,5 +210,25 @@ describe('findStudentMatches / excludeClaimedStudent', () => {
     const dup = [...pool, student({ course: 'Engenharia de Software', ingresso: '2023.1', ira: 9.8289 })];
     const filtered = excludeClaimedStudent(dup, pool[1]);
     assert.equal(filtered.length, dup.length - 1);
+  });
+});
+
+describe('computeCourseTrajectory / computeCourseCohorts', () => {
+  const pool = [
+    ...Array.from({ length: 6 }, (_, i) => student({ ingresso: '2026.1', ira: 7 + i * 0.4 })),
+    ...Array.from({ length: 6 }, (_, i) => student({ ingresso: '2024.1', ira: 6.5 + i * 0.3 })),
+    ...Array.from({ length: 6 }, (_, i) => student({ status: 'formado', ingresso: '2020.1', ira: 7.2 + i * 0.3 })),
+  ];
+
+  it('builds stage percentile trajectory including formados', () => {
+    const traj = computeCourseTrajectory(pool, 'Engenharia de Software', '2026.1', 0.75);
+    assert.equal(traj.stages.length, 2);
+    assert.ok(traj.graduated !== null);
+    assert.ok(traj.graduated!.p75 >= traj.graduated!.p50);
+  });
+
+  it('summarizes .1 cohorts in descending order', () => {
+    const cohorts = computeCourseCohorts(pool, 'Engenharia de Software');
+    assert.deepEqual(cohorts.map((c) => c.ingresso), ['2026.1', '2024.1']);
   });
 });

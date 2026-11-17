@@ -1,21 +1,20 @@
 'use client';
 
-import { GraduationCap, TrendingUp } from 'lucide-react';
+import { GraduationCap, Layers, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
-import type { IraEntry } from '@/data/types';
 import {
   MIN_GROUP_SIZE,
   iraByStage,
   kde,
+  percentileBelow,
   semestersAttended,
   summarize,
 } from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, groupIras } from '@/lib/iraCampusData';
+import { CAMPUS_COURSES, CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, groupIras } from '@/lib/iraCampusData';
 import { clampIra } from '@/lib/statistics';
 import { EmptyChart } from './chartKit';
-import { fmt, linePath } from './chartFormat';
-import { IraEvolutionChart } from './IraEvolutionChart';
+import { fmt, linePath, pct } from './chartFormat';
 
 const W = 280;
 const H = 135;
@@ -240,14 +239,90 @@ function StageTimelineCard({
   );
 }
 
+const SHORT_COURSE: Record<string, string> = {
+  'Ciência da Computação': 'Ciência Comp.',
+  'Design Digital': 'Design Digital',
+  'Engenharia de Computação': 'Eng. Comp.',
+  'Engenharia de Software': 'Eng. Software',
+  'Inteligência Artificial': 'Intel. Artif.',
+  'Redes de Computadores': 'Redes Comp.',
+  'Sistemas de Informação': 'Sist. Info.',
+};
+
+function CourseCampusBenchmarkCard({ ira, course }: { ira: number; course: string | null }) {
+  const displayIra = clampIra(ira);
+  const rows = useMemo(() => {
+    return CAMPUS_COURSES.map((c) => {
+      const vals = groupIras(c, 'ativos');
+      const s = summarize(vals);
+      return {
+        course: c,
+        short: SHORT_COURSE[c] ?? c,
+        n: s?.n ?? 0,
+        q1: s?.q1 ?? 0,
+        median: s?.median ?? 0,
+        q3: s?.q3 ?? 0,
+        pct: vals.length > 0 ? percentileBelow(vals, displayIra) : 0,
+      };
+    }).sort((a, b) => b.median - a.median);
+  }, [displayIra]);
+
+  return (
+    <Card padding="md" className="flex flex-col">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div>
+          <CardKicker>Panorama dos ativos</CardKicker>
+          <CardTitle>Seu IRA nos cursos do campus</CardTitle>
+        </div>
+        <Layers size={18} className="text-accent-3 shrink-0 mt-1" aria-hidden />
+      </div>
+
+      <p className="text-11-5 text-ink-3 mb-2.5">Faixa central (Q1–Q3) e mediana dos ativos com sua nota marcada.</p>
+
+      <div className="flex flex-col gap-2 flex-1 justify-center">
+        {rows.map((r) => {
+          const active = r.course === course;
+          return (
+            <div key={r.course} className="grid grid-cols-[92px_1fr_36px] items-center gap-2 text-11">
+              <span className={`truncate ${active ? 'font-heading font-bold text-accent-dark' : 'text-ink-2'}`} title={r.course}>
+                {r.short}
+              </span>
+              <div className="relative h-3 rounded-full bg-surface-sunken overflow-hidden">
+                <div
+                  className="absolute top-0.5 bottom-0.5 rounded-full"
+                  style={{
+                    left: `${r.q1 * 10}%`,
+                    width: `${Math.max(4, (r.q3 - r.q1) * 10)}%`,
+                    background: active ? 'var(--color-accent-tint-2)' : 'var(--color-line-strong)',
+                  }}
+                />
+                <div
+                  className="absolute top-0 bottom-0 w-0.5"
+                  style={{ left: `${r.median * 10}%`, background: 'var(--color-ink-2)' }}
+                  title={`Mediana: ${fmt(r.median, 2)}`}
+                />
+                <div
+                  className="absolute top-0 bottom-0 w-0.5"
+                  style={{ left: `${displayIra * 10}%`, background: 'var(--color-accent-3)' }}
+                />
+              </div>
+              <span className={`text-right tabular-nums ${active ? 'font-bold text-accent-dark' : 'text-ink-3'}`}>
+                {pct(r.pct)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 export function IraInsightsGrid({
   ira,
-  entries,
   course,
   ingresso,
 }: {
   ira: number;
-  entries: IraEntry[];
   course: string | null;
   ingresso: string | null;
 }) {
@@ -255,7 +330,7 @@ export function IraInsightsGrid({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <SurvivalCard ira={ira} course={course} />
       <StageTimelineCard ira={ira} course={course} ingresso={ingresso} />
-      <IraEvolutionChart entries={entries} course={course} />
+      <CourseCampusBenchmarkCard ira={ira} course={course} />
     </div>
   );
 }

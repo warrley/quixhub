@@ -393,6 +393,99 @@ export function iraByStage(students: CampusStudent[], reference: string, maxStag
     });
 }
 
+export interface PercentileStage {
+  label: string;
+  n: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  atMyPct: number;
+}
+
+export interface CourseTrajectory {
+  stages: PercentileStage[];
+  graduated: PercentileStage | null;
+}
+
+const STAGE_BUCKETS: { label: string; min: number; max: number }[] = [
+  { label: '1–2º sem', min: 1, max: 2 },
+  { label: '3–4º sem', min: 3, max: 4 },
+  { label: '5–6º sem', min: 5, max: 6 },
+  { label: '7–8º sem', min: 7, max: 8 },
+  { label: '9º+ sem', min: 9, max: 99 },
+];
+
+function buildPercentileStage(label: string, values: number[], pct01: number): PercentileStage | null {
+  if (values.length < MIN_GROUP_SIZE) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return {
+    label,
+    n: sorted.length,
+    p25: quantile(sorted, 0.25),
+    p50: quantile(sorted, 0.5),
+    p75: quantile(sorted, 0.75),
+    p90: quantile(sorted, 0.9),
+    atMyPct: quantile(sorted, Math.max(0, Math.min(1, pct01))),
+  };
+}
+
+/**
+ * Tracks percentile bands (P25, P50, P75, P90, plus the user's equivalent
+ * percentile `pct01`) from early semesters through graduation.
+ */
+export function computeCourseTrajectory(
+  students: CampusStudent[],
+  course: string | null,
+  reference: string,
+  pct01: number,
+): CourseTrajectory {
+  const scoped = course ? students.filter((s) => s.course === course) : students;
+  const ativos = scoped.filter((s) => s.status === 'ativo');
+  const formados = scoped.filter((s) => s.status === 'formado').map((s) => s.ira);
+
+  const stages: PercentileStage[] = [];
+  for (const b of STAGE_BUCKETS) {
+    const vals = ativos
+      .filter((s) => {
+        const sem = semestersAttended(s.ingresso, reference);
+        return sem !== null && sem >= b.min && sem <= b.max;
+      })
+      .map((s) => s.ira);
+    const stage = buildPercentileStage(b.label, vals, pct01);
+    if (stage) stages.push(stage);
+  }
+
+  return {
+    stages,
+    graduated: buildPercentileStage('Formados', formados, pct01),
+  };
+}
+
+export interface CohortSummary extends Summary {
+  ingresso: string;
+}
+
+/** Active students grouped by `.1` ingresso cohort (plus `2007.2`). */
+export function computeCourseCohorts(students: CampusStudent[], course: string | null): CohortSummary[] {
+  const byIngresso = new Map<string, number[]>();
+  for (const s of students) {
+    if (s.status !== 'ativo') continue;
+    if (course && s.course !== course) continue;
+    if (!s.ingresso.endsWith('.1') && s.ingresso !== '2007.2') continue;
+    const list = byIngresso.get(s.ingresso) ?? [];
+    list.push(s.ira);
+    byIngresso.set(s.ingresso, list);
+  }
+  return [...byIngresso.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .flatMap(([ingresso, vals]) => {
+      const sum = summarize(vals);
+      if (!sum || sum.n < MIN_GROUP_SIZE) return [];
+      return [{ ingresso, ...sum }];
+    });
+}
+
 // ── transcript ↔ campus dataset matching ───────────────────────────────
 
 export interface StudentMatch {
