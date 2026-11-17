@@ -94,9 +94,6 @@ export interface IraEntry {
   workload: number;
   situacao?: 'aprovado' | 'reprovado' | 'em_andamento' | 'trancado' | 'outro';
   source: 'manual' | 'pdf';
-  /** True when the grade is a hypothetical/predicted grade (e.g. for an
-   * in-progress discipline), so official IRA and predictions stay distinct. */
-  simulated?: boolean;
   /** Academic period the discipline was taken in (e.g. "2025.1" from a PDF
    * import, or the catalog's semester label for a manual entry). Entries
    * without one are grouped under "Outros" in the UI. */

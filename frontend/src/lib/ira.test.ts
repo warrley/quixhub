@@ -8,6 +8,7 @@ import {
   computeIra,
   computeSemesterImpacts,
   gradeSituacaoError,
+  isEntryPredicted,
   isSemesterConsolidated,
   MIN_PASSING_GRADE,
   requiresGrade,
@@ -155,5 +156,8 @@ describe('computeEvolution / impacts', () => {
     assert.equal(isSemesterConsolidated('2026.1', nov2026), true);
     assert.equal(isSemesterConsolidated('2026.2', nov2026), false);
     assert.equal(isSemesterConsolidated('2027.1', nov2026), false);
+    assert.equal(isEntryPredicted({ semester: '2026.2', situacao: 'aprovado' }, nov2026), true);
+    assert.equal(isEntryPredicted({ semester: '2026.2', situacao: 'em_andamento' }, nov2026), false);
+    assert.equal(isEntryPredicted({ semester: '2026.1', situacao: 'aprovado' }, nov2026), false);
   });
 });

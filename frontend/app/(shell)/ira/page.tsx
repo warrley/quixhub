@@ -7,7 +7,7 @@ import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { useToast } from '@/components/Toast';
-import { IraEvolutionChart } from '@/components/ira/IraEvolutionChart';
+import { IraForceMapCard } from '@/components/ira/IraForceMapCard';
 import { IraIdentityMatch } from '@/components/ira/IraIdentityMatch';
 import { IraInsightsGrid } from '@/components/ira/IraInsightsGrid';
 import { IraPrivacyModal } from '@/components/ira/IraPrivacyModal';
@@ -21,7 +21,7 @@ import {
   computeIra,
   computeSemesterStats,
   gradeSituacaoError,
-  isSemesterConsolidated,
+  isEntryPredicted,
   requiresGrade,
   situacaoFromGrade,
   type Situacao,
@@ -93,7 +93,6 @@ function toEntry(draft: DraftEntry): Omit<IraEntry, 'id'> {
   return {
     ...draft,
     grade: requiresGrade(draft.situacao) && draft.grade !== '' ? draft.grade : 0,
-    ...(draft.situacao === 'em_andamento' ? { simulated: false } : {}),
   };
 }
 
@@ -258,15 +257,14 @@ export default function Ira() {
     ]);
   }, [simActive, state.entries, simGrade, simWorkload]);
 
-  const hasSimulated = useMemo(() => state.entries.some((e) => e.simulated), [state.entries]);
+  const hasSimulated = useMemo(() => state.entries.some((e) => isEntryPredicted(e)), [state.entries]);
   const officialIra = useMemo(
-    () => (hasSimulated ? computeIra(state.entries.filter((e) => !e.simulated)) : ira),
+    () => (hasSimulated ? computeIra(state.entries.filter((e) => !isEntryPredicted(e))) : ira),
     [hasSimulated, state.entries, ira],
   );
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftEntry | null>(null);
-  const [editingWasInProgress, setEditingWasInProgress] = useState(false);
 
   const [knownSemesters, setKnownSemesters] = useState<string[]>([]);
   const [openAddSemester, setOpenAddSemester] = useState<string | null>(null);
@@ -464,7 +462,7 @@ export default function Ira() {
                   isEstimate={hasSimulated}
                   officialIra={officialIra}
                 />
-                <IraEvolutionChart entries={state.entries} course={comparisonCourse} />
+                <IraForceMapCard ira={ira} entries={state.entries} />
               </div>
 
               <IraInsightsGrid ira={ira} entries={state.entries} course={comparisonCourse} ingresso={ingresso} />
@@ -539,13 +537,7 @@ export default function Ira() {
                               placeholder={requiresGrade(e.situacao) ? '0–10' : '—'}
                               disabled={gradeLocked(e.situacao)}
                               value={e.grade}
-                              onChange={(ev) => {
-                                const patch = gradeChange(ev.target.value);
-                                updateReviewRow(i, {
-                                  ...patch,
-                                  ...(e.situacao === 'em_andamento' && patch.grade !== '' ? { simulated: true } : {}),
-                                });
-                              }}
+                              onChange={(ev) => updateReviewRow(i, gradeChange(ev.target.value))}
                               className={`${COMPACT_CTRL} tabular-nums ${rowError ? 'border-danger focus-visible:border-danger' : ''}`}
                             />
                           </label>
@@ -750,14 +742,7 @@ export default function Ira() {
                                 value={editDraft.grade}
                                 onChange={(ev) => {
                                   const patch = gradeChange(ev.target.value);
-                                  const autoSim = (editingWasInProgress || !isSemesterConsolidated(e.semester)) && patch.grade !== '';
-                                  setEditDraft((d) =>
-                                    d && {
-                                      ...d,
-                                      ...patch,
-                                      ...(autoSim ? { simulated: true } : {}),
-                                    },
-                                  );
+                                  setEditDraft((d) => d && { ...d, ...patch });
                                 }}
                                 className={`${COMPACT_CTRL} tabular-nums ${editError ? 'border-danger focus-visible:border-danger' : ''}`}
                               />
@@ -796,18 +781,7 @@ export default function Ira() {
                               </div>
                             </label>
                           </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <label className="inline-flex items-center gap-1.5 text-11 text-ink-2 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(editDraft.simulated)}
-                                onChange={(ev) => setEditDraft((d) => d && { ...d, simulated: ev.target.checked })}
-                                className="accent-[var(--color-accent-2-dark)] w-3.5 h-3.5 cursor-pointer"
-                              />
-                              <span>Previsão (não altera o IRA oficial)</span>
-                            </label>
-                            {editError && <p className="text-11 font-semibold text-danger">{editError}</p>}
-                          </div>
+                          {editError && <p className="text-11 font-semibold text-danger">{editError}</p>}
                         </div>
                       );
                     })() : (
@@ -816,10 +790,10 @@ export default function Ira() {
                           <span className="font-medium truncate" title={e.disciplineName}>
                             {e.disciplineName}
                           </span>
-                          {e.simulated && (
+                          {isEntryPredicted(e) && (
                             <span
                               className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0"
-                              title="Nota prevista — não entra no IRA oficial"
+                              title="Semestre ainda em consolidação na UFC — usado apenas como previsão"
                             >
                               Previsão
                             </span>
@@ -840,14 +814,12 @@ export default function Ira() {
                             size="icon"
                             onClick={() => {
                               setEditingId(e.id);
-                              setEditingWasInProgress(e.situacao === 'em_andamento');
                               setEditDraft({
                                 disciplineName: e.disciplineName,
                                 grade: requiresGrade(e.situacao) ? e.grade : '',
                                 workload: e.workload,
                                 situacao: e.situacao,
                                 source: e.source,
-                                simulated: e.simulated,
                                 semester: e.semester,
                               });
                             }}

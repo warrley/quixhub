@@ -25,6 +25,7 @@ const CONTROL =
  * Compact inline form rendered directly inside a semester section: supports
  * campus catalog autocomplete (auto-filling CH), 1-click CH pills, Enter to
  * submit, and returns focus to the discipline name input for batch entry.
+ * Unconsolidated UFC semesters automatically enter as predictions.
  */
 export function QuickAddDisciplineForm({
   semester,
@@ -43,7 +44,6 @@ export function QuickAddDisciplineForm({
   const [workload, setWorkload] = useState(64);
   const [situacao, setSituacao] = useState<Situacao>(() => situacaoFromGrade(''));
   const unconsolidated = !isSemesterConsolidated(semester);
-  const [simulated, setSimulated] = useState(unconsolidated);
 
   const error = gradeSituacaoError(grade, situacao);
   const canAdd = Boolean(disciplineName.trim() && workload > 0 && error === null);
@@ -76,13 +76,11 @@ export function QuickAddDisciplineForm({
       workload,
       situacao,
       source: 'manual',
-      ...(simulated ? { simulated: true } : {}),
       semester,
     });
     setDisciplineName('');
     setGrade('');
     setSituacao(situacaoFromGrade(''));
-    setSimulated(unconsolidated);
     nameRef.current?.focus();
   }
 
@@ -167,22 +165,16 @@ export function QuickAddDisciplineForm({
         </Button>
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <label className="inline-flex items-center gap-1.5 text-11-5 text-ink-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={simulated}
-            onChange={(e) => setSimulated(e.target.checked)}
-            className="accent-[var(--color-accent-2-dark)] w-3.5 h-3.5 cursor-pointer"
-          />
-          <span>
-            {unconsolidated
-              ? `Previsão — ${semester} ainda não consolidou notas na UFC`
-              : 'Marcar como previsão (não altera seu IRA real)'}
-          </span>
-        </label>
-        {error && <p className="text-11-5 font-semibold text-danger">{error}</p>}
-      </div>
+      {(unconsolidated || error) && (
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          {unconsolidated && (
+            <span className="text-11 font-semibold text-accent-2-dark bg-accent-2-tint px-2 py-0.5 rounded">
+              {semester} ainda não consolidou notas na UFC — notas preenchidas entram como previsão
+            </span>
+          )}
+          {error && <p className="text-11-5 font-semibold text-danger">{error}</p>}
+        </div>
+      )}
     </form>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowUp, Crown, Trophy } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
 import { clampIra } from '@/lib/statistics';
@@ -160,7 +160,14 @@ export function IraRanking({
   isEstimate?: boolean;
   officialIra?: number | null;
 }) {
-  const myIra = clampIra(ira);
+  const estimatedIra = clampIra(ira);
+  const realIra = officialIra !== null ? clampIra(officialIra) : null;
+  const hasPrediction = isEstimate && realIra !== null && Math.abs(realIra - estimatedIra) > 1e-6;
+  const [usePredicted, setUsePredicted] = useState<'previsto' | 'real'>('previsto');
+
+  const showingPredicted = hasPrediction && usePredicted === 'previsto';
+  const myIra = showingPredicted ? estimatedIra : (realIra ?? estimatedIra);
+
   const me = useMemo(() => ({ course: myCourse, ingresso }), [myCourse, ingresso]);
   const blocker = rankingFilterBlocker(filter, me);
   const pool = useMemo(() => excludeClaimedStudent(CAMPUS_STUDENTS, claimedStudent), [claimedStudent]);
@@ -170,11 +177,10 @@ export function IraRanking({
     () => buildRanking(mappedGroup, myIra, PODIUM_SIZE, ingresso),
     [mappedGroup, myIra, ingresso],
   );
-  const realIra = officialIra !== null ? clampIra(officialIra) : null;
-  const hasRealDiff = isEstimate && realIra !== null && Math.abs(realIra - myIra) > 1e-6;
-  const officialRanking = useMemo(
-    () => (hasRealDiff && realIra !== null ? buildRanking(mappedGroup, realIra, PODIUM_SIZE, ingresso) : null),
-    [hasRealDiff, mappedGroup, realIra, ingresso],
+  const altIra = showingPredicted ? realIra : (hasPrediction ? estimatedIra : null);
+  const altRanking = useMemo(
+    () => (hasPrediction && altIra !== null ? buildRanking(mappedGroup, altIra, PODIUM_SIZE, ingresso) : null),
+    [hasPrediction, mappedGroup, altIra, ingresso],
   );
   const tooSmall = !blocker && group.length < MIN_GROUP_SIZE;
   const max = Math.max(10, ...ranking.rows.map((r) => r.ira));
@@ -192,16 +198,30 @@ export function IraRanking({
       </div>
 
       <div className="flex flex-col gap-2 mb-3">
-        <Segmented<RankingScope>
-          size="sm"
-          ariaLabel="Abrangência do ranking"
-          value={filter.scope}
-          onChange={(scope) => onFilterChange({ ...filter, scope })}
-          options={[
-            { value: 'curso', label: 'Meu curso', title: myCourse ?? 'Curso não informado', disabled: !myCourse },
-            { value: 'campus', label: 'Campus', title: 'Todos os cursos de Quixadá' },
-          ]}
-        />
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <Segmented<RankingScope>
+            size="sm"
+            ariaLabel="Abrangência do ranking"
+            value={filter.scope}
+            onChange={(scope) => onFilterChange({ ...filter, scope })}
+            options={[
+              { value: 'curso', label: 'Meu curso', title: myCourse ?? 'Curso não informado', disabled: !myCourse },
+              { value: 'campus', label: 'Campus', title: 'Todos os cursos de Quixadá' },
+            ]}
+          />
+          {hasPrediction && (
+            <Segmented<'real' | 'previsto'>
+              size="sm"
+              ariaLabel="Nota usada no ranking"
+              value={usePredicted}
+              onChange={setUsePredicted}
+              options={[
+                { value: 'real', label: 'IRA real' },
+                { value: 'previsto', label: 'IRA previsto' },
+              ]}
+            />
+          )}
+        </div>
         <Segmented<RankingCohort>
           size="sm"
           ariaLabel="Grupo do ranking"
@@ -275,7 +295,7 @@ export function IraRanking({
         <>
           <ol className="flex flex-col gap-0.5" aria-label={`Top ${PODIUM_SIZE}`}>
             {ranking.rows.map((row, i) => (
-              <Row key={i} row={row} max={max} displayName={displayName} isEstimate={hasRealDiff} />
+              <Row key={i} row={row} max={max} displayName={displayName} isEstimate={showingPredicted} />
             ))}
           </ol>
 
@@ -287,20 +307,20 @@ export function IraRanking({
                 ))}
               </div>
               <div
-                className={`flex items-center gap-3 px-3 py-3 rounded-md border-1-5 shadow-md ${hasRealDiff ? 'border-dashed' : ''}`}
+                className={`flex items-center gap-3 px-3 py-3 rounded-md border-1-5 shadow-md ${showingPredicted ? 'border-dashed' : ''}`}
                 style={
-                  hasRealDiff
+                  showingPredicted
                     ? { borderColor: 'var(--color-accent-2-dark)', background: 'var(--color-accent-2-tint)' }
                     : { borderColor: 'var(--color-accent)', background: 'linear-gradient(135deg, var(--color-accent-tint), var(--color-accent-3-tint))' }
                 }
               >
-                <PositionBadge position={ranking.you.position} isYou isEstimate={hasRealDiff} />
+                <PositionBadge position={ranking.you.position} isYou isEstimate={showingPredicted} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className={`font-heading font-bold text-14-5 leading-tight truncate ${hasRealDiff ? 'text-accent-2-dark' : 'text-accent-dark'}`}>
+                    <span className={`font-heading font-bold text-14-5 leading-tight truncate ${showingPredicted ? 'text-accent-2-dark' : 'text-accent-dark'}`}>
                       {displayName ? displayName : 'Você'}
                     </span>
-                    {hasRealDiff && (
+                    {showingPredicted && (
                       <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface text-accent-2-dark shrink-0">
                         Previsão
                       </span>
@@ -311,23 +331,38 @@ export function IraRanking({
                     {ranking.you.ingresso && ` · ${ranking.you.ingresso}`}
                   </div>
                 </div>
-                <span className={`font-heading font-extrabold text-21 tabular-nums ${hasRealDiff ? 'text-accent-2-dark' : 'text-accent-dark'}`}>
+                <span className={`font-heading font-extrabold text-21 tabular-nums ${showingPredicted ? 'text-accent-2-dark' : 'text-accent-dark'}`}>
                   {fmt(myIra, 4)}
                 </span>
               </div>
             </>
           )}
 
-          {officialRanking && realIra !== null && (
+          {altRanking && altIra !== null && (
             <div
-              className="mt-2 flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-12"
-              style={{ borderColor: 'var(--color-accent)', background: 'var(--color-accent-tint)' }}
+              className={`mt-2 flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-12 ${showingPredicted ? '' : 'border-dashed'}`}
+              style={
+                showingPredicted
+                  ? { borderColor: 'var(--color-accent)', background: 'var(--color-accent-tint)' }
+                  : { borderColor: 'var(--color-accent-2-dark)', background: 'var(--color-accent-2-tint)' }
+              }
             >
-              <span className="text-accent-dark font-medium">
-                Sua posição <b>real</b> (sem previsões): <b>{ordinal(officialRanking.you.position)}</b> de{' '}
-                {officialRanking.total.toLocaleString('pt-BR')}
+              <span className={showingPredicted ? 'text-accent-dark font-medium' : 'text-accent-2-dark font-medium'}>
+                {showingPredicted ? (
+                  <>
+                    Sua posição <b>real</b> (sem previsões): <b>{ordinal(altRanking.you.position)}</b> de{' '}
+                    {altRanking.total.toLocaleString('pt-BR')}
+                  </>
+                ) : (
+                  <>
+                    Com as notas <b>previstas</b>: <b>{ordinal(altRanking.you.position)}</b> de{' '}
+                    {altRanking.total.toLocaleString('pt-BR')}
+                  </>
+                )}
               </span>
-              <span className="font-heading font-bold tabular-nums text-accent-dark">{fmt(realIra, 4)}</span>
+              <span className={`font-heading font-bold tabular-nums ${showingPredicted ? 'text-accent-dark' : 'text-accent-2-dark'}`}>
+                {fmt(altIra, 4)}
+              </span>
             </div>
           )}
 

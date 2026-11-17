@@ -191,11 +191,17 @@ export function semesterConsolidationDate(semester: string | undefined): Date | 
 }
 
 /** False when the UFC semester hasn't finished consolidating grades yet
- * (so entries added with a grade should default to "Previsão"). */
+ * (so graded entries in that semester are treated as predictions). */
 export function isSemesterConsolidated(semester: string | undefined, now = new Date()): boolean {
   const cutoff = semesterConsolidationDate(semester);
   if (!cutoff) return true;
   return now.getTime() > cutoff.getTime();
+}
+
+/** True when a discipline's grade belongs to an unconsolidated UFC semester. */
+export function isEntryPredicted(entry: Pick<IraEntry, 'semester' | 'situacao'>, now = new Date()): boolean {
+  if (entry.situacao === 'em_andamento') return false;
+  return !isSemesterConsolidated(entry.semester, now);
 }
 
 /**
@@ -203,7 +209,7 @@ export function isSemesterConsolidated(semester: string | undefined, now = new D
  * grade average, recency weight, step delta, and graded disciplines — drives
  * the rich personal evolution chart.
  */
-export function computeEvolution(entries: IraEntry[]): EvolutionPoint[] {
+export function computeEvolution(entries: IraEntry[], now = new Date()): EvolutionPoint[] {
   const semesters = chronologicalSemesters(entries);
   const stats = new Map(computeSemesterStats(entries).map((s) => [s.semester, s]));
   const points: EvolutionPoint[] = [];
@@ -228,9 +234,9 @@ export function computeEvolution(entries: IraEntry[]): EvolutionPoint[] {
         grade: e.grade,
         workload: e.workload,
         situacao: e.situacao,
-        simulated: Boolean(e.simulated),
+        simulated: isEntryPredicted(e, now),
       })),
-      simulated: inSem.some((e) => e.simulated),
+      simulated: inSem.some((e) => isEntryPredicted(e, now)),
     });
   }
   return points;
@@ -253,7 +259,7 @@ export interface DisciplineBubble {
 
 /** Every graded/trancado discipline with its grade, effective IRA weight
  * (`CH × peso do semestre`), and exact marginal IRA impact. */
-export function computeDisciplineBubbles(entries: IraEntry[]): DisciplineBubble[] {
+export function computeDisciplineBubbles(entries: IraEntry[], now = new Date()): DisciplineBubble[] {
   const base = computeIra(entries);
   if (base === null) return [];
   const semesters = chronologicalSemesters(entries);
@@ -274,7 +280,7 @@ export function computeDisciplineBubbles(entries: IraEntry[]): DisciplineBubble[
       effectiveWeight: e.workload * weight,
       delta: Number((base - without).toFixed(4)),
       situacao: e.situacao,
-      simulated: Boolean(e.simulated),
+      simulated: isEntryPredicted(e, now),
     });
   }
   return bubbles;
@@ -307,7 +313,7 @@ export function computeDisciplineImpacts(entries: IraEntry[]): IraImpactItem[] {
       label: e.disciplineName,
       sublabel: e.situacao === 'trancado' ? `${e.semester ?? ''} · Trancado`.trim() : `${e.semester ?? ''} · Nota ${e.grade}`.trim(),
       delta,
-      simulated: Boolean(e.simulated),
+      simulated: isEntryPredicted(e),
     });
   }
   return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
@@ -331,7 +337,7 @@ export function computeSemesterImpacts(entries: IraEntry[]): IraImpactItem[] {
       label: `Semestre ${sem}`,
       sublabel: `${inSem.length} ${inSem.length === 1 ? 'disciplina' : 'disciplinas'}`,
       delta,
-      simulated: inSem.some((e) => e.simulated),
+      simulated: inSem.some((e) => isEntryPredicted(e)),
     });
   }
   return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
