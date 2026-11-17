@@ -16,11 +16,11 @@ describe('situacaoFromGrade', () => {
   });
 
   it('fails every grade below the cutoff', () => {
-    for (const grade of [0, 2, 3.9, 3.99]) assert.equal(situacaoFromGrade(grade), 'reprovado', `grade ${grade}`);
+    for (const grade of [0, 2, 3.9, 4, 4.5, 4.99]) assert.equal(situacaoFromGrade(grade), 'reprovado', `grade ${grade}`);
   });
 
   it('passes the cutoff itself and everything above it', () => {
-    for (const grade of [MIN_PASSING_GRADE, 4.1, 5, 7, 10]) assert.equal(situacaoFromGrade(grade), 'aprovado', `grade ${grade}`);
+    for (const grade of [MIN_PASSING_GRADE, 5.1, 7, 10]) assert.equal(situacaoFromGrade(grade), 'aprovado', `grade ${grade}`);
   });
 
   it('only ever derives combinations the forms accept', () => {

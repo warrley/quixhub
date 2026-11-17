@@ -107,8 +107,10 @@ export function computeSemesterStats(entries: IraEntry[]): SemesterStat[] {
 
 export type Situacao = NonNullable<IraEntry['situacao']>;
 
-/** Final grades below this are always a failure — never "aprovado". */
-export const MIN_PASSING_GRADE = 4;
+/** Final grades below this are always a failure — never "aprovado". UFC:
+ * média final < 5 (after the avaliação final) is reprovação, so no passing
+ * grade on a SIGAA transcript is below 5. */
+export const MIN_PASSING_GRADE = 5;
 
 /**
  * The single grade → situação rule shared by every IRA entry flow (manual
