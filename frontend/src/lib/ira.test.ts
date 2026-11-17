@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { IraEntry } from '@/data/types';
 import {
+  computeDisciplineBubbles,
   computeDisciplineImpacts,
   computeEvolution,
   computeIra,
   computeSemesterImpacts,
   gradeSituacaoError,
+  isSemesterConsolidated,
   MIN_PASSING_GRADE,
   requiresGrade,
   situacaoFromGrade,
@@ -139,5 +141,19 @@ describe('computeEvolution / impacts', () => {
     assert.ok(byId.b > 0);
     assert.ok(byId.c < 0);
     assert.equal(computeSemesterImpacts(transcript).length, 2);
+  });
+
+  it('computes discipline bubbles with effective weight (CH × recency)', () => {
+    const bubbles = computeDisciplineBubbles(transcript);
+    const byId = Object.fromEntries(bubbles.map((b) => [b.id, b]));
+    assert.equal(byId.a.effectiveWeight, 64);
+    assert.equal(byId.b.effectiveWeight, 128);
+  });
+
+  it('treats unconsolidated UFC semesters as not consolidated yet', () => {
+    const nov2026 = new Date('2026-11-17T12:00:00');
+    assert.equal(isSemesterConsolidated('2026.1', nov2026), true);
+    assert.equal(isSemesterConsolidated('2026.2', nov2026), false);
+    assert.equal(isSemesterConsolidated('2027.1', nov2026), false);
   });
 });

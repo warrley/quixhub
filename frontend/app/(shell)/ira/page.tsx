@@ -21,6 +21,7 @@ import {
   computeIra,
   computeSemesterStats,
   gradeSituacaoError,
+  isSemesterConsolidated,
   requiresGrade,
   situacaoFromGrade,
   type Situacao,
@@ -89,7 +90,11 @@ function gradeLocked(situacao: Situacao | undefined): boolean {
 // Grade-less entries (trancado / em andamento) are stored with a 0
 // placeholder: computeIra never reads their grade, and the list shows "—".
 function toEntry(draft: DraftEntry): Omit<IraEntry, 'id'> {
-  return { ...draft, grade: requiresGrade(draft.situacao) && draft.grade !== '' ? draft.grade : 0 };
+  return {
+    ...draft,
+    grade: requiresGrade(draft.situacao) && draft.grade !== '' ? draft.grade : 0,
+    ...(draft.situacao === 'em_andamento' ? { simulated: false } : {}),
+  };
 }
 
 // Manual entry only accepts these three workloads (imported PDF entries
@@ -368,6 +373,46 @@ export default function Ira() {
 
       {ira !== null && (
         <>
+          <Card className="mb-6" padding="md">
+            <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+              <div>
+                <CardKicker>Comparativo</CardKicker>
+                <CardTitle>Sua posição no curso</CardTitle>
+              </div>
+              <Segmented<StatusGroup>
+                size="sm"
+                ariaLabel="Grupo de comparação"
+                value={statusGroup}
+                onChange={setStatusGroup}
+                options={[
+                  { value: 'ativos', label: 'Ativos' },
+                  { value: 'todos', label: 'Todos' },
+                ]}
+              />
+            </div>
+
+            <IraRealDistributionChart
+              ira={ira}
+              officialIra={officialIra}
+              ghostIra={simulatedIra}
+              course={comparisonCourse}
+              group={statusGroup}
+              onCourseChange={setComparisonCourse}
+            />
+            <IraWhatIfSimulator
+              entries={state.entries}
+              currentIra={officialIra ?? ira}
+              course={comparisonCourse}
+              group={statusGroup}
+              active={simActive}
+              grade={simGrade}
+              workload={simWorkload}
+              onToggle={setSimActive}
+              onGradeChange={setSimGrade}
+              onWorkloadChange={setSimWorkload}
+            />
+          </Card>
+
           <IraIdentityMatch
             entries={state.entries}
             ira={officialIra ?? ira}
@@ -385,10 +430,10 @@ export default function Ira() {
 
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-heading font-bold text-13 text-ink-2">Estatísticas, ranking e evolução</span>
-              {hasSimulated && (
+              <span className="font-heading font-bold text-13 text-ink-2">Ranking, evolução e mapa de força</span>
+              {hasSimulated && officialIra !== null && (
                 <span className="text-11 font-heading font-semibold px-2.5 py-0.5 rounded-full bg-accent-2-tint text-accent-2-dark">
-                  Estimativa com notas previstas{officialIra !== null ? ` · IRA oficial: ${officialIra.toFixed(4)}` : ''}
+                  Com previsão ({ira.toFixed(4)}) · Real: {officialIra.toFixed(4)}
                 </span>
               )}
             </div>
@@ -405,45 +450,6 @@ export default function Ira() {
 
           {showStats && (
             <>
-              <Card className="mb-6" padding="md">
-                <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-                  <div>
-                    <CardKicker>Comparativo</CardKicker>
-                    <CardTitle>Sua posição no curso</CardTitle>
-                  </div>
-                  <Segmented<StatusGroup>
-                    size="sm"
-                    ariaLabel="Grupo de comparação"
-                    value={statusGroup}
-                    onChange={setStatusGroup}
-                    options={[
-                      { value: 'ativos', label: 'Ativos' },
-                      { value: 'todos', label: 'Todos' },
-                    ]}
-                  />
-                </div>
-
-                <IraRealDistributionChart
-                  ira={ira}
-                  ghostIra={simulatedIra}
-                  course={comparisonCourse}
-                  group={statusGroup}
-                  onCourseChange={setComparisonCourse}
-                />
-                <IraWhatIfSimulator
-                  entries={state.entries}
-                  currentIra={ira}
-                  course={comparisonCourse}
-                  group={statusGroup}
-                  active={simActive}
-                  grade={simGrade}
-                  workload={simWorkload}
-                  onToggle={setSimActive}
-                  onGradeChange={setSimGrade}
-                  onWorkloadChange={setSimWorkload}
-                />
-              </Card>
-
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <IraRanking
                   ira={ira}
@@ -533,7 +539,13 @@ export default function Ira() {
                               placeholder={requiresGrade(e.situacao) ? '0–10' : '—'}
                               disabled={gradeLocked(e.situacao)}
                               value={e.grade}
-                              onChange={(ev) => updateReviewRow(i, gradeChange(ev.target.value))}
+                              onChange={(ev) => {
+                                const patch = gradeChange(ev.target.value);
+                                updateReviewRow(i, {
+                                  ...patch,
+                                  ...(e.situacao === 'em_andamento' && patch.grade !== '' ? { simulated: true } : {}),
+                                });
+                              }}
                               className={`${COMPACT_CTRL} tabular-nums ${rowError ? 'border-danger focus-visible:border-danger' : ''}`}
                             />
                           </label>
@@ -738,11 +750,12 @@ export default function Ira() {
                                 value={editDraft.grade}
                                 onChange={(ev) => {
                                   const patch = gradeChange(ev.target.value);
+                                  const autoSim = (editingWasInProgress || !isSemesterConsolidated(e.semester)) && patch.grade !== '';
                                   setEditDraft((d) =>
                                     d && {
                                       ...d,
                                       ...patch,
-                                      ...(editingWasInProgress && patch.grade !== '' ? { simulated: true } : {}),
+                                      ...(autoSim ? { simulated: true } : {}),
                                     },
                                   );
                                 }}

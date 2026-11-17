@@ -35,13 +35,16 @@ const GROUP_LABEL: Record<StatusGroup, string> = {
  */
 export function IraRealDistributionChart({
   ira,
+  officialIra,
   ghostIra,
   course,
   group,
   onCourseChange,
 }: {
   ira: number;
-  /** A simulated IRA (from the "e se" simulator), drawn as a dashed marker. */
+  /** Real IRA excluding predicted entries — kept side-by-side when predictions exist. */
+  officialIra?: number | null;
+  /** A simulated IRA (from the "e se" simulator), drawn as a brown dashed marker. */
   ghostIra?: number | null;
   /** null = whole campus. */
   course: string | null;
@@ -52,7 +55,12 @@ export function IraRealDistributionChart({
   const [mode, setMode] = useState<DistributionMode>('pontos');
   const [hoverGrade, setHoverGrade] = useState<number | null>(null);
 
-  const displayIra = clampIra(ira);
+  const hasPrediction = officialIra !== undefined && officialIra !== null && Math.abs(officialIra - ira) > 1e-6;
+  const displayIra = clampIra(officialIra ?? ira);
+  const predictedIra = hasPrediction ? clampIra(ira) : null;
+  const brownMarkerIra = ghostIra !== null && ghostIra !== undefined ? clampIra(ghostIra) : predictedIra;
+  const brownMarkerLabel = ghostIra !== null && ghostIra !== undefined ? 'simulado' : 'previsão';
+
   const values = useMemo(() => groupIras(course, group), [course, group]);
   const summary = useMemo(() => summarize(values), [values]);
   const ativos = course ? groupSummary(course, 'ativos') : null;
@@ -63,7 +71,7 @@ export function IraRealDistributionChart({
   // (shown as a "N abaixo" note instead), but always keep your own IRA in.
   const sortedAsc = useMemo(() => [...values].sort((a, b) => a - b), [values]);
   const domainMin = enough
-    ? Math.max(0, Math.floor((Math.min(quantile(sortedAsc, 0.02), displayIra, ghostIra ?? CAP) - 0.2) * 2) / 2)
+    ? Math.max(0, Math.floor((Math.min(quantile(sortedAsc, 0.02), displayIra, brownMarkerIra ?? CAP) - 0.2) * 2) / 2)
     : 0;
   const inDomain = useMemo(() => values.filter((v) => v >= domainMin), [values, domainMin]);
   const belowDomain = values.length - inDomain.length;
@@ -116,6 +124,8 @@ export function IraRealDistributionChart({
 
   const percentile = percentileBelow(values, displayIra);
   const rank = values.filter((v) => v > displayIra).length + 1;
+  const predictedRank = predictedIra !== null ? values.filter((v) => v > predictedIra).length + 1 : null;
+  const predictedPercentile = predictedIra !== null ? percentileBelow(values, predictedIra) : null;
   const normalGuess = summary && summary.std > 0 ? truncatedNormalCdf(displayIra, summary.mean, summary.std, CAP) * 100 : null;
   const geral = ativos ? iraGeral(displayIra, ativos.mean, ativos.std) : null;
 
@@ -133,7 +143,7 @@ export function IraRealDistributionChart({
   for (let t = Math.ceil(domainMin); t <= CAP; t++) ticks.push(t);
 
   const youX = xToSvg(displayIra);
-  const ghostX = ghostIra !== null && ghostIra !== undefined ? xToSvg(clampIra(ghostIra)) : null;
+  const ghostX = brownMarkerIra !== null ? xToSvg(brownMarkerIra) : null;
   const scopeLabel = course ?? 'todo o campus';
 
   return (
@@ -262,18 +272,19 @@ export function IraRealDistributionChart({
                 </text>
               )}
 
-              {ghostX !== null && (
+              {ghostX !== null && brownMarkerIra !== null && (
                 <g>
-                  <line x1={ghostX} y1={TOP_Y + 4} x2={ghostX} y2={BASELINE_Y} stroke="var(--color-accent-2-dark)" strokeWidth={1.4} strokeDasharray="3 2" />
+                  <line x1={ghostX} y1={TOP_Y + 4} x2={ghostX} y2={BASELINE_Y} stroke="var(--color-accent-2-dark)" strokeWidth={1.5} strokeDasharray="3 2" />
+                  <circle cx={ghostX} cy={TOP_Y + 4} r={2.4} fill="var(--color-accent-2-dark)" />
                   <text
-                    x={ghostX + (ghostX > youX ? 3 : -3)}
-                    y={TOP_Y + 10}
-                    textAnchor={ghostX > youX ? 'start' : 'end'}
+                    x={ghostX + (ghostX >= youX ? 3 : -3)}
+                    y={TOP_Y + 12}
+                    textAnchor={ghostX >= youX ? 'start' : 'end'}
                     fontSize={7}
                     fontWeight={700}
                     fill="var(--color-accent-2-dark)"
                   >
-                    simulado {fmt(clampIra(ghostIra!), 4)}
+                    {brownMarkerLabel} {fmt(brownMarkerIra, 4)}
                   </text>
                 </g>
               )}
@@ -281,7 +292,7 @@ export function IraRealDistributionChart({
               <line x1={youX} y1={TOP_Y - 2} x2={youX} y2={BASELINE_Y} stroke="var(--color-accent-3)" strokeWidth={1.6} />
               <circle cx={youX} cy={TOP_Y - 2} r={2.6} fill="var(--color-accent-3)" />
               <text x={youX} y={TOP_Y - 7} textAnchor="middle" fontSize={8} fontWeight={700} fill="var(--color-accent-3)">
-                você {fmt(displayIra, 4)}
+                {hasPrediction ? `real ${fmt(displayIra, 4)}` : `você ${fmt(displayIra, 4)}`}
               </text>
 
               {hoverBin && hoverGrade !== null && (
@@ -363,27 +374,59 @@ export function IraRealDistributionChart({
               <span>
                 mediana <b className="text-ink tabular-nums">{fmt(summary.median, 4)}</b>
               </span>
+              <span>
+                desvio padrão <b className="text-ink tabular-nums">{fmt(summary.std, 4)}</b>
+              </span>
             </div>
           ) : (
             <div className="text-11-5 text-ink-3 mt-2">Sem dados para este recorte</div>
           )}
         </div>
 
-        <div className="rounded-md px-5 py-4 mb-3" style={{ background: 'var(--color-accent-tint)' }}>
-          <div className="font-heading font-extrabold text-28 leading-none" style={{ color: 'var(--color-accent)' }}>
-            {displayIra.toFixed(4)}
+        <div className={`grid gap-3 mb-3 ${predictedIra !== null ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+          <div className="rounded-md px-5 py-4" style={{ background: 'var(--color-accent-tint)' }}>
+            <div className="font-heading font-extrabold text-25 leading-none tabular-nums" style={{ color: 'var(--color-accent)' }}>
+              {displayIra.toFixed(4)}
+            </div>
+            <div className="text-11 text-ink-3 mt-1.5 uppercase tracking-wide">
+              {predictedIra !== null ? 'IRA individual (real)' : 'IRA individual'}
+            </div>
           </div>
-          <div className="text-11-5 text-ink-3 mt-1 uppercase tracking-wide">IRA individual</div>
+
+          {predictedIra !== null && (
+            <div
+              className="rounded-md px-5 py-4 border border-dashed"
+              style={{ background: 'var(--color-accent-2-tint)', borderColor: 'var(--color-accent-2-dark)' }}
+            >
+              <div className="flex items-baseline gap-2">
+                <span className="font-heading font-extrabold text-25 leading-none tabular-nums text-accent-2-dark">
+                  {predictedIra.toFixed(4)}
+                </span>
+                <span className="text-11 font-bold tabular-nums text-accent-2-dark">
+                  ({predictedIra - displayIra >= 0 ? '+' : ''}
+                  {(predictedIra - displayIra).toFixed(4)})
+                </span>
+              </div>
+              <div className="text-11 text-accent-2-dark mt-1.5 uppercase tracking-wide font-semibold">
+                IRA previsto (estimativa)
+              </div>
+            </div>
+          )}
         </div>
 
         {enough && (
           <>
             <div className="flex gap-3 flex-wrap mb-3">
-              <StatBadge value={pct(percentile)} label="Percentil real" tone="var(--color-accent-2-dark)" tint="var(--color-accent-2-tint)" />
+              <StatBadge
+                value={pct(percentile)}
+                label={predictedPercentile !== null ? `Percentil real (prev.: ${pct(predictedPercentile)})` : 'Percentil real'}
+                tone="var(--color-accent-2-dark)"
+                tint="var(--color-accent-2-tint)"
+              />
               {geral !== null && (
                 <StatBadge
                   value={geral.toFixed(4)}
-                  label="IRA Geral"
+                  label="IRA Geral (real)"
                   tone="var(--color-accent-3)"
                   tint="var(--color-accent-3-tint)"
                   title="Mesma fórmula do IRA-G do SIGAA (média 6, 2 pontos por desvio padrão dos ativos do curso) — conferida contra o IRA-G real da planilha."
@@ -396,6 +439,17 @@ export function IraRealDistributionChart({
                 de {(values.length + 1).toLocaleString('pt-BR')} · posição real entre {GROUP_LABEL[group]} · SIGAA {CAMPUS_UPDATED_AT}
               </span>
             </p>
+            {predictedRank !== null && (
+              <p className="text-12-5 text-accent-2-dark font-semibold mt-1">
+                Com as notas previstas: <b>{ordinal(predictedRank)}</b>
+                {predictedRank !== rank && (
+                  <span>
+                    {' '}
+                    ({predictedRank < rank ? `+${rank - predictedRank} pos.` : `${rank - predictedRank} pos.`})
+                  </span>
+                )}
+              </p>
+            )}
             {normalGuess !== null && Math.abs(normalGuess - percentile) >= 0.5 && (
               <p className="text-11-5 text-ink-3 mt-1.5">
                 A curva normal estimaria {pct(normalGuess)} — {normalGuess > percentile ? 'otimista' : 'pessimista'} em{' '}

@@ -5,7 +5,7 @@ import { useId, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import campusDisciplinesRaw from '@/data/campusDisciplines.json';
 import type { IraEntry } from '@/data/types';
-import { gradeSituacaoError, requiresGrade, situacaoFromGrade, type Situacao } from '@/lib/ira';
+import { gradeSituacaoError, isSemesterConsolidated, requiresGrade, situacaoFromGrade, type Situacao } from '@/lib/ira';
 
 const CATALOG = campusDisciplinesRaw as [string, number][];
 const CATALOG_WORKLOAD = new Map<string, number>(CATALOG.map(([name, ch]) => [name.toLowerCase(), ch]));
@@ -42,7 +42,8 @@ export function QuickAddDisciplineForm({
   const [grade, setGrade] = useState<number | ''>('');
   const [workload, setWorkload] = useState(64);
   const [situacao, setSituacao] = useState<Situacao>(() => situacaoFromGrade(''));
-  const [simulated, setSimulated] = useState(false);
+  const unconsolidated = !isSemesterConsolidated(semester);
+  const [simulated, setSimulated] = useState(unconsolidated);
 
   const error = gradeSituacaoError(grade, situacao);
   const canAdd = Boolean(disciplineName.trim() && workload > 0 && error === null);
@@ -81,6 +82,7 @@ export function QuickAddDisciplineForm({
     setDisciplineName('');
     setGrade('');
     setSituacao(situacaoFromGrade(''));
+    setSimulated(unconsolidated);
     nameRef.current?.focus();
   }
 
@@ -173,7 +175,11 @@ export function QuickAddDisciplineForm({
             onChange={(e) => setSimulated(e.target.checked)}
             className="accent-[var(--color-accent-2-dark)] w-3.5 h-3.5 cursor-pointer"
           />
-          <span>Marcar como previsão (não altera seu IRA oficial)</span>
+          <span>
+            {unconsolidated
+              ? `Previsão — ${semester} ainda não consolidou notas na UFC`
+              : 'Marcar como previsão (não altera seu IRA real)'}
+          </span>
         </label>
         {error && <p className="text-11-5 font-semibold text-danger">{error}</p>}
       </div>

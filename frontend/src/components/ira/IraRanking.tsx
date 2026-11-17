@@ -43,14 +43,17 @@ const MEDAL: Record<number, { bg: string; fg: string }> = {
   3: { bg: 'var(--color-accent-4-tint)', fg: 'var(--color-accent-4-dark)' },
 };
 
-function PositionBadge({ position, isYou }: { position: number; isYou: boolean }) {
+function PositionBadge({ position, isYou, isEstimate }: { position: number; isYou: boolean; isEstimate?: boolean }) {
   const medal = !isYou ? MEDAL[position] : undefined;
   return (
     <span
       className="shrink-0 inline-flex items-center justify-center w-9 h-7 rounded-full font-heading font-bold text-12-5"
       style={
         isYou
-          ? { background: 'var(--color-accent)', color: 'var(--color-ink-inverse)' }
+          ? {
+              background: isEstimate ? 'var(--color-accent-2-dark)' : 'var(--color-accent)',
+              color: 'var(--color-ink-inverse)',
+            }
           : { background: medal?.bg ?? 'transparent', color: medal?.fg ?? 'var(--color-ink-3)' }
       }
     >
@@ -76,16 +79,21 @@ function Row({
       : 'Você'
     : (PLACE_NAME[row.position] ?? `${ordinal(row.position)} lugar`);
 
+  const rowClass = row.isYou
+    ? isEstimate
+      ? 'border-dashed border-[var(--color-accent-2-dark)] bg-accent-2-tint shadow-sm'
+      : 'border-accent bg-accent-tint shadow-sm'
+    : 'border-transparent';
+
+  const textClass = row.isYou ? (isEstimate ? 'text-accent-2-dark' : 'text-accent-dark') : 'text-ink-2';
+  const barColor = row.isYou ? (isEstimate ? 'var(--color-accent-2-dark)' : 'var(--color-accent)') : 'var(--color-line-strong)';
+
   return (
-    <li
-      className={`flex items-center gap-2.5 h-11 px-2.5 rounded-md border ${
-        row.isYou ? 'border-accent bg-accent-tint shadow-sm' : 'border-transparent'
-      }`}
-    >
-      <PositionBadge position={row.position} isYou={row.isYou} />
-      <div className="flex items-center gap-1.5 min-w-0 w-[132px] shrink-0">
+    <li className={`flex items-center gap-2.5 h-11 px-2.5 rounded-md border ${rowClass}`}>
+      <PositionBadge position={row.position} isYou={row.isYou} isEstimate={isEstimate} />
+      <div className="flex items-center gap-1.5 min-w-0 w-[136px] shrink-0">
         <span
-          className={`text-13 truncate ${row.isYou ? 'font-heading font-bold text-accent-dark' : 'text-ink-2'}`}
+          className={`text-13 truncate ${row.isYou ? `font-heading font-bold ${textClass}` : 'text-ink-2'}`}
           title={label}
         >
           {label}
@@ -99,7 +107,7 @@ function Row({
           </span>
         )}
         {row.isYou && isEstimate && (
-          <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0">
+          <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface text-accent-2-dark shrink-0">
             prev.
           </span>
         )}
@@ -107,10 +115,14 @@ function Row({
       <span className="flex-1 h-1.5 rounded-full bg-surface-sunken overflow-hidden" aria-hidden>
         <span
           className="block h-full rounded-full [transition:width_0.4s_ease]"
-          style={{ width: `${(row.ira / max) * 100}%`, background: row.isYou ? 'var(--color-accent)' : 'var(--color-line-strong)' }}
+          style={{ width: `${(row.ira / max) * 100}%`, background: barColor }}
         />
       </span>
-      <span className={`font-heading font-bold text-13-5 tabular-nums w-[60px] text-right ${row.isYou ? 'text-accent-dark' : 'text-ink'}`}>
+      <span
+        className={`font-heading font-bold text-13-5 tabular-nums w-[60px] text-right ${
+          row.isYou ? textClass : 'text-ink'
+        }`}
+      >
         {fmt(row.ira, 4)}
       </span>
     </li>
@@ -153,9 +165,16 @@ export function IraRanking({
   const blocker = rankingFilterBlocker(filter, me);
   const pool = useMemo(() => excludeClaimedStudent(CAMPUS_STUDENTS, claimedStudent), [claimedStudent]);
   const group = useMemo(() => filterForRanking(pool, filter, me), [pool, filter, me]);
+  const mappedGroup = useMemo(() => group.map((s) => ({ ira: s.ira, ingresso: s.ingresso })), [group]);
   const ranking = useMemo(
-    () => buildRanking(group.map((s) => ({ ira: s.ira, ingresso: s.ingresso })), myIra, PODIUM_SIZE, ingresso),
-    [group, myIra, ingresso],
+    () => buildRanking(mappedGroup, myIra, PODIUM_SIZE, ingresso),
+    [mappedGroup, myIra, ingresso],
+  );
+  const realIra = officialIra !== null ? clampIra(officialIra) : null;
+  const hasRealDiff = isEstimate && realIra !== null && Math.abs(realIra - myIra) > 1e-6;
+  const officialRanking = useMemo(
+    () => (hasRealDiff && realIra !== null ? buildRanking(mappedGroup, realIra, PODIUM_SIZE, ingresso) : null),
+    [hasRealDiff, mappedGroup, realIra, ingresso],
   );
   const tooSmall = !blocker && group.length < MIN_GROUP_SIZE;
   const max = Math.max(10, ...ranking.rows.map((r) => r.ira));
@@ -256,7 +275,7 @@ export function IraRanking({
         <>
           <ol className="flex flex-col gap-0.5" aria-label={`Top ${PODIUM_SIZE}`}>
             {ranking.rows.map((row, i) => (
-              <Row key={i} row={row} max={max} displayName={displayName} isEstimate={isEstimate} />
+              <Row key={i} row={row} max={max} displayName={displayName} isEstimate={hasRealDiff} />
             ))}
           </ol>
 
@@ -268,29 +287,48 @@ export function IraRanking({
                 ))}
               </div>
               <div
-                className="flex items-center gap-3 px-3 py-3 rounded-md border-1-5 shadow-md"
-                style={{ borderColor: 'var(--color-accent)', background: 'linear-gradient(135deg, var(--color-accent-tint), var(--color-accent-3-tint))' }}
+                className={`flex items-center gap-3 px-3 py-3 rounded-md border-1-5 shadow-md ${hasRealDiff ? 'border-dashed' : ''}`}
+                style={
+                  hasRealDiff
+                    ? { borderColor: 'var(--color-accent-2-dark)', background: 'var(--color-accent-2-tint)' }
+                    : { borderColor: 'var(--color-accent)', background: 'linear-gradient(135deg, var(--color-accent-tint), var(--color-accent-3-tint))' }
+                }
               >
-                <PositionBadge position={ranking.you.position} isYou />
+                <PositionBadge position={ranking.you.position} isYou isEstimate={hasRealDiff} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-heading font-bold text-14-5 text-accent-dark leading-tight truncate">
+                    <span className={`font-heading font-bold text-14-5 leading-tight truncate ${hasRealDiff ? 'text-accent-2-dark' : 'text-accent-dark'}`}>
                       {displayName ? displayName : 'Você'}
                     </span>
-                    {isEstimate && (
-                      <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0">
+                    {hasRealDiff && (
+                      <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface text-accent-2-dark shrink-0">
                         Previsão
                       </span>
                     )}
                   </div>
                   <div className="text-11 text-ink-2">
                     {ordinal(ranking.you.position)} de {ranking.total.toLocaleString('pt-BR')}
-                    {isEstimate && officialIra !== null && ` · oficial: ${fmt(clampIra(officialIra), 4)}`}
+                    {ranking.you.ingresso && ` · ${ranking.you.ingresso}`}
                   </div>
                 </div>
-                <span className="font-heading font-extrabold text-21 tabular-nums text-accent-dark">{fmt(myIra, 4)}</span>
+                <span className={`font-heading font-extrabold text-21 tabular-nums ${hasRealDiff ? 'text-accent-2-dark' : 'text-accent-dark'}`}>
+                  {fmt(myIra, 4)}
+                </span>
               </div>
             </>
+          )}
+
+          {officialRanking && realIra !== null && (
+            <div
+              className="mt-2 flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-12"
+              style={{ borderColor: 'var(--color-accent)', background: 'var(--color-accent-tint)' }}
+            >
+              <span className="text-accent-dark font-medium">
+                Sua posição <b>real</b> (sem previsões): <b>{ordinal(officialRanking.you.position)}</b> de{' '}
+                {officialRanking.total.toLocaleString('pt-BR')}
+              </span>
+              <span className="font-heading font-bold tabular-nums text-accent-dark">{fmt(realIra, 4)}</span>
+            </div>
           )}
 
           <div className="mt-3 flex flex-col gap-1 text-11-5 text-ink-2">

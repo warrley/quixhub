@@ -4,26 +4,38 @@ import { Activity } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
 import type { IraEntry } from '@/data/types';
-import { computeEvolution } from '@/lib/ira';
+import { computeEvolution, type EvolutionDiscipline } from '@/lib/ira';
 import { iraByStage } from '@/lib/iraCampus';
 import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { EmptyChart } from './chartKit';
 import { fmt, linePath } from './chartFormat';
 
-const W = 360;
-const H = 205;
+const W = 380;
+const H = 232;
 const PAD_L = 30;
-const PAD_R = 16;
-const PAD_T = 28;
-const PAD_B = 28;
+const PAD_R = 14;
+const TOP_T = 24;
+const TOP_B = 138;
+const TOP_H = TOP_B - TOP_T;
+const STRIP_T = 152;
+const STRIP_B = 196;
+const STRIP_H = STRIP_B - STRIP_T;
 const PW = W - PAD_L - PAD_R;
-const PH = H - PAD_T - PAD_B;
+
+function dotColor(d: EvolutionDiscipline): string {
+  if (d.simulated) return 'var(--color-accent-2-dark)';
+  if (d.situacao === 'trancado' || d.grade < 5) return 'var(--color-danger)';
+  if (d.grade >= 7) return 'var(--color-good)';
+  return 'var(--color-accent)';
+}
 
 /**
- * Rich personal trajectory chart: plots your cumulative IRA (gradient-shaded
- * area + crisp line), your per-semester average (bars), and — behind it — the
- * selected course's real Q1–Q3 interquartile band and median/mean trajectory
- * from the campus dataset, with interactive hover across semesters.
+ * Rich semester-by-semester story chart:
+ * - Upper plot: your cumulative IRA (solid blue for real, dashed brown for
+ *   semesters with predictions) overlaid on the selected course's real Q1–Q3
+ *   shaded band and mean trajectory.
+ * - Lower plot (aligned on the same semesters): every graded discipline as a
+ *   dot at its grade (0–10), sized by CH, plus the semester's IRA weight (1×–6×).
  */
 export function IraEvolutionChart({
   entries,
@@ -47,8 +59,8 @@ export function IraEvolutionChart({
       <Card padding="md" className="h-full flex flex-col">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <CardKicker>Sua trajetória</CardKicker>
-            <CardTitle>Evolução semestre a semestre</CardTitle>
+            <CardKicker>Raio-X dos semestres</CardKicker>
+            <CardTitle>Evolução e mapa de notas</CardTitle>
           </div>
           <Activity size={20} className="text-accent shrink-0 mt-1" aria-hidden />
         </div>
@@ -60,19 +72,18 @@ export function IraEvolutionChart({
   const stageMatches = points.map((_, i) => courseStages.get(i + 1) ?? null);
   const allVals = [
     ...points.map((p) => p.cumulativeIra),
-    ...points.flatMap((p) => (p.semesterAverage !== null ? [p.semesterAverage] : [])),
     ...stageMatches.flatMap((s) => (s ? [s.q1, s.q3] : [])),
   ];
-  const minVal = Math.max(0, Math.floor((Math.min(...allVals) - 0.3) * 2) / 2);
+  const minVal = Math.max(0, Math.floor((Math.min(...allVals) - 0.35) * 2) / 2);
   const maxVal = 10;
   const span = Math.max(1, maxVal - minVal);
 
   const slotW = PW / Math.max(1, points.length);
-  const barW = Math.min(20, slotW * 0.44);
   const xAt = (i: number) => PAD_L + (i + 0.5) * slotW;
-  const yAt = (v: number) => PAD_T + PH - ((Math.max(minVal, Math.min(maxVal, v)) - minVal) / span) * PH;
+  const yAt = (v: number) => TOP_T + TOP_H - ((Math.max(minVal, Math.min(maxVal, v)) - minVal) / span) * TOP_H;
+  const yGrade = (g: number) => STRIP_T + STRIP_H - (Math.max(0, Math.min(10, g)) / 10) * STRIP_H;
 
-  // Course Q1–Q3 shaded band aligned with semester 1, 2, 3...
+  // Course Q1–Q3 shaded band aligned with 1st, 2nd, 3rd semester...
   const bandPts = points
     .map((_, i) => ({ i, s: stageMatches[i] }))
     .filter((x): x is { i: number; s: NonNullable<typeof x.s> } => x.s !== null);
@@ -87,20 +98,14 @@ export function IraEvolutionChart({
   const courseMeanLine =
     bandPts.length >= 2 ? linePath(bandPts.map(({ i, s }) => ({ x: xAt(i), y: yAt(s.mean) }))) : '';
 
-  const iraLine = linePath(points.map((p, i) => ({ x: xAt(i), y: yAt(p.cumulativeIra) })));
   const iraArea =
     points.length >= 2
-      ? `${iraLine} L ${xAt(points.length - 1).toFixed(2)} ${PAD_T + PH} L ${xAt(0).toFixed(2)} ${PAD_T + PH} Z`
+      ? `${linePath(points.map((p, i) => ({ x: xAt(i), y: yAt(p.cumulativeIra) })))} L ${xAt(points.length - 1).toFixed(2)} ${TOP_B} L ${xAt(0).toFixed(2)} ${TOP_B} Z`
       : '';
-
-  const last = points[points.length - 1];
-  const prev = points.length >= 2 ? points[points.length - 2] : null;
-  const delta = prev ? last.cumulativeIra - prev.cumulativeIra : null;
 
   const activeIdx = hoverIdx !== null ? hoverIdx : points.length - 1;
   const active = points[activeIdx];
-  const activePrev = activeIdx > 0 ? points[activeIdx - 1] : null;
-  const activeDelta = activePrev ? active.cumulativeIra - activePrev.cumulativeIra : null;
+  const activeCourseStage = stageMatches[activeIdx];
 
   function handleMove(e: React.MouseEvent<SVGRectElement>) {
     const svg = svgRef.current;
@@ -112,127 +117,186 @@ export function IraEvolutionChart({
   }
 
   const yTicks = [minVal, Number(((minVal + maxVal) / 2).toFixed(1)), 10].filter((v, i, a) => a.indexOf(v) === i);
+  const activeGrades = active.disciplines.filter((d) => d.situacao !== 'trancado').map((d) => d.grade);
+  const activeMinG = activeGrades.length > 0 ? Math.min(...activeGrades) : null;
+  const activeMaxG = activeGrades.length > 0 ? Math.max(...activeGrades) : null;
 
   return (
     <Card padding="md" className="h-full flex flex-col">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div>
-          <CardKicker>Sua trajetória</CardKicker>
-          <CardTitle>Evolução semestre a semestre</CardTitle>
+          <CardKicker>Raio-X dos semestres</CardKicker>
+          <CardTitle>Evolução, peso e notas por período</CardTitle>
         </div>
         <Activity size={20} className="text-accent shrink-0 mt-1" aria-hidden />
       </div>
 
-      <div className="flex flex-wrap items-baseline justify-between gap-2 text-12 text-ink-2 mb-2">
-        <span>
-          {hoverIdx !== null ? active.semester : `Último (${last.semester})`}:{' '}
-          <b className="text-ink tabular-nums">{fmt(active.cumulativeIra, 4)}</b>
-          {(hoverIdx !== null ? activeDelta : delta) !== null && (
-            <span
-              className={`ml-1 font-semibold tabular-nums ${
-                (hoverIdx !== null ? activeDelta! : delta!) >= 0 ? 'text-good' : 'text-danger'
-              }`}
-            >
-              ({(hoverIdx !== null ? activeDelta! : delta!) >= 0 ? '+' : ''}
-              {fmt(hoverIdx !== null ? activeDelta! : delta!, 4)})
+      {/* Rich HUD summarizing the focused (or latest) semester */}
+      <div className="rounded-md px-3 py-2 mb-2 bg-surface-sunken flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-11-5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <b className="font-heading text-ink">{active.semester}</b>
+          <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-surface text-ink-2">
+            peso {active.weight}×
+          </span>
+          {active.simulated && (
+            <span className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark">
+              previsão
             </span>
           )}
-        </span>
-        {active.semesterAverage !== null && (
-          <span className="text-11-5 text-ink-3 tabular-nums">
-            média no sem.: <b className="text-ink">{fmt(active.semesterAverage, 2)}</b>
+          <span className="text-ink-2 tabular-nums">
+            IRA{' '}
+            <b className={active.simulated ? 'text-accent-2-dark' : 'text-accent-dark'}>{fmt(active.cumulativeIra, 4)}</b>
           </span>
-        )}
+          {active.deltaIra !== null && (
+            <span className={`font-semibold tabular-nums ${active.deltaIra >= 0 ? 'text-good' : 'text-danger'}`}>
+              ({active.deltaIra >= 0 ? '+' : ''}
+              {fmt(active.deltaIra, 4)})
+            </span>
+          )}
+        </div>
+        <div className="text-ink-3 tabular-nums">
+          {active.semesterAverage !== null && (
+            <>
+              média <b className="text-ink">{fmt(active.semesterAverage, 2)}</b>
+            </>
+          )}
+          {activeMinG !== null && activeMaxG !== null && (
+            <span>
+              {' · '}notas {fmt(activeMinG, 1)}–{fmt(activeMaxG, 1)}
+            </span>
+          )}
+          {activeCourseStage && (
+            <span>
+              {' · '}curso {fmt(activeCourseStage.q1, 1)}–{fmt(activeCourseStage.q3, 1)}
+            </span>
+          )}
+        </div>
       </div>
 
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-auto my-auto select-none">
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.24" />
+            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.22" />
             <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
+        {/* Focused column highlight */}
+        <rect
+          x={xAt(activeIdx) - slotW * 0.42}
+          y={TOP_T - 4}
+          width={slotW * 0.84}
+          height={STRIP_B - TOP_T + 8}
+          rx={4}
+          fill={active.simulated ? 'var(--color-accent-2-tint)' : 'var(--color-accent-tint)'}
+          opacity={hoverIdx !== null ? 0.55 : 0.3}
+        />
+
+        {/* Upper plot grid */}
         {yTicks.map((v) => (
           <g key={v}>
-            <line x1={PAD_L} y1={yAt(v)} x2={PAD_L + PW} y2={yAt(v)} stroke="var(--color-line)" strokeDasharray="2 3" opacity={0.65} />
-            <text x={PAD_L - 5} y={yAt(v) + 3} textAnchor="end" fontSize={8} fill="var(--color-ink-3)">
+            <line x1={PAD_L} y1={yAt(v)} x2={PAD_L + PW} y2={yAt(v)} stroke="var(--color-line)" strokeDasharray="2 3" opacity={0.6} />
+            <text x={PAD_L - 5} y={yAt(v) + 2.5} textAnchor="end" fontSize={7.5} fill="var(--color-ink-3)">
               {v}
             </text>
           </g>
         ))}
 
         {/* Course Q1–Q3 shaded reference band */}
-        {bandFill && <path d={bandFill} fill="var(--color-surface-sunken)" opacity={0.9} />}
+        {bandFill && <path d={bandFill} fill="var(--color-surface-sunken)" opacity={0.85} />}
         {courseMeanLine && (
-          <path d={courseMeanLine} fill="none" stroke="var(--color-ink-3)" strokeWidth={1.2} strokeDasharray="3 2" opacity={0.75} />
+          <path d={courseMeanLine} fill="none" stroke="var(--color-ink-3)" strokeWidth={1.1} strokeDasharray="3 2" opacity={0.75} />
         )}
 
-        {/* Per-semester average bars */}
-        {points.map((p, i) => {
-          if (p.semesterAverage === null) return null;
-          const y = yAt(p.semesterAverage);
-          const isHover = hoverIdx === i;
+        {/* Cumulative IRA area + segmented lines (dashed brown into predicted semesters) */}
+        {iraArea && <path d={iraArea} fill={`url(#${gradId})`} />}
+        {points.slice(1).map((p, i) => {
+          const prev = points[i];
+          const isSimSeg = p.simulated || prev.simulated;
           return (
-            <rect
-              key={`bar-${p.semester}`}
-              x={xAt(i) - barW / 2}
-              y={y}
-              width={barW}
-              height={Math.max(1, PAD_T + PH - y)}
-              rx={2}
-              fill={p.simulated ? 'var(--color-accent-2-tint)' : 'var(--color-accent-tint-2)'}
-              opacity={isHover ? 1 : 0.7}
+            <line
+              key={`seg-${p.semester}`}
+              x1={xAt(i)}
+              y1={yAt(prev.cumulativeIra)}
+              x2={xAt(i + 1)}
+              y2={yAt(p.cumulativeIra)}
+              stroke={isSimSeg ? 'var(--color-accent-2-dark)' : 'var(--color-accent)'}
+              strokeWidth={2.1}
+              strokeDasharray={isSimSeg ? '4 2.5' : undefined}
             />
           );
         })}
 
-        {/* Cumulative IRA area + line */}
-        {iraArea && <path d={iraArea} fill={`url(#${gradId})`} />}
-        {points.length > 1 && <path d={iraLine} fill="none" stroke="var(--color-accent)" strokeWidth={2.2} />}
-
-        {/* Hover crosshair */}
-        {hoverIdx !== null && (
-          <line
-            x1={xAt(hoverIdx)}
-            y1={PAD_T - 4}
-            x2={xAt(hoverIdx)}
-            y2={PAD_T + PH}
-            stroke="var(--color-accent-3)"
-            strokeWidth={1.2}
-            strokeDasharray="2 2"
-          />
-        )}
-
-        {/* Nodes + labels */}
+        {/* Upper nodes + focused value */}
         {points.map((p, i) => {
           const cx = xAt(i);
           const cy = yAt(p.cumulativeIra);
-          const isFocus = hoverIdx === i || (hoverIdx === null && i === points.length - 1);
+          const isFocus = activeIdx === i;
           return (
             <g key={p.semester}>
               <circle
                 cx={cx}
                 cy={cy}
-                r={isFocus ? 4.2 : 3}
+                r={isFocus ? 4 : 2.8}
                 fill={p.simulated ? 'var(--color-accent-2-dark)' : 'var(--color-accent)'}
                 stroke="var(--color-surface-raised)"
-                strokeWidth={1.4}
+                strokeWidth={1.3}
               />
               {isFocus && (
                 <text
                   x={cx}
-                  y={Math.max(11, cy - 8)}
+                  y={Math.max(10, cy - 7)}
                   textAnchor="middle"
-                  fontSize={8}
+                  fontSize={7.5}
                   fontWeight={700}
                   fill={p.simulated ? 'var(--color-accent-2-dark)' : 'var(--color-accent-dark)'}
                 >
                   {fmt(p.cumulativeIra, 4)}
                 </text>
               )}
+            </g>
+          );
+        })}
+
+        <line x1={PAD_L} y1={TOP_B} x2={PAD_L + PW} y2={TOP_B} stroke="var(--color-line)" />
+
+        {/* Lower constellation strip: each discipline's grade (0–10) sized by CH */}
+        <text x={PAD_L - 5} y={yGrade(10) + 2} textAnchor="end" fontSize={6.5} fill="var(--color-ink-3)">
+          10
+        </text>
+        <text x={PAD_L - 5} y={yGrade(5) + 2} textAnchor="end" fontSize={6.5} fill="var(--color-ink-3)">
+          5
+        </text>
+        <text x={PAD_L - 5} y={yGrade(0) + 2} textAnchor="end" fontSize={6.5} fill="var(--color-ink-3)">
+          0
+        </text>
+        <line x1={PAD_L} y1={yGrade(5)} x2={PAD_L + PW} y2={yGrade(5)} stroke="var(--color-danger)" strokeDasharray="2 3" opacity={0.35} />
+
+        {points.map((p, i) => {
+          const cx = xAt(i);
+          const spread = Math.min(slotW * 0.58, 20);
+          const count = p.disciplines.length;
+          return (
+            <g key={`strip-${p.semester}`}>
+              {p.disciplines.map((d, j) => {
+                const offset = count > 1 ? ((j / (count - 1)) - 0.5) * spread : 0;
+                const r = d.workload >= 96 ? 3.2 : d.workload >= 64 ? 2.5 : 1.9;
+                return (
+                  <circle
+                    key={d.id}
+                    cx={cx + offset}
+                    cy={yGrade(d.situacao === 'trancado' ? 0 : d.grade)}
+                    r={r}
+                    fill={dotColor(d)}
+                    opacity={activeIdx === i ? 0.95 : 0.72}
+                  />
+                );
+              })}
+              <text x={cx} y={STRIP_B + 11} textAnchor="middle" fontSize={6.5} fontWeight={600} fill="var(--color-ink-3)">
+                {p.weight}×
+              </text>
               {(points.length <= 8 || i === 0 || i === points.length - 1 || i % 2 === 0) && (
-                <text x={cx} y={PAD_T + PH + 14} textAnchor="middle" fontSize={7.5} fill="var(--color-ink-3)">
+                <text x={cx} y={STRIP_B + 22} textAnchor="middle" fontSize={7.2} fill={activeIdx === i ? 'var(--color-ink)' : 'var(--color-ink-3)'}>
                   {p.semester}
                 </text>
               )}
@@ -240,13 +304,11 @@ export function IraEvolutionChart({
           );
         })}
 
-        <line x1={PAD_L} y1={PAD_T + PH} x2={PAD_L + PW} y2={PAD_T + PH} stroke="var(--color-line)" />
-
         <rect
           x={PAD_L}
-          y={PAD_T - 6}
+          y={TOP_T - 6}
           width={PW}
-          height={PH + 10}
+          height={STRIP_B - TOP_T + 10}
           fill="transparent"
           style={{ cursor: 'crosshair' }}
           onMouseMove={handleMove}
@@ -254,21 +316,28 @@ export function IraEvolutionChart({
         />
       </svg>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-10-5 text-ink-3 mt-2">
+      <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-10-5 text-ink-3 mt-1.5">
         <span className="inline-flex items-center gap-1.5">
           <span className="w-3 border-t-2 border-accent inline-block" />
-          Seu IRA acumulado
+          IRA real
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-accent-tint-2 inline-block" />
-          Média do semestre
-        </span>
+        {points.some((p) => p.simulated) && (
+          <span className="inline-flex items-center gap-1.5 text-accent-2-dark font-medium">
+            <span className="w-3 border-t-2 border-dashed border-[var(--color-accent-2-dark)] inline-block" />
+            Com previsão
+          </span>
+        )}
         {bandFill && (
           <span className="inline-flex items-center gap-1.5">
             <span className="w-3 border-t border-dashed border-ink-3 inline-block" />
-            Faixa Q1–Q3 de {course ?? 'campus'}
+            Q1–Q3 de {course ?? 'campus'}
           </span>
         )}
+        <span className="inline-flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-good inline-block" /> ≥7
+          <span className="w-2 h-2 rounded-full bg-accent inline-block ml-1" /> 5–6,9
+          <span className="w-2 h-2 rounded-full bg-danger inline-block ml-1" /> &lt;5
+        </span>
       </div>
     </Card>
   );

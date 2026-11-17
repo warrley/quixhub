@@ -150,16 +150,58 @@ export function resolveDisciplineId(name: string): string | undefined {
   return disciplines.find((d) => normalize(d.name) === target)?.id;
 }
 
+export interface EvolutionDiscipline {
+  id: string;
+  name: string;
+  grade: number;
+  workload: number;
+  situacao: IraEntry['situacao'];
+  simulated: boolean;
+}
+
 export interface EvolutionPoint {
   semester: string;
   cumulativeIra: number;
+  deltaIra: number | null;
   semesterAverage: number | null;
+  weight: number;
+  disciplines: EvolutionDiscipline[];
   simulated: boolean;
+}
+
+/** Known UFC Quixadá grade-consolidation cutoffs (end of the semester).
+ * Unlisted semesters fall back to July 31 (.1) and Dec 23 (.2). */
+export const UFC_CONSOLIDATION_DATES: Record<string, string> = {
+  '2025.1': '2025-07-31',
+  '2025.2': '2025-12-23',
+  '2026.1': '2026-07-31',
+  '2026.2': '2026-12-22',
+  '2027.1': '2027-07-31',
+  '2027.2': '2027-12-22',
+};
+
+export function semesterConsolidationDate(semester: string | undefined): Date | null {
+  if (!semester) return null;
+  const known = UFC_CONSOLIDATION_DATES[semester];
+  if (known) return new Date(`${known}T23:59:59`);
+  const match = semester.match(/^(\d{4})\.([12])$/);
+  if (!match) return null;
+  const monthDay = match[2] === '1' ? '07-31' : '12-23';
+  return new Date(`${match[1]}-${monthDay}T23:59:59`);
+}
+
+/** False when the UFC semester hasn't finished consolidating grades yet
+ * (so entries added with a grade should default to "Previsão"). */
+export function isSemesterConsolidated(semester: string | undefined, now = new Date()): boolean {
+  const cutoff = semesterConsolidationDate(semester);
+  if (!cutoff) return true;
+  return now.getTime() > cutoff.getTime();
 }
 
 /**
  * Cumulative IRA after each chronological semester plus that semester's own
- * grade average — drives the personal evolution chart.
+ * grade average, recency weight, step delta, and graded disciplines — drives
+ * the rich personal evolution chart.
  */
 export function computeEvolution(entries: IraEntry[]): EvolutionPoint[] {
   const semesters = chronologicalSemesters(entries);
@@ -173,14 +215,69 @@ export function computeEvolution(entries: IraEntry[]): EvolutionPoint[] {
     if (cumulativeIra === null) continue;
     const inSem = entries.filter((e) => e.semester === sem && e.situacao !== 'em_andamento');
     if (inSem.length === 0) continue;
+    const prev = points[points.length - 1];
     points.push({
       semester: sem,
       cumulativeIra,
+      deltaIra: prev ? Number((cumulativeIra - prev.cumulativeIra).toFixed(4)) : null,
       semesterAverage: stats.get(sem)?.average ?? null,
+      weight: stats.get(sem)?.weight ?? 1,
+      disciplines: inSem.map((e) => ({
+        id: e.id,
+        name: e.disciplineName,
+        grade: e.grade,
+        workload: e.workload,
+        situacao: e.situacao,
+        simulated: Boolean(e.simulated),
+      })),
       simulated: inSem.some((e) => e.simulated),
     });
   }
   return points;
+}
+
+export interface DisciplineBubble {
+  id: string;
+  name: string;
+  semester: string;
+  grade: number;
+  workload: number;
+  weight: number;
+  /** workload × semesterWeight — how much weight the discipline carries in IRA. */
+  effectiveWeight: number;
+  /** IRA(all) − IRA(without this discipline). */
+  delta: number;
+  situacao: IraEntry['situacao'];
+  simulated: boolean;
+}
+
+/** Every graded/trancado discipline with its grade, effective IRA weight
+ * (`CH × peso do semestre`), and exact marginal IRA impact. */
+export function computeDisciplineBubbles(entries: IraEntry[]): DisciplineBubble[] {
+  const base = computeIra(entries);
+  if (base === null) return [];
+  const semesters = chronologicalSemesters(entries);
+  const bubbles: DisciplineBubble[] = [];
+
+  for (const e of entries) {
+    if (e.situacao === 'em_andamento') continue;
+    const without = computeIra(entries.filter((x) => x.id !== e.id));
+    if (without === null) continue;
+    const weight = semesterWeight(e.semester, semesters);
+    bubbles.push({
+      id: e.id,
+      name: e.disciplineName,
+      semester: e.semester ?? '—',
+      grade: e.situacao === 'trancado' ? 0 : e.grade,
+      workload: e.workload,
+      weight,
+      effectiveWeight: e.workload * weight,
+      delta: Number((base - without).toFixed(4)),
+      situacao: e.situacao,
+      simulated: Boolean(e.simulated),
+    });
+  }
+  return bubbles;
 }
 
 export interface IraImpactItem {
