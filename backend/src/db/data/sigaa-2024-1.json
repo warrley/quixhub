@@ -1,0 +1,1466 @@
+{
+  "disciplines": [
+    {
+      "id": "fundamentos-de-programacao",
+      "code": "QXD0001",
+      "name": "Fundamentos de Programação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "arquitetura-de-computadores",
+      "code": "QXD0005",
+      "name": "Arquitetura de Computadores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "calculo-diferencial-e-integral-i",
+      "code": "QXD0006",
+      "name": "Cálculo Diferencial e Integral I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "programacao-orientada-a-objetos",
+      "code": "QXD0007",
+      "name": "Programação Orientada a Objetos",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "matematica-discreta",
+      "code": "QXD0008",
+      "name": "Matemática Discreta",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "estrutura-de-dados",
+      "code": "QXD0010",
+      "name": "Estrutura de Dados",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "fundamentos-de-banco-de-dados",
+      "code": "QXD0011",
+      "name": "Fundamentos de Banco de Dados",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "probabilidade-e-estatistica",
+      "code": "QXD0012",
+      "name": "Probabilidade e Estatística",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "sistemas-operacionais",
+      "code": "QXD0013",
+      "name": "Sistemas Operacionais",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "linguagens-de-programacao",
+      "code": "QXD0016",
+      "name": "Linguagens de Programação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "logica-para-computacao",
+      "code": "QXD0017",
+      "name": "Lógica para Computação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "redes-de-computadores",
+      "code": "QXD0021",
+      "name": "Redes de Computadores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "auditoria-e-seguranca-de-sistemas-de-informacao",
+      "code": "QXD0022",
+      "name": "Auditoria e Segurança de Sistemas de Informação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "compiladores",
+      "code": "QXD0025",
+      "name": "Compiladores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "gerencia-de-redes",
+      "code": "QXD0033",
+      "name": "Gerência de Redes",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "linguagens-formais-e-automatos",
+      "code": "QXD0040",
+      "name": "Linguagens Formais e Autômatos",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "projeto-e-analise-de-algoritmos",
+      "code": "QXD0041",
+      "name": "Projeto e Análise de Algoritmos",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "sistemas-distribuidos",
+      "code": "QXD0043",
+      "name": "Sistemas Distribuídos",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "topicos-avancados-em-redes-de-computadores",
+      "code": "QXD0048",
+      "name": "Tópicos Avançados em Redes de Computadores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "matematica-basica",
+      "code": "QXD0056",
+      "name": "Matemática Básica",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "introducao-ao-desenvolvimento-de-jogos",
+      "code": "QXD0078",
+      "name": "Introdução ao Desenvolvimento de Jogos",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "computacao-em-nuvem",
+      "code": "QXD0079",
+      "name": "Computação em Nuvem",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "administracao-de-sistemas-operacionais-linux",
+      "code": "QXD0084",
+      "name": "Administração de Sistemas Operacionais Linux",
+      "workload": 96,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "administracao-de-sistemas-operacionais-windows",
+      "code": "QXD0085",
+      "name": "Administração de Sistemas Operacionais Windows",
+      "workload": 96,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "internet-e-arquitetura-tcp-ip",
+      "code": "QXD0086",
+      "name": "Internet e Arquitetura TCP/IP",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "servicos-de-redes-de-computadores",
+      "code": "QXD0092",
+      "name": "Serviços de Redes de Computadores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "pre-calculo",
+      "code": "QXD0109",
+      "name": "Pré-Cálculo",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "projeto-de-pesquisa-cientifica-e-tecnologica",
+      "code": "QXD0110",
+      "name": "Projeto de Pesquisa Científica e Tecnológica",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "programacao-funcional",
+      "code": "QXD0114",
+      "name": "Programação Funcional",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "estrutura-de-dados-avancada",
+      "code": "QXD0115",
+      "name": "Estrutura de Dados Avançada",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "algebra-linear",
+      "code": "QXD0116",
+      "name": "Álgebra Linear",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "computacao-grafica",
+      "code": "QXD0119",
+      "name": "Computação Gráfica",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "matematica-computacional",
+      "code": "QXD0120",
+      "name": "Matemática Computacional",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "desenho-i",
+      "code": "QXD0121",
+      "name": "Desenho I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "historia-da-arte",
+      "code": "QXD0122",
+      "name": "História da Arte",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "multimidia",
+      "code": "QXD0124",
+      "name": "Multimídia",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "introducao-a-programacao-para-design",
+      "code": "QXD0125",
+      "name": "Introdução à Programação para Design",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "psicologia-e-percepcao",
+      "code": "QXD0126",
+      "name": "Psicologia e Percepção",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "programacao-para-design",
+      "code": "QXD0129",
+      "name": "Programação para Design",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "analise-de-circuitos",
+      "code": "QXD0131",
+      "name": "Análise de Circuitos",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "arquitetura-e-organizacao-de-computadores-i",
+      "code": "QXD0132",
+      "name": "Arquitetura e Organização de Computadores I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "calculo-diferencial-e-integral-ii",
+      "code": "QXD0134",
+      "name": "Cálculo Diferencial e Integral II",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "eletricidade-e-magnetismo",
+      "code": "QXD0136",
+      "name": "Eletricidade e Magnetismo",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "eletronica-fundamental-ii",
+      "code": "QXD0138",
+      "name": "Eletrônica Fundamental II",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "microcontroladores",
+      "code": "QXD0143",
+      "name": "Microcontroladores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "sistemas-de-tempo-real",
+      "code": "QXD0145",
+      "name": "Sistemas de Tempo-Real",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "sistemas-operacionais-i",
+      "code": "QXD0147",
+      "name": "Sistemas Operacionais I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "tecnicas-de-programacao-para-sistemas-embarcados-i",
+      "code": "QXD0149",
+      "name": "Técnicas de Programação para Sistemas Embarcados I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "sistemas-de-automacao-e-controle",
+      "code": "QXD0151",
+      "name": "Sistemas de Automação e Controle",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "desafios-de-programacao",
+      "code": "QXD0153",
+      "name": "Desafios de Programação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "semiotica",
+      "code": "QXD0161",
+      "name": "Semiótica",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "sociedade-cultura-e-tecnologias",
+      "code": "QXD0162",
+      "name": "Sociedade, Cultura e Tecnologias",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "aprendizado-de-maquina",
+      "code": "QXD0176",
+      "name": "Aprendizado de Máquina",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "visao-computacional",
+      "code": "QXD0182",
+      "name": "Visão Computacional",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "tipografia",
+      "code": "QXD0191",
+      "name": "Tipografia",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "processos-de-criacao",
+      "code": "QXD0192",
+      "name": "Processos de Criação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "projeto-de-interfaces-web",
+      "code": "QXD0193",
+      "name": "Projeto de Interfaces Web",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "ergonomia",
+      "code": "QXD0202",
+      "name": "Ergonomia",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "cinema-e-animacao",
+      "code": "QXD0204",
+      "name": "Cinema e Animação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "prototipacao-rapida",
+      "code": "QXD0208",
+      "name": "Prototipação Rápida",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "projeto-tecnico-cientifico-em-design-digital",
+      "code": "QXD0215",
+      "name": "Projeto Técnico-Científico em Design Digital",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "introducao-a-administracao",
+      "code": "QXD0227",
+      "name": "Introdução a Administração",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "gestao-da-tecnologia-da-informacao",
+      "code": "QXD0230",
+      "name": "Gestão da Tecnologia da Informação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "projeto-integrado-em-engenharia-de-software-ii",
+      "code": "QXD0238",
+      "name": "Projeto Integrado em Engenharia de Software II",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "protocolos-de-comunicacao",
+      "code": "QXD0242",
+      "name": "Protocolos de Comunicação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "processamento-digital-de-sinais",
+      "code": "QXD0243",
+      "name": "Processamento Digital de Sinais",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "introducao-a-sistemas-de-informacao",
+      "code": "QXD0247",
+      "name": "Introdução a Sistemas de Informação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "analise-e-projeto-de-sistemas",
+      "code": "QXD0248",
+      "name": "Análise e Projeto de Sistemas",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "gestao-de-processos-de-negocios",
+      "code": "QXD0249",
+      "name": "Gestão de Processos de Negócios",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "etica-direito-e-legislacao",
+      "code": "QXD0250",
+      "name": "Ética, Direito e Legislação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "requisitos-de-software",
+      "code": "QXD0251",
+      "name": "Requisitos de Software",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "engenharia-de-software",
+      "code": "QXD0252",
+      "name": "Engenharia de Software",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "desenvolvimento-de-software-para-web",
+      "code": "QXD0253",
+      "name": "Desenvolvimento de Software para Web",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "empreendedorismo",
+      "code": "QXD0255",
+      "name": "Empreendedorismo",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "interacao-humano-computador",
+      "code": "QXD0256",
+      "name": "Interação Humano-Computador",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "informatica-e-organizacao-de-computadores",
+      "code": "QXD0261",
+      "name": "Informática e Organização de Computadores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "redes-de-computadores-i",
+      "code": "QXD0263",
+      "name": "Redes de Computadores I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "seguranca-da-informacao",
+      "code": "QXD0267",
+      "name": "Segurança da Informação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "desenvolvimento-de-software-para-dispositivos-moveis",
+      "code": "QXD0276",
+      "name": "Desenvolvimento de Software para Dispositivos Móveis",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "verificacao-e-validacao",
+      "code": "QXD0278",
+      "name": "Verificação e Validação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "sistemas-digitais-para-computadores",
+      "code": "QXD0285",
+      "name": "Sistemas Digitais para Computadores",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "modelagem-tridimensional",
+      "code": "QXD0503",
+      "name": "Modelagem Tridimensional",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "projeto-integrado-i",
+      "code": "QXD0504",
+      "name": "Projeto Integrado I",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "avaliacao-da-interacao-humano-computador",
+      "code": "QXD0505",
+      "name": "Avaliação da Interação Humano-Computador",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "etica-e-legislacao",
+      "code": "QXD0508",
+      "name": "Ética e Legislação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    },
+    {
+      "id": "projeto-integrado-iii",
+      "code": "QXD0509",
+      "name": "Projeto Integrado III",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent"
+    },
+    {
+      "id": "introducao-a-ciencia-da-computacao",
+      "code": "QXD200",
+      "name": "Introdução à Ciência da Computação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent2"
+    },
+    {
+      "id": "introducao-a-engenharia-de-computacao",
+      "code": "QXD203",
+      "name": "Introdução à Engenharia de Computação",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent3"
+    },
+    {
+      "id": "introducao-a-engenharia-de-software",
+      "code": "QXD2040",
+      "name": "Introdução à Engenharia de Software",
+      "workload": 64,
+      "semester": "2024.1",
+      "description": "",
+      "prerequisites": [],
+      "accent": "accent4"
+    }
+  ],
+  "offerings": [
+    {
+      "disciplineId": "fundamentos-de-programacao",
+      "professor": "Bruno Gois Mateus",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "fundamentos-de-programacao",
+      "professor": "Criston Pereira de Souza",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "fundamentos-de-programacao",
+      "professor": "Enyo Jose Tavares Goncalves",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "fundamentos-de-programacao",
+      "professor": "Fabio Carlos Sousa Dias",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "fundamentos-de-programacao",
+      "professor": "Paulo Henrique Macedo de Araujo",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "arquitetura-de-computadores",
+      "professor": "Cristiano Bacelar de Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "calculo-diferencial-e-integral-i",
+      "professor": "Elvis Miguel Galeas Stancanelli",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "programacao-orientada-a-objetos",
+      "professor": "Rubens Fernandes Nunes",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "programacao-orientada-a-objetos",
+      "professor": "Sidartha Azevedo Lobo de Carvalho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "matematica-discreta",
+      "professor": "Lucas Ismaily Bezerra Freitas",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados",
+      "professor": "Arthur Rodrigues Araruna",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados",
+      "professor": "Claro Henrique Silva Sales",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados",
+      "professor": "Paulo Henrique Macedo de Araujo",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados",
+      "professor": "Ricardo Reis Pereira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados",
+      "professor": "Wladimir Araujo Tavares",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "fundamentos-de-banco-de-dados",
+      "professor": "Livia Almada Cruz",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "probabilidade-e-estatistica",
+      "professor": "Antonio Joel Ramiro de Castro",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "probabilidade-e-estatistica",
+      "professor": "Elvis Miguel Galeas Stancanelli",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-operacionais",
+      "professor": "Andre Ribeiro Braga",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-operacionais",
+      "professor": "Marcos Dantas Ortiz",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "linguagens-de-programacao",
+      "professor": "Joao Marcelo Uchoa de Alencar",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "logica-para-computacao",
+      "professor": "Carlos Roberto Rodrigues Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "logica-para-computacao",
+      "professor": "Maria Viviane de Menezes",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "redes-de-computadores",
+      "professor": "Arthur de Castro Callado",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "auditoria-e-seguranca-de-sistemas-de-informacao",
+      "professor": "Roberto Cabral Rabelo Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "compiladores",
+      "professor": "Lucas Ismaily Bezerra Freitas",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "gerencia-de-redes",
+      "professor": "Michel Sales Bonfim",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "linguagens-formais-e-automatos",
+      "professor": "Carlos Roberto Rodrigues Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-e-analise-de-algoritmos",
+      "professor": "Atilio Gomes Luiz",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-distribuidos",
+      "professor": "Marcos Dantas Ortiz",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "topicos-avancados-em-redes-de-computadores",
+      "professor": "Carlos Igor Ramos Bandeira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "matematica-basica",
+      "professor": "Francisco Erivelton Fernandes de Aragao",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "matematica-basica",
+      "professor": "Samy Soares Passos de Sa",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-ao-desenvolvimento-de-jogos",
+      "professor": "Paulyne Matthews Juca",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "computacao-em-nuvem",
+      "professor": "Emanuel Ferreira Coutinho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "computacao-em-nuvem",
+      "professor": "Joao Marcelo Uchoa de Alencar",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "administracao-de-sistemas-operacionais-linux",
+      "professor": "Michel Sales Bonfim",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "administracao-de-sistemas-operacionais-windows",
+      "professor": "Alisson Barbosa de Souza",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "internet-e-arquitetura-tcp-ip",
+      "professor": "Antonio Rafael Braga",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "servicos-de-redes-de-computadores",
+      "professor": "Joao Marcelo Uchoa de Alencar",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "pre-calculo",
+      "professor": "Carlos Roberto Rodrigues Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "pre-calculo",
+      "professor": "Francisco Erivelton Fernandes de Aragao",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-de-pesquisa-cientifica-e-tecnologica",
+      "professor": "Carla Ilane Moreira Bezerra",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-de-pesquisa-cientifica-e-tecnologica",
+      "professor": "Emanuel Ferreira Coutinho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-de-pesquisa-cientifica-e-tecnologica",
+      "professor": "Paulo de Tarso Guerra Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "programacao-funcional",
+      "professor": "Ricardo Reis Pereira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados-avancada",
+      "professor": "Arthur Rodrigues Araruna",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "estrutura-de-dados-avancada",
+      "professor": "Atilio Gomes Luiz",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "algebra-linear",
+      "professor": "Ricardo Reis Pereira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "computacao-grafica",
+      "professor": "Rubens Fernandes Nunes",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "matematica-computacional",
+      "professor": "Fabio Carlos Sousa Dias",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desenho-i",
+      "professor": "Diana Patricia Medina Pereira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "historia-da-arte",
+      "professor": "Paulo Victor Barbosa de Sousa",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "multimidia",
+      "professor": "Joao Vilnei de Oliveira Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-a-programacao-para-design",
+      "professor": "David Sena Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "psicologia-e-percepcao",
+      "professor": "Valdemir Pereira de Queiroz Neto",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "programacao-para-design",
+      "professor": "David Sena Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "analise-de-circuitos",
+      "professor": "Luis Rodolfo Reboucas Coutinho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "arquitetura-e-organizacao-de-computadores-i",
+      "professor": "Thiago Werlley Bandeira da Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "calculo-diferencial-e-integral-ii",
+      "professor": "Carlos Igor Ramos Bandeira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "eletricidade-e-magnetismo",
+      "professor": "Antonio Joel Ramiro de Castro",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "eletronica-fundamental-ii",
+      "professor": "Luis Rodolfo Reboucas Coutinho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "microcontroladores",
+      "professor": "Luis Rodolfo Reboucas Coutinho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-de-tempo-real",
+      "professor": "Francisco Helder Candido dos Santos Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-operacionais-i",
+      "professor": "Andre Ribeiro Braga",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "tecnicas-de-programacao-para-sistemas-embarcados-i",
+      "professor": "Francisco Helder Candido dos Santos Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "tecnicas-de-programacao-para-sistemas-embarcados-i",
+      "professor": "Thiago Werlley Bandeira da Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-de-automacao-e-controle",
+      "professor": "Paulo Armando Cavalcante Aguilar",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desafios-de-programacao",
+      "professor": "Claro Henrique Silva Sales",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desafios-de-programacao",
+      "professor": "Wladimir Araujo Tavares",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "semiotica",
+      "professor": "Ingrid Teixeira Monteiro",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sociedade-cultura-e-tecnologias",
+      "professor": "Valdemir Pereira de Queiroz Neto",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "aprendizado-de-maquina",
+      "professor": "Regis Pires Magalhaes",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "visao-computacional",
+      "professor": "Cristiano Bacelar de Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "tipografia",
+      "professor": "Jose Neto de Faria",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "processos-de-criacao",
+      "professor": "Diana Patricia Medina Pereira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-de-interfaces-web",
+      "professor": "Bruno Gois Mateus",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "ergonomia",
+      "professor": "Jose Neto de Faria",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "cinema-e-animacao",
+      "professor": "Joao Vilnei de Oliveira Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "prototipacao-rapida",
+      "professor": "Jose Neto de Faria",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-tecnico-cientifico-em-design-digital",
+      "professor": "Paulo Victor Barbosa de Sousa",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-a-administracao",
+      "professor": "Wesley Castro Sabino",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "gestao-da-tecnologia-da-informacao",
+      "professor": "Wesley Castro Sabino",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-integrado-em-engenharia-de-software-ii",
+      "professor": "Antonia Diana Braga Nogueira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "protocolos-de-comunicacao",
+      "professor": "Francisco Helder Candido dos Santos Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "processamento-digital-de-sinais",
+      "professor": "Carlos Igor Ramos Bandeira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-a-sistemas-de-informacao",
+      "professor": "Antonia Diana Braga Nogueira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "analise-e-projeto-de-sistemas",
+      "professor": "Marcos Antonio de Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "gestao-de-processos-de-negocios",
+      "professor": "Wesley Castro Sabino",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "etica-direito-e-legislacao",
+      "professor": "Joao Ferreira de Lavor",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "etica-direito-e-legislacao",
+      "professor": "Paulo de Tarso Guerra Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "requisitos-de-software",
+      "professor": "Paulyne Matthews Juca",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "engenharia-de-software",
+      "professor": "Carla Ilane Moreira Bezerra",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "engenharia-de-software",
+      "professor": "Marcos Antonio de Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desenvolvimento-de-software-para-web",
+      "professor": "Bruno Gois Mateus",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desenvolvimento-de-software-para-web",
+      "professor": "Jefferson de Carvalho Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desenvolvimento-de-software-para-web",
+      "professor": "Sidartha Azevedo Lobo de Carvalho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "empreendedorismo",
+      "professor": "Paulo Armando Cavalcante Aguilar",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "interacao-humano-computador",
+      "professor": "Marcelo Martins da Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "interacao-humano-computador",
+      "professor": "Rainara Maia Carvalho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "informatica-e-organizacao-de-computadores",
+      "professor": "Cristiano Bacelar de Oliveira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "redes-de-computadores-i",
+      "professor": "Arthur de Castro Callado",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "seguranca-da-informacao",
+      "professor": "Marcos Dantas Ortiz",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "desenvolvimento-de-software-para-dispositivos-moveis",
+      "professor": "Sidartha Azevedo Lobo de Carvalho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "verificacao-e-validacao",
+      "professor": "Paulyne Matthews Juca",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "sistemas-digitais-para-computadores",
+      "professor": "Thiago Werlley Bandeira da Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "modelagem-tridimensional",
+      "professor": "Joao Vilnei de Oliveira Filho",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-integrado-i",
+      "professor": "Ingrid Teixeira Monteiro",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "avaliacao-da-interacao-humano-computador",
+      "professor": "Marcelo Martins da Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "etica-e-legislacao",
+      "professor": "Valdemir Pereira de Queiroz Neto",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "projeto-integrado-iii",
+      "professor": "Jefferson de Carvalho Silva",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-a-ciencia-da-computacao",
+      "professor": "Antonia Diana Braga Nogueira",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-a-engenharia-de-computacao",
+      "professor": "Wagner Guimaraes Al Alam",
+      "semester": "2024.1"
+    },
+    {
+      "disciplineId": "introducao-a-engenharia-de-software",
+      "professor": "Jeferson Kenedy Morais Vieira",
+      "semester": "2024.1"
+    }
+  ]
+}
