@@ -353,6 +353,8 @@ export function IraRealDistributionChart({
               />
             </div>
           </>
+        ) : snapshot === null ? (
+          <EmptyChart>Carregando distribuição do recorte...</EmptyChart>
         ) : (
           <EmptyChart>Poucos alunos neste recorte para mostrar a distribuição (mínimo {MIN_GROUP_SIZE}).</EmptyChart>
         )}
