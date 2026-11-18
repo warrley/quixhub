@@ -343,6 +343,11 @@ export function computeSemesterImpacts(entries: IraEntry[]): IraImpactItem[] {
   return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 }
 
+export interface IraSensitivityTarget {
+  delta: number;
+  neededAvg: number | null;
+}
+
 export interface IraSensitivity {
   currentIra: number;
   gradedHours: number;
@@ -351,6 +356,8 @@ export interface IraSensitivity {
   deltaGrade10_64h: number;
   /** How much a single 64h discipline with grade 8 next semester moves IRA. */
   deltaGrade8_64h: number;
+  /** How much a single 64h discipline with grade 5 next semester moves IRA. */
+  deltaGrade5_64h: number;
   /** How much a 64h trancamento next semester drops IRA. */
   deltaLock64h: number;
   /** IRA if you hadn't withdrawn from any disciplines (null when no trancados). */
@@ -359,6 +366,14 @@ export interface IraSensitivity {
   lockPenaltyCost: number;
   /** Average needed across `nextSemesterHours` to raise IRA by `targetDelta` (null if impossible even with 10). */
   neededAvgForTarget: number | null;
+  /** Maximum IRA gain achievable by getting average 10 across `nextSemesterHours`. */
+  maxGainNextSemester: number;
+  /** Recency weight multiplier (1–6) the next semester will carry. */
+  nextWeight: number;
+  /** Percentage (0–100) of total effective weight held by the latest up to 3 graded semesters. */
+  recentWeightShare: number;
+  /** Precomputed required averages across `nextSemesterHours` for +0.05, +0.10, +0.20. */
+  targets: IraSensitivityTarget[];
   /** Weighted average of the student's latest up to 2 graded semesters. */
   recentAverage: number | null;
   /** Where IRA converges at `targetTotalHours` if the student keeps `recentAverage`. */
@@ -381,6 +396,7 @@ export function computeIraSensitivity(
   const semesters = chronologicalSemesters(entries);
   const lastSem = semesters[semesters.length - 1];
   const nextSem = lastSem ? `${lastSem}_next` : '9999.1';
+  const nextWeight = Math.min(semesters.length + 1, 6);
 
   const synth = (grade: number, workload: number, situacao: IraEntry['situacao'] = 'aprovado'): IraEntry => ({
     id: '__sens__',
@@ -394,6 +410,7 @@ export function computeIraSensitivity(
 
   const with10 = computeIra([...entries, synth(10, 64)]) ?? currentIra;
   const with8 = computeIra([...entries, synth(8, 64)]) ?? currentIra;
+  const with5 = computeIra([...entries, synth(5, 64)]) ?? currentIra;
   const withLock = computeIra([...entries, synth(0, 64, 'trancado')]) ?? currentIra;
 
   let gradedHours = 0;
@@ -407,24 +424,36 @@ export function computeIraSensitivity(
   const iraWithoutLocks = lockedHours > 0 ? computeIra(entries.filter((e) => e.situacao !== 'trancado')) : null;
   const lockPenaltyCost = iraWithoutLocks !== null ? Number((currentIra - iraWithoutLocks).toFixed(4)) : 0;
 
-  // Binary search exact grade in `nextSemesterHours` to achieve currentIra + targetDelta.
-  const target = currentIra + targetDelta;
-  let neededAvgForTarget: number | null = null;
+  // Binary search exact grade in `nextSemesterHours` to achieve currentIra + delta.
   const at10 = computeIra([...entries, synth(10, nextSemesterHours)]);
-  if (at10 !== null && at10 >= target) {
+  const maxGainNextSemester = Number(((at10 ?? currentIra) - currentIra).toFixed(4));
+
+  const solveNeededAvg = (delta: number): number | null => {
+    const goal = currentIra + delta;
+    if (at10 === null || at10 < goal) return null;
     let lo = 0;
     let hi = 10;
     for (let i = 0; i < 24; i++) {
       const mid = (lo + hi) / 2;
       const val = computeIra([...entries, synth(mid, nextSemesterHours, mid < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado')]);
-      if (val !== null && val >= target) hi = mid;
+      if (val !== null && val >= goal) hi = mid;
       else lo = mid;
     }
-    neededAvgForTarget = Number(hi.toFixed(2));
-  }
+    return Number(hi.toFixed(2));
+  };
 
-  // Recent average across up to the last 2 graded semesters.
+  const targets: IraSensitivityTarget[] = [0.05, 0.1, 0.2].map((delta) => ({
+    delta,
+    neededAvg: solveNeededAvg(delta),
+  }));
+  const neededAvgForTarget = targets.find((t) => t.delta === targetDelta)?.neededAvg ?? solveNeededAvg(targetDelta);
+
+  // Recent average across up to the last 2 graded semesters + recent 3-semester weight share.
   const stats = computeSemesterStats(entries).filter((s) => s.average !== null && s.hours > 0);
+  const totalEffWeight = stats.reduce((s, x) => s + x.weight * x.hours, 0);
+  const recentEffWeight = stats.slice(-3).reduce((s, x) => s + x.weight * x.hours, 0);
+  const recentWeightShare = totalEffWeight > 0 ? Number(((recentEffWeight / totalEffWeight) * 100).toFixed(1)) : 0;
+
   const recent = stats.slice(-2);
   let recentAverage: number | null = null;
   let projectedAtGraduation: number | null = null;
@@ -452,10 +481,15 @@ export function computeIraSensitivity(
     lockedHours,
     deltaGrade10_64h: Number((with10 - currentIra).toFixed(4)),
     deltaGrade8_64h: Number((with8 - currentIra).toFixed(4)),
+    deltaGrade5_64h: Number((with5 - currentIra).toFixed(4)),
     deltaLock64h: Number((withLock - currentIra).toFixed(4)),
     iraWithoutLocks,
     lockPenaltyCost,
     neededAvgForTarget,
+    maxGainNextSemester,
+    nextWeight,
+    recentWeightShare,
+    targets,
     recentAverage,
     projectedAtGraduation,
   };

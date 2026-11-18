@@ -166,8 +166,13 @@ describe('computeEvolution / impacts', () => {
   it('computes IRA sensitivity and semester composition', () => {
     const sens = computeIraSensitivity(transcript)!;
     assert.ok(sens.deltaGrade10_64h > 0);
+    assert.ok(sens.deltaGrade5_64h < 0);
     assert.ok(sens.deltaLock64h < 0);
     assert.equal(sens.iraWithoutLocks, null);
+    assert.equal(sens.nextWeight, 3);
+    assert.equal(sens.targets.length, 3);
+    assert.ok(sens.recentWeightShare > 0);
+    assert.ok(sens.maxGainNextSemester > 0);
     const comp = computeSemesterComposition(transcript);
     assert.equal(comp.length, 2);
     assert.equal(comp[1].weight, 2);
