@@ -56,10 +56,11 @@ export function IraRealDistributionChart({
   const [hoverGrade, setHoverGrade] = useState<number | null>(null);
 
   const hasPrediction = officialIra !== undefined && officialIra !== null && Math.abs(officialIra - ira) > 1e-6;
+  const hasGhost = ghostIra !== null && ghostIra !== undefined;
   const displayIra = clampIra(officialIra ?? ira);
   const predictedIra = hasPrediction ? clampIra(ira) : null;
-  const brownMarkerIra = ghostIra !== null && ghostIra !== undefined ? clampIra(ghostIra) : predictedIra;
-  const brownMarkerLabel = ghostIra !== null && ghostIra !== undefined ? 'simulado' : 'previsão';
+  const brownMarkerIra = hasGhost ? clampIra(ghostIra) : predictedIra;
+  const brownMarkerLabel = hasGhost ? 'simulado' : 'previsão';
 
   const values = useMemo(() => groupIras(course, group), [course, group]);
   const summary = useMemo(() => summarize(values), [values]);
@@ -124,8 +125,8 @@ export function IraRealDistributionChart({
 
   const percentile = percentileBelow(values, displayIra);
   const rank = values.filter((v) => v > displayIra).length + 1;
-  const predictedRank = predictedIra !== null ? values.filter((v) => v > predictedIra).length + 1 : null;
-  const predictedPercentile = predictedIra !== null ? percentileBelow(values, predictedIra) : null;
+  const brownRank = brownMarkerIra !== null ? values.filter((v) => v > brownMarkerIra).length + 1 : null;
+  const brownPercentile = brownMarkerIra !== null ? percentileBelow(values, brownMarkerIra) : null;
   const normalGuess = summary && summary.std > 0 ? truncatedNormalCdf(displayIra, summary.mean, summary.std, CAP) * 100 : null;
   const geral = ativos ? iraGeral(displayIra, ativos.mean, ativos.std) : null;
 
@@ -383,32 +384,32 @@ export function IraRealDistributionChart({
           )}
         </div>
 
-        <div className={`grid gap-3 mb-3 ${predictedIra !== null ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+        <div className={`grid gap-3 mb-3 ${brownMarkerIra !== null ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
           <div className="rounded-md px-5 py-4" style={{ background: 'var(--color-accent-tint)' }}>
             <div className="font-heading font-extrabold text-25 leading-none tabular-nums" style={{ color: 'var(--color-accent)' }}>
               {displayIra.toFixed(4)}
             </div>
             <div className="text-11 text-ink-3 mt-1.5 uppercase tracking-wide">
-              {predictedIra !== null ? 'IRA individual (real)' : 'IRA individual'}
+              {brownMarkerIra !== null ? 'IRA individual (real)' : 'IRA individual'}
             </div>
           </div>
 
-          {predictedIra !== null && (
+          {brownMarkerIra !== null && (
             <div
               className="rounded-md px-5 py-4 border border-dashed"
               style={{ background: 'var(--color-accent-2-tint)', borderColor: 'var(--color-accent-2-dark)' }}
             >
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="font-heading font-extrabold text-25 leading-none tabular-nums text-accent-2-dark">
-                  {predictedIra.toFixed(4)}
+                  {brownMarkerIra.toFixed(4)}
                 </span>
                 <span className="text-11 font-bold tabular-nums text-accent-2-dark">
-                  ({predictedIra - displayIra >= 0 ? '+' : ''}
-                  {(predictedIra - displayIra).toFixed(4)})
+                  ({brownMarkerIra - displayIra >= 0 ? '+' : ''}
+                  {(brownMarkerIra - displayIra).toFixed(4)})
                 </span>
               </div>
               <div className="text-11 text-accent-2-dark mt-1.5 uppercase tracking-wide font-semibold">
-                IRA previsto (estimativa)
+                {hasGhost ? 'IRA simulado (cenário ativo)' : 'IRA previsto (estimativa)'}
               </div>
             </div>
           )}
@@ -419,7 +420,11 @@ export function IraRealDistributionChart({
             <div className="flex gap-3 flex-wrap mb-3">
               <StatBadge
                 value={pct(percentile)}
-                label={predictedPercentile !== null ? `Percentil real (prev.: ${pct(predictedPercentile)})` : 'Percentil real'}
+                label={
+                  brownPercentile !== null
+                    ? `Percentil real (${hasGhost ? 'sim.' : 'prev.'}: ${pct(brownPercentile)})`
+                    : 'Percentil real'
+                }
                 tone="var(--color-accent-2-dark)"
                 tint="var(--color-accent-2-tint)"
               />
@@ -439,13 +444,14 @@ export function IraRealDistributionChart({
                 de {(values.length + 1).toLocaleString('pt-BR')} · posição real entre {GROUP_LABEL[group]} · SIGAA {CAMPUS_UPDATED_AT}
               </span>
             </p>
-            {predictedRank !== null && (
+            {brownRank !== null && (
               <p className="text-12-5 text-accent-2-dark font-semibold mt-1">
-                Com as notas previstas: <b>{ordinal(predictedRank)}</b>
-                {predictedRank !== rank && (
+                {hasGhost ? 'Com o cenário simulado: ' : 'Com as notas previstas: '}
+                <b>{ordinal(brownRank)}</b>
+                {brownRank !== rank && (
                   <span>
                     {' '}
-                    ({predictedRank < rank ? `+${rank - predictedRank} pos.` : `${rank - predictedRank} pos.`})
+                    ({brownRank < rank ? `+${rank - brownRank} pos.` : `${rank - brownRank} pos.`})
                   </span>
                 )}
               </p>

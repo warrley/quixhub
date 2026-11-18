@@ -232,31 +232,7 @@ export default function Ira() {
     toIngresso: '2026.1',
   });
 
-  const [simActive, setSimActive] = useState(false);
-  const [simGrade, setSimGrade] = useState(8.5);
-  const [simWorkload, setSimWorkload] = useState(256);
-
-  const simulatedIra = useMemo(() => {
-    if (!simActive || state.entries.length === 0) return null;
-    let maxIdx = 0;
-    for (const e of state.entries) {
-      const idx = semesterIndex(e.semester);
-      if (idx !== null && idx > maxIdx) maxIdx = idx;
-    }
-    const nextSem = maxIdx > 0 ? semesterLabel(maxIdx + 1) : '2026.2';
-    return computeIra([
-      ...state.entries,
-      {
-        id: '__sim__',
-        disciplineName: 'Simulação',
-        grade: simGrade,
-        workload: simWorkload,
-        situacao: simGrade < 5 ? 'reprovado' : 'aprovado',
-        source: 'manual',
-        semester: nextSem,
-      },
-    ]);
-  }, [simActive, state.entries, simGrade, simWorkload]);
+  const [simulatedIra, setSimulatedIra] = useState<number | null>(null);
 
   const hasSimulated = useMemo(() => state.entries.some((e) => isEntryPredicted(e)), [state.entries]);
   const officialIra = useMemo(
@@ -400,15 +376,10 @@ export default function Ira() {
             />
             <IraWhatIfSimulator
               entries={state.entries}
-              currentIra={officialIra ?? ira}
+              currentIra={ira}
               course={comparisonCourse}
               group={statusGroup}
-              active={simActive}
-              grade={simGrade}
-              workload={simWorkload}
-              onToggle={setSimActive}
-              onGradeChange={setSimGrade}
-              onWorkloadChange={setSimWorkload}
+              onSimulatedIraChange={setSimulatedIra}
             />
           </Card>
 
