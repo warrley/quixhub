@@ -71,6 +71,20 @@ export interface HorizonSolution {
   totalHours: number;
   neededAvg: number | null;
   maxIraAt10: number;
+  maxIraAtCeiling: number;
+  withinCeiling: boolean;
+}
+
+export interface RecoveryAnalysis {
+  semester: string;
+  nextSemester: string;
+  iraBefore: number;
+  iraAfterEvent: number;
+  deltaEvent: number;
+  /** Number of 64h disciplines at `recoveryGrade` in `nextSemester` needed to recover `iraBefore` (null if > 20). */
+  disciplinesToRecover: number | null;
+  /** Average needed in 256h in `nextSemester` to recover `iraBefore` (null if even 10 isn't enough). */
+  avg256hToRecover: number | null;
 }
 
 export function nextSemesterAfterEntries(entries: IraEntry[]): string {
@@ -411,11 +425,13 @@ export function solveTargetHorizons(
   targetIra: number,
   hoursPerSemester = 256,
   horizons = [1, 2, 3, 4],
+  realisticCeiling = 10,
 ): HorizonSolution[] {
   const baseEntries = entries.filter((e) => e.situacao !== 'em_andamento');
   const startSem = defaultWorkbenchSemester(entries);
   const startIdx = semesterIndex(startSem) ?? semesterIndex('2026.2') ?? 4053;
   const clampedTarget = Math.min(10, Math.max(0, targetIra));
+  const ceiling = Math.min(10, Math.max(0, realisticCeiling));
 
   return horizons.map((semesters) => {
     const totalHours = semesters * hoursPerSemester;
@@ -433,13 +449,28 @@ export function solveTargetHorizons(
     };
 
     const maxIraAt10 = evalAvg(10) ?? 0;
+    const maxIraAtCeiling = evalAvg(ceiling) ?? 0;
     if (maxIraAt10 < clampedTarget - 1e-6) {
-      return { semesters, totalHours, neededAvg: null, maxIraAt10 };
+      return {
+        semesters,
+        totalHours,
+        neededAvg: null,
+        maxIraAt10,
+        maxIraAtCeiling,
+        withinCeiling: false,
+      };
     }
 
     const at0 = evalAvg(0) ?? 0;
     if (at0 >= clampedTarget) {
-      return { semesters, totalHours, neededAvg: 0, maxIraAt10 };
+      return {
+        semesters,
+        totalHours,
+        neededAvg: 0,
+        maxIraAt10,
+        maxIraAtCeiling,
+        withinCeiling: ceiling >= 0,
+      };
     }
 
     let lo = 0;
@@ -452,6 +483,138 @@ export function solveTargetHorizons(
 
     // Round up to 0.01 so plugging neededAvg back in guarantees >= targetIra.
     const neededAvg = Math.min(10, Number((Math.ceil(hi * 100) / 100).toFixed(2)));
-    return { semesters, totalHours, neededAvg, maxIraAt10 };
+    return {
+      semesters,
+      totalHours,
+      neededAvg,
+      maxIraAt10,
+      maxIraAtCeiling,
+      withinCeiling: neededAvg <= ceiling + 1e-6,
+    };
   });
+}
+
+export function solveSemestersAtCeiling(
+  entries: IraEntry[],
+  targetIra: number,
+  hoursPerSemester = 256,
+  ceilingGrade = 9.0,
+  maxSemesters = 12,
+): number | null {
+  const baseEntries = entries.filter((e) => e.situacao !== 'em_andamento');
+  const current = computeIra(baseEntries);
+  if (current !== null && current >= targetIra - 1e-6) return 0;
+
+  const startSem = defaultWorkbenchSemester(entries);
+  const startIdx = semesterIndex(startSem) ?? semesterIndex('2026.2') ?? 4053;
+  const g = Math.min(10, Math.max(0, ceilingGrade));
+
+  for (let s = 1; s <= maxSemesters; s++) {
+    const future: IraEntry[] = Array.from({ length: s }, (_, k) => ({
+      id: `__ceil_${s}_${k}`,
+      disciplineName: `Meta ${k + 1}`,
+      grade: g,
+      workload: hoursPerSemester,
+      situacao: g < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado',
+      source: 'manual',
+      semester: semesterLabel(startIdx + k),
+    }));
+    const val = computeIra([...baseEntries, ...future]);
+    if (val !== null && val >= targetIra - 1e-6) return s;
+  }
+  return null;
+}
+
+export function analyzeRecoveryCost(
+  entries: IraEntry[],
+  eventGrade: number,
+  eventWorkload: number,
+  isLock: boolean,
+  recoveryGrade = 9.5,
+): RecoveryAnalysis | null {
+  const baseEntries = entries.filter((e) => e.situacao !== 'em_andamento');
+  const iraBefore = computeIra(baseEntries);
+  if (iraBefore === null) return null;
+
+  const semester = defaultWorkbenchSemester(entries);
+  const idx1 = semesterIndex(semester) ?? semesterIndex('2026.2') ?? 4053;
+  const nextSemester = semesterLabel(idx1 + 1);
+
+  const eventEntry: IraEntry = {
+    id: '__rec_event__',
+    disciplineName: isLock ? 'Trancamento' : 'Evento',
+    grade: isLock ? 0 : eventGrade,
+    workload: eventWorkload,
+    situacao: isLock ? 'trancado' : eventGrade < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado',
+    source: 'manual',
+    semester,
+  };
+
+  const withEvent = [...baseEntries, eventEntry];
+  const iraAfterEvent = computeIra(withEvent);
+  if (iraAfterEvent === null) return null;
+
+  const deltaEvent = Number((iraAfterEvent - iraBefore).toFixed(4));
+
+  let disciplinesToRecover: number | null = 0;
+  let avg256hToRecover: number | null = 0;
+
+  if (iraAfterEvent < iraBefore - 1e-6) {
+    disciplinesToRecover = null;
+    for (let k = 1; k <= 20; k++) {
+      const rec = computeIra([
+        ...withEvent,
+        {
+          id: '__rec_k__',
+          disciplineName: 'Recuperação',
+          grade: recoveryGrade,
+          workload: k * 64,
+          situacao: recoveryGrade < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado',
+          source: 'manual',
+          semester: nextSemester,
+        },
+      ]);
+      if (rec !== null && rec >= iraBefore - 1e-6) {
+        disciplinesToRecover = k;
+        break;
+      }
+    }
+
+    const eval256 = (g: number) =>
+      computeIra([
+        ...withEvent,
+        {
+          id: '__rec_256__',
+          disciplineName: 'Recuperação 256h',
+          grade: g,
+          workload: 256,
+          situacao: g < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado',
+          source: 'manual',
+          semester: nextSemester,
+        },
+      ]) ?? 0;
+
+    if (eval256(10) < iraBefore - 1e-6) {
+      avg256hToRecover = null;
+    } else {
+      let lo = 0;
+      let hi = 10;
+      for (let i = 0; i < 24; i++) {
+        const mid = (lo + hi) / 2;
+        if (eval256(mid) >= iraBefore) hi = mid;
+        else lo = mid;
+      }
+      avg256hToRecover = Math.min(10, Number((Math.ceil(hi * 100) / 100).toFixed(2)));
+    }
+  }
+
+  return {
+    semester,
+    nextSemester,
+    iraBefore,
+    iraAfterEvent,
+    deltaEvent,
+    disciplinesToRecover,
+    avg256hToRecover,
+  };
 }

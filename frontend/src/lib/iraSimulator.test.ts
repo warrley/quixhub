@@ -3,11 +3,13 @@ import { describe, it } from 'node:test';
 import type { IraEntry } from '@/data/types';
 import { computeIra } from './ira';
 import {
+  analyzeRecoveryCost,
   buildSimulatedEntries,
   compareLockVsRetake,
   computeCourseMilestones,
   computeLockBreakEven,
   runIraSimulation,
+  solveSemestersAtCeiling,
   solveTargetHorizons,
   type SimDisciplineItem,
   type SimFutureSemester,
@@ -133,5 +135,17 @@ describe('iraSimulator', () => {
     assert.equal(median.reached, true);
     assert.equal(top10.reached, false);
     assert.ok(top10.targetIra > median.targetIra);
+  });
+
+  it('computes realistic ceiling semesters and recovery cost after a failing grade', () => {
+    const base = VETERAN_TRANSCRIPT.filter((e) => e.situacao !== 'em_andamento');
+    const baseIra = computeIra(base)!;
+    const neededSems = solveSemestersAtCeiling(VETERAN_TRANSCRIPT, baseIra + 0.12, 256, 9.2, 12);
+    assert.ok(neededSems !== null && neededSems >= 1 && neededSems <= 12);
+
+    const rec = analyzeRecoveryCost(VETERAN_TRANSCRIPT, 3.0, 64, false, 9.5);
+    assert.ok(rec !== null);
+    assert.ok(rec.deltaEvent < 0);
+    assert.ok(rec.disciplinesToRecover !== null && rec.disciplinesToRecover >= 1);
   });
 });

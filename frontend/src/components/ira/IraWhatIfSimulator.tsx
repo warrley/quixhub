@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  AlertTriangle,
   Check,
   FlaskConical,
   Plus,
@@ -20,11 +21,13 @@ import { clampIra } from '@/lib/statistics';
 import { iraGeral, percentileBelow, type StatusGroup } from '@/lib/iraCampus';
 import { groupIras, groupSummary } from '@/lib/iraCampusData';
 import {
+  analyzeRecoveryCost,
   compareLockVsRetake,
   computeCourseMilestones,
   computeLockBreakEven,
   defaultWorkbenchSemester,
   runIraSimulation,
+  solveSemestersAtCeiling,
   solveTargetHorizons,
   type SimDisciplineItem,
   type SimDisciplineMode,
@@ -34,8 +37,15 @@ import {
 import { fmt, ordinal, pct } from './chartFormat';
 import { IraSimulatorTrajectory } from './IraSimulatorTrajectory';
 
-type SimTab = 'plano' | 'trancar' | 'metas';
+type SimTab = 'plano' | 'metas' | 'trancar' | 'risco';
 type ScenarioSlot = 'A' | 'B' | 'C';
+
+const ENROLLMENT_STRATEGIES = [
+  { key: 'leve', label: '3 mat. (192h)', workload: 192, grade: 9.5 },
+  { key: 'padrao', label: '4 mat. (256h)', workload: 256, grade: 8.8 },
+  { key: 'pesada', label: '5 mat. (320h)', workload: 320, grade: 8.0 },
+  { key: 'cheia', label: '6 mat. (384h)', workload: 384, grade: 7.5 },
+];
 
 const SCENARIO_SLOTS: { slot: ScenarioSlot; color: string }[] = [
   { slot: 'A', color: 'var(--color-accent-3)' },
@@ -126,6 +136,12 @@ export function IraWhatIfSimulator({
   // Goal Hunter state
   const [goalInput, setGoalInput] = useState<number | null>(null);
   const [goalHours, setGoalHours] = useState(256);
+  const [realisticCeiling, setRealisticCeiling] = useState(9.0);
+
+  // Risk & Enrollment Strategy state
+  const [riskEventKind, setRiskEventKind] = useState<'rep3' | 'pass5' | 'lock' | 'zero'>('rep3');
+  const [riskEventCh, setRiskEventCh] = useState(64);
+  const [recoveryGrade, setRecoveryGrade] = useState(9.5);
 
   // Up to 3 saved & restorable scenarios (A, B, C)
   const [savedScenarios, setSavedScenarios] = useState<Partial<Record<ScenarioSlot, SavedScenario>>>({});
@@ -233,9 +249,34 @@ export function IraWhatIfSimulator({
   const effectiveGoal = goalInput ?? defaultMilestoneTarget;
 
   const horizonSolutions = useMemo(
-    () => solveTargetHorizons(entries, effectiveGoal, goalHours, [1, 2, 3, 4]),
-    [entries, effectiveGoal, goalHours],
+    () => solveTargetHorizons(entries, effectiveGoal, goalHours, [1, 2, 3, 4], realisticCeiling),
+    [entries, effectiveGoal, goalHours, realisticCeiling],
   );
+  const semestersAtCeiling = useMemo(
+    () => solveSemestersAtCeiling(entries, effectiveGoal, goalHours, realisticCeiling, 12),
+    [entries, effectiveGoal, goalHours, realisticCeiling],
+  );
+
+  // Tab 4 computations: Recovery cost & Enrollment strategies
+  const recoveryInfo = useMemo(() => {
+    const isLock = riskEventKind === 'lock';
+    const g = riskEventKind === 'rep3' ? 3.0 : riskEventKind === 'pass5' ? 5.0 : 0;
+    return analyzeRecoveryCost(entries, g, riskEventCh, isLock, recoveryGrade);
+  }, [entries, riskEventKind, riskEventCh, recoveryGrade]);
+
+  const enrollmentComparisons = useMemo(() => {
+    return ENROLLMENT_STRATEGIES.map((st) => {
+      const out = runIraSimulation(entries, [], [{ id: st.key, workload: st.workload, grade: st.grade, lockHours: 0 }]);
+      const iraVal = out.finalIra !== null ? clampIra(out.finalIra) : null;
+      const rank = iraVal !== null ? values.filter((v) => v > iraVal).length + 1 : null;
+      return {
+        ...st,
+        ira: iraVal,
+        delta: iraVal !== null ? iraVal - currentDisplay : null,
+        rank,
+      };
+    });
+  }, [entries, values, currentDisplay]);
 
   // Workbench handlers
   function updateWorkbenchItem(item: SimDisciplineItem, patch: Partial<{ grade: number; mode: SimDisciplineMode }>) {
@@ -404,6 +445,40 @@ export function IraWhatIfSimulator({
     setTab('plano');
   }
 
+  function applySingleSemesterStrategy(workload: number, grade: number, isLock = false) {
+    setActiveSlot(null);
+    const ignoredOverrides: Record<string, TranscriptOverride> = {};
+    for (const e of transcriptWorkbenchEntries) {
+      ignoredOverrides[e.id] = { grade, mode: 'ignorar', sourceSig: entrySourceSig(e) };
+    }
+    setTranscriptOverrides(ignoredOverrides);
+    if (isLock) {
+      setCustomItems([
+        {
+          id: `risk-lock-${customCounter}`,
+          name: 'Trancamento simulado',
+          workload,
+          semester: workbenchSemester,
+          grade: 0,
+          mode: 'trancar',
+          fromTranscript: false,
+        },
+      ]);
+      setCustomFutureSemesters([]);
+    } else {
+      setCustomItems([]);
+      setCustomFutureSemesters([
+        {
+          id: `strat-sem-${customCounter}`,
+          workload,
+          grade,
+          lockHours: 0,
+        },
+      ]);
+    }
+    setCustomCounter((c) => c + 1);
+    setTab('plano');
+  }
   function applyGoalHorizonToChart(semestersCount: number, neededAvg: number) {
     setActiveSlot(null);
     const ignoredOverrides: Record<string, TranscriptOverride> = {};
@@ -495,8 +570,9 @@ export function IraWhatIfSimulator({
               onChange={setTab}
               options={[
                 { value: 'plano', label: 'Montar cenário' },
-                { value: 'trancar', label: 'Trancar vs. Cursar' },
                 { value: 'metas', label: 'Caçador de metas' },
+                { value: 'trancar', label: 'Trancar vs. Cursar' },
+                { value: 'risco', label: 'Risco & Matrícula' },
               ]}
             />
 
@@ -1030,7 +1106,7 @@ export function IraWhatIfSimulator({
               </div>
             )}
 
-            {/* TAB 3: Real Course Milestones & Multi-Horizon Solver */}
+            {/* TAB 2: Real Course Milestones & Multi-Horizon Solver */}
             {tab === 'metas' && (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1049,6 +1125,27 @@ export function IraWhatIfSimulator({
                         }`}
                       >
                         {ch}h/sem
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Realistic ceiling picker */}
+                <div className="flex items-center justify-between gap-2 flex-wrap rounded-md bg-surface border border-line px-3 py-2">
+                  <span className="text-11 font-medium text-ink-2">Sua média realista máxima por semestre:</span>
+                  <div className="inline-flex flex-wrap gap-1">
+                    {[8.0, 8.5, 9.0, 9.5, 10.0].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setRealisticCeiling(c)}
+                        className={`px-2 py-0.5 rounded-full text-11 font-heading font-bold cursor-pointer border transition-colors tabular-nums ${
+                          realisticCeiling === c
+                            ? 'bg-accent-2-tint text-accent-2-dark border-accent-2-dark/40'
+                            : 'bg-surface-sunken text-ink-2 border-line hover:text-ink'
+                        }`}
+                      >
+                        {fmt(c, 1)}
                       </button>
                     ))}
                   </div>
@@ -1094,6 +1191,27 @@ export function IraWhatIfSimulator({
                   </label>
                 </div>
 
+                {/* Pace summary using chosen realistic ceiling */}
+                <div className="rounded-md bg-accent-tint/50 border border-accent/25 px-3 py-2 text-11-5 text-ink-2 tabular-nums">
+                  {semestersAtCeiling === 0 ? (
+                    <span>Você já atingiu a meta de <b className="text-ink">{fmt(effectiveGoal, 2)}</b>.</span>
+                  ) : semestersAtCeiling !== null ? (
+                    <span>
+                      Mantendo média realista <b className="text-ink">{fmt(realisticCeiling, 1)}</b> em{' '}
+                      <b className="text-ink">{goalHours}h/sem</b>, você chega em{' '}
+                      <b className="text-accent-dark font-heading">
+                        {semestersAtCeiling} {semestersAtCeiling === 1 ? 'semestre' : 'semestres'}
+                      </b>
+                      .
+                    </span>
+                  ) : (
+                    <span>
+                      Com média <b className="text-ink">{fmt(realisticCeiling, 1)}</b> em <b className="text-ink">{goalHours}h/sem</b>, a meta de{' '}
+                      <b className="text-ink">{fmt(effectiveGoal, 2)}</b> não é alcançável em até 12 semestres.
+                    </span>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {horizonSolutions.map((sol) => (
                     <div
@@ -1111,26 +1229,200 @@ export function IraWhatIfSimulator({
                         <>
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-11 text-ink-2">Média necessária:</span>
-                            <span className="font-heading font-extrabold text-17 text-accent-dark tabular-nums">
+                            <span
+                              className={`font-heading font-extrabold text-17 tabular-nums ${
+                                sol.withinCeiling ? 'text-accent-dark' : 'text-accent-2-dark'
+                              }`}
+                            >
                               {fmt(sol.neededAvg, 2)}
                             </span>
                           </div>
+                          {!sol.withinCeiling && (
+                            <div className="text-10-5 text-accent-2-dark leading-snug tabular-nums">
+                              Acima do seu teto ({fmt(realisticCeiling, 1)}): com {fmt(realisticCeiling, 1)} chega a{' '}
+                              <b>{fmt(sol.maxIraAtCeiling, 4)}</b>.
+                            </div>
+                          )}
                           <button
                             type="button"
                             onClick={() => applyGoalHorizonToChart(sol.semesters, sol.neededAvg!)}
-                            className="w-full py-1.5 px-2.5 rounded-md bg-accent-tint hover:bg-accent-tint-2 text-accent-dark font-heading font-semibold text-11 cursor-pointer transition-colors"
+                            className="w-full py-1.5 px-2.5 rounded-full bg-accent-tint hover:bg-accent-tint-2 text-accent-dark font-heading font-semibold text-11 cursor-pointer transition-colors"
                           >
                             Simular roteiro de {sol.semesters} {sol.semesters === 1 ? 'sem.' : 'sems.'} →
                           </button>
                         </>
                       ) : (
                         <div className="text-11 text-ink-3 leading-snug tabular-nums">
-                          Alcançar <b>{fmt(effectiveGoal, 2)}</b> nesse prazo não cabe na inércia atual: o teto com média 10 é{' '}
-                          <b className="text-ink">{fmt(sol.maxIraAt10, 4)}</b>.
+                          Não cabe nesse prazo: com seu teto ({fmt(realisticCeiling, 1)}) chega a{' '}
+                          <b className="text-ink">{fmt(sol.maxIraAtCeiling, 4)}</b> (com 10: {fmt(sol.maxIraAt10, 4)}).
                         </div>
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: Recovery Cost & Enrollment Strategy */}
+            {tab === 'risco' && (
+              <div className="flex flex-col gap-3">
+                {/* Recovery calculator */}
+                <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-xs font-heading font-bold text-ink">
+                      <AlertTriangle size={14} className="text-accent-2-dark" aria-hidden="true" />
+                      Calculadora de Recuperação
+                    </div>
+                    <div className="inline-flex gap-1 bg-surface-sunken border border-line rounded-full p-0.5">
+                      {ITEM_WORKLOAD_CHOICES.map((ch) => (
+                        <button
+                          key={ch}
+                          type="button"
+                          onClick={() => setRiskEventCh(ch)}
+                          className={`px-2 py-0.5 rounded-full text-10-5 font-heading font-bold cursor-pointer ${
+                            riskEventCh === ch ? 'bg-accent text-accent-ink' : 'text-ink-2 hover:text-ink'
+                          }`}
+                        >
+                          {ch}h
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(
+                      [
+                        ['rep3', 'Reprovar c/ 3,0'],
+                        ['pass5', 'Passar c/ 5,0'],
+                        ['lock', 'Trancar'],
+                        ['zero', 'Zerar (0,0)'],
+                      ] as const
+                    ).map(([kind, label]) => (
+                      <button
+                        key={kind}
+                        type="button"
+                        onClick={() => setRiskEventKind(kind)}
+                        className={`px-2.5 py-1 rounded-full border text-11 font-heading font-semibold cursor-pointer transition-colors ${
+                          riskEventKind === kind
+                            ? 'bg-danger-tint text-danger border-danger/40'
+                            : 'bg-surface-sunken text-ink-2 border-line hover:text-ink'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 flex-wrap text-11 text-ink-2">
+                    <span>Nota para recuperar depois:</span>
+                    <div className="inline-flex gap-1">
+                      {[8.5, 9.0, 9.5, 10.0].map((rg) => (
+                        <button
+                          key={rg}
+                          type="button"
+                          onClick={() => setRecoveryGrade(rg)}
+                          className={`px-2 py-0.5 rounded-full border text-10-5 font-heading font-bold cursor-pointer tabular-nums ${
+                            recoveryGrade === rg
+                              ? 'bg-good-tint text-good border-good/40'
+                              : 'bg-surface-sunken text-ink-2 border-line hover:text-ink'
+                          }`}
+                        >
+                          {fmt(rg, 1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {recoveryInfo ? (
+                    <div className="rounded-md bg-surface-sunken border border-line p-2.5 flex flex-col gap-1.5 text-11-5 tabular-nums">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-ink-2">
+                          IRA após o evento: <b className="font-heading text-ink">{fmt(recoveryInfo.iraAfterEvent, 4)}</b>
+                        </span>
+                        <span
+                          className={`font-heading font-bold ${
+                            recoveryInfo.deltaEvent >= 0 ? 'text-good' : 'text-danger'
+                          }`}
+                        >
+                          {recoveryInfo.deltaEvent >= 0 ? '+' : ''}
+                          {fmt(recoveryInfo.deltaEvent, 4)}
+                        </span>
+                      </div>
+
+                      {recoveryInfo.deltaEvent < 0 ? (
+                        <div className="text-ink-2 leading-snug">
+                          Para voltar a <b className="text-ink">{fmt(recoveryInfo.iraBefore, 4)}</b> em{' '}
+                          <b>{recoveryInfo.nextSemester}</b>:{' '}
+                          {recoveryInfo.disciplinesToRecover !== null ? (
+                            <>
+                              precisa de{' '}
+                              <b className="text-accent-dark font-heading">
+                                {recoveryInfo.disciplinesToRecover}{' '}
+                                {recoveryInfo.disciplinesToRecover === 1 ? 'matéria' : 'matérias'} de 64h
+                              </b>{' '}
+                              com nota {fmt(recoveryGrade, 1)}
+                            </>
+                          ) : (
+                            <>mais de 20 matérias de 64h com nota {fmt(recoveryGrade, 1)}</>
+                          )}
+                          {recoveryInfo.avg256hToRecover !== null
+                            ? ` (ou fechar 256h com média ${fmt(recoveryInfo.avg256hToRecover, 2)}).`
+                            : ' (nem média 10 em 256h recupera em 1 período).'}
+                        </div>
+                      ) : (
+                        <div className="text-good font-medium">Esse evento não reduz o seu IRA atual.</div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applySingleSemesterStrategy(
+                            riskEventCh,
+                            riskEventKind === 'rep3' ? 3.0 : riskEventKind === 'pass5' ? 5.0 : 0,
+                            riskEventKind === 'lock',
+                          )
+                        }
+                        className="self-start text-10-5 font-heading font-semibold text-accent-dark hover:underline cursor-pointer"
+                      >
+                        Simular esse evento na bancada →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-11 text-ink-3">Adicione ao menos 1 matéria com nota fechada no histórico.</div>
+                  )}
+                </div>
+
+                {/* Enrollment Strategy Comparator */}
+                <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2">
+                  <div className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
+                    Estratégia de matrícula: menos matérias c/ nota alta vs. grade cheia
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {enrollmentComparisons.map((st) => (
+                      <button
+                        key={st.key}
+                        type="button"
+                        onClick={() => applySingleSemesterStrategy(st.workload, st.grade, false)}
+                        className="rounded-md bg-surface-sunken hover:border-accent border border-line p-2.5 text-left cursor-pointer transition-colors flex flex-col gap-1"
+                      >
+                        <div className="flex items-center justify-between gap-2 text-11">
+                          <b className="font-heading text-ink">{st.label}</b>
+                          <span className="text-ink-3 tabular-nums">média {fmt(st.grade, 1)}</span>
+                        </div>
+                        {st.ira !== null && st.delta !== null && (
+                          <div className="flex items-baseline justify-between gap-2 tabular-nums">
+                            <span className="font-heading font-extrabold text-sm text-accent-2-dark">
+                              {fmt(st.ira, 4)}
+                            </span>
+                            <span className={`text-10-5 font-bold ${st.delta >= 0 ? 'text-good' : 'text-danger'}`}>
+                              {st.delta >= 0 ? '+' : ''}
+                              {fmt(st.delta, 4)} {st.rank !== null ? `· ${ordinal(st.rank)}` : ''}
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1211,42 +1503,47 @@ export function IraWhatIfSimulator({
                     );
                   }
                   const diff = simDisplay !== null ? simDisplay - saved.finalIra : null;
+                  const hasDiff = diff !== null && Math.abs(diff) > 0.0001;
                   return (
                     <div
                       key={slot}
-                      className={`min-w-0 overflow-hidden rounded-md border p-2 flex flex-col gap-1.5 transition-colors ${
+                      className={`min-w-0 overflow-hidden rounded-md border p-2 flex flex-col justify-between gap-1.5 transition-colors ${
                         isActiveSlot ? 'border-accent bg-accent-tint/45' : 'border-line bg-surface-sunken'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="inline-flex items-center gap-1.5 font-heading font-bold text-11 text-ink truncate">
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                          Cenário {slot}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeScenario(slot)}
-                          aria-label={`Remover Cenário ${slot}`}
-                          className="text-ink-3 hover:text-danger cursor-pointer shrink-0"
-                        >
-                          <X size={12} aria-hidden="true" />
-                        </button>
-                      </div>
-                      <div className="flex items-baseline justify-between gap-1 tabular-nums">
-                        <b className="font-heading text-xs text-ink">{fmt(saved.finalIra, 4)}</b>
-                        <span className="text-10 text-ink-3">{ordinal(saved.rank)}</span>
-                      </div>
-                      {diff !== null && Math.abs(diff) > 0.0001 && (
-                        <div className={`text-10 font-semibold tabular-nums ${diff > 0 ? 'text-good' : 'text-danger'}`}>
-                          Atual {diff > 0 ? '+' : ''}
-                          {fmt(diff, 4)}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="inline-flex items-center gap-1.5 font-heading font-bold text-11 text-ink truncate">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                            Cenário {slot}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeScenario(slot)}
+                            aria-label={`Remover Cenário ${slot}`}
+                            className="text-ink-3 hover:text-danger cursor-pointer shrink-0"
+                          >
+                            <X size={12} aria-hidden="true" />
+                          </button>
                         </div>
-                      )}
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                        <div className="flex items-baseline justify-between gap-1 tabular-nums">
+                          <b className="font-heading text-xs text-ink">{fmt(saved.finalIra, 4)}</b>
+                          <span className="text-10 text-ink-3">{ordinal(saved.rank)}</span>
+                        </div>
+                        <div
+                          className={`text-10 font-semibold tabular-nums min-h-[14px] ${
+                            hasDiff ? (diff! > 0 ? 'text-good' : 'text-danger') : 'text-ink-3 font-normal'
+                          }`}
+                        >
+                          {hasDiff ? `Atual ${diff! > 0 ? '+' : ''}${fmt(diff!, 4)}` : 'Igual ao atual'}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1 pt-0.5">
                         <button
                           type="button"
                           onClick={() => loadScenario(slot)}
-                          className="flex-1 min-w-0 rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10 font-heading font-semibold text-ink text-center cursor-pointer truncate"
+                          className="w-full rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink text-center cursor-pointer"
                           title={`Voltar para o Cenário ${slot} na bancada`}
                         >
                           Carregar
@@ -1255,7 +1552,7 @@ export function IraWhatIfSimulator({
                           type="button"
                           onClick={() => saveScenario(slot)}
                           disabled={simDisplay === null}
-                          className="flex-1 min-w-0 rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10 font-heading font-semibold text-ink-2 hover:text-ink text-center cursor-pointer truncate"
+                          className="w-full rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink-2 hover:text-ink text-center cursor-pointer"
                           title={`Sobrescrever Cenário ${slot} com o atual`}
                         >
                           Atualizar
