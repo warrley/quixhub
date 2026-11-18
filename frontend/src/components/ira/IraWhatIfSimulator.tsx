@@ -74,6 +74,51 @@ interface SavedScenario {
   futureSemesters: SimFutureSemester[] | null;
 }
 
+const SCENARIOS_STORAGE_KEY = 'quixhub.ira.scenarios.v1';
+
+function isValidSavedScenario(value: unknown, slot: ScenarioSlot): value is SavedScenario {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Partial<SavedScenario>;
+  return (
+    v.slot === slot &&
+    typeof v.finalIra === 'number' &&
+    Number.isFinite(v.finalIra) &&
+    typeof v.rank === 'number' &&
+    Number.isFinite(v.rank) &&
+    Array.isArray(v.points) &&
+    typeof v.transcriptOverrides === 'object' &&
+    v.transcriptOverrides !== null &&
+    Array.isArray(v.customItems) &&
+    (v.futureSemesters === null || Array.isArray(v.futureSemesters))
+  );
+}
+
+function readStoredScenarios(): Partial<Record<ScenarioSlot, SavedScenario>> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(SCENARIOS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object') return {};
+    const out: Partial<Record<ScenarioSlot, SavedScenario>> = {};
+    for (const slot of ['A', 'B', 'C'] as const) {
+      if (isValidSavedScenario(parsed[slot], slot)) out[slot] = parsed[slot];
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredScenarios(scenarios: Partial<Record<ScenarioSlot, SavedScenario>>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SCENARIOS_STORAGE_KEY, JSON.stringify(scenarios));
+  } catch {
+    // ignore quota or privacy mode errors
+  }
+}
+
 export interface AppliedEntryPatch {
   id: string;
   grade: number;
@@ -134,7 +179,7 @@ export function IraWhatIfSimulator({
 
   // Goal Hunter state
   const [goalInput, setGoalInput] = useState<number | null>(null);
-  const [goalHours, setGoalHours] = useState(256);
+  const [goalHours, setGoalHours] = useState(320);
   const [realisticCeiling, setRealisticCeiling] = useState(9.0);
 
   // Risk & Enrollment Strategy state
@@ -142,9 +187,13 @@ export function IraWhatIfSimulator({
   const [riskEventCh, setRiskEventCh] = useState(64);
   const [recoveryGrade, setRecoveryGrade] = useState(9.5);
 
-  // Up to 3 saved & restorable scenarios (A, B, C)
+  // Up to 3 saved & restorable scenarios (A, B, C) persisted in localStorage
   const [savedScenarios, setSavedScenarios] = useState<Partial<Record<ScenarioSlot, SavedScenario>>>({});
   const [activeSlot, setActiveSlot] = useState<ScenarioSlot | null>(null);
+
+  useEffect(() => {
+    setSavedScenarios(readStoredScenarios());
+  }, []);
 
   const transcriptWorkbenchEntries = useMemo(
     () => entries.filter((e) => e.situacao === 'em_andamento' || isEntryPredicted(e)),
@@ -176,7 +225,7 @@ export function IraWhatIfSimulator({
   const futureSemesters = useMemo<SimFutureSemester[]>(() => {
     if (customFutureSemesters !== null) return customFutureSemesters;
     if (transcriptWorkbenchEntries.length === 0 && customItems.length === 0) {
-      return [{ id: 'fs-default', workload: 256, grade: 8.5, lockHours: 0 }];
+      return [{ id: 'fs-default', workload: 320, grade: 8.5, lockHours: 0 }];
     }
     return [];
   }, [customFutureSemesters, transcriptWorkbenchEntries.length, customItems.length]);
@@ -359,7 +408,7 @@ export function IraWhatIfSimulator({
       for (let i = 0; i < toAdd; i++) {
         next.push({
           id: `fs-${customCounter + i}`,
-          workload: 256,
+          workload: 320,
           grade: 8.5,
           lockHours: 0,
         });
@@ -387,18 +436,22 @@ export function IraWhatIfSimulator({
 
   function saveScenario(slot: ScenarioSlot) {
     if (simDisplay === null || simRank === null) return;
-    setSavedScenarios((cur) => ({
-      ...cur,
-      [slot]: {
-        slot,
-        finalIra: simDisplay,
-        rank: simRank,
-        points: simOutput.points.map((p) => ({ ...p })),
-        transcriptOverrides: { ...transcriptOverrides },
-        customItems: customItems.map((c) => ({ ...c })),
-        futureSemesters: customFutureSemesters ? customFutureSemesters.map((f) => ({ ...f })) : null,
-      },
-    }));
+    setSavedScenarios((cur) => {
+      const next: Partial<Record<ScenarioSlot, SavedScenario>> = {
+        ...cur,
+        [slot]: {
+          slot,
+          finalIra: simDisplay,
+          rank: simRank,
+          points: simOutput.points.map((p) => ({ ...p })),
+          transcriptOverrides: { ...transcriptOverrides },
+          customItems: customItems.map((c) => ({ ...c })),
+          futureSemesters: customFutureSemesters ? customFutureSemesters.map((f) => ({ ...f })) : null,
+        },
+      };
+      writeStoredScenarios(next);
+      return next;
+    });
     setActiveSlot(slot);
   }
 
@@ -416,6 +469,7 @@ export function IraWhatIfSimulator({
     setSavedScenarios((cur) => {
       const next = { ...cur };
       delete next[slot];
+      writeStoredScenarios(next);
       return next;
     });
     if (activeSlot === slot) setActiveSlot(null);
@@ -1373,9 +1427,9 @@ export function IraWhatIfSimulator({
                           ) : (
                             <>mais de 20 matérias de 64h com nota {fmt(recoveryGrade, 1)}</>
                           )}
-                          {recoveryInfo.avg256hToRecover !== null
-                            ? ` (ou fechar 256h com média ${fmt(recoveryInfo.avg256hToRecover, 2)}).`
-                            : ' (nem média 10 em 256h recupera em 1 período).'}
+                          {recoveryInfo.avg320hToRecover !== null
+                            ? ` (ou fechar 320h com média ${fmt(recoveryInfo.avg320hToRecover, 2)}).`
+                            : ' (nem média 10 em 320h recupera em 1 período).'}
                         </div>
                       ) : (
                         <div className="text-good font-medium">Esse evento não reduz o seu IRA atual.</div>

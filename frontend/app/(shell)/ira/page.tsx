@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, Check, ChevronDown, ChevronUp, Layers, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { AlertCircle, BarChart3, Check, ChevronDown, ChevronUp, Layers, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
@@ -164,6 +164,7 @@ export default function Ira() {
   const [manualIngresso, setManualIngresso] = useState<string | null>(null);
   const [claimedStudent, setClaimedStudent] = useState<CampusStudent | null>(null);
   const [showNameInRanking, setShowNameInRanking] = useState(false);
+  const [studentName, setStudentName] = useState<string | null>(null);
 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showStats, setShowStats] = useState(true);
@@ -173,9 +174,14 @@ export default function Ira() {
     try {
       const saved = localStorage.getItem('quixhub-ira-identity');
       if (saved) {
-        const parsed = JSON.parse(saved) as { claimed?: CampusStudent | null; showName?: boolean };
+        const parsed = JSON.parse(saved) as {
+          claimed?: CampusStudent | null;
+          showName?: boolean;
+          studentName?: string | null;
+        };
         if (parsed.claimed) setClaimedStudent(parsed.claimed);
         if (typeof parsed.showName === 'boolean') setShowNameInRanking(parsed.showName);
+        if (typeof parsed.studentName === 'string') setStudentName(parsed.studentName);
       }
       if (!localStorage.getItem('quixhub-ira-privacy-ack')) {
         setShowPrivacyModal(true);
@@ -222,10 +228,15 @@ export default function Ira() {
     }
   }
 
-  function updateIdentity(claimed: CampusStudent | null, showName: boolean) {
+  function updateIdentity(claimed: CampusStudent | null, showName: boolean, nextName: string | null = studentName) {
     setClaimedStudent(claimed);
     setShowNameInRanking(showName);
-    localStorage.setItem('quixhub-ira-identity', JSON.stringify({ claimed, showName }));
+    setStudentName(nextName);
+    try {
+      localStorage.setItem('quixhub-ira-identity', JSON.stringify({ claimed, showName, studentName: nextName }));
+    } catch {
+      // ignore storage errors
+    }
   }
 
   const rawIngresso = manualIngresso ?? claimedStudent?.ingresso ?? inferredIngresso;
@@ -249,6 +260,11 @@ export default function Ira() {
     fromIngresso: '2023.1',
     toIngresso: '2026.1',
   });
+
+  function handleComparisonCourseChange(nextCourse: string | null) {
+    setComparisonCourse(nextCourse);
+    setRankingFilter((cur) => ({ ...cur, scope: nextCourse ? 'curso' : 'campus' }));
+  }
 
   const [simulatedIra, setSimulatedIra] = useState<number | null>(null);
 
@@ -281,7 +297,7 @@ export default function Ira() {
         ghostIra: simulatedIra,
         predictedIra: hasSimulated ? ira : null,
         course: comparisonCourse,
-        myCourse,
+        myCourse: comparisonCourse,
         group: statusGroup,
         rankingFilter,
         podiumSize,
@@ -365,12 +381,33 @@ export default function Ira() {
 
   const [fileName, setFileName] = useState<string>();
   const [parsing, setParsing] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const [review, setReview] = useState<DraftEntry[] | null>(null);
+  const [reviewStudentName, setReviewStudentName] = useState<string | undefined>();
   const [printedIra, setPrintedIra] = useState<number | undefined>();
 
   const previewIra = review ? computeIra(review.map((e, i) => ({ ...toEntry(e), id: `preview-${i}` }))) : null;
 
   async function handleFile(file: File) {
+    setPdfError(null);
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      const msg = `O arquivo "${file.name}" não é um PDF válido. Envie o histórico escolar em PDF emitido pelo SIGAA.`;
+      setFileName(undefined);
+      setReview(null);
+      setPdfError(msg);
+      show(msg);
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      const msg = `O arquivo "${file.name}" ultrapassa o limite de 25MB.`;
+      setFileName(undefined);
+      setReview(null);
+      setPdfError(msg);
+      show(msg);
+      return;
+    }
+
     setFileName(file.name);
     setParsing(true);
     setReview(null);
@@ -378,13 +415,20 @@ export default function Ira() {
       const { parseHistoricoPdf } = await import('@/lib/iraPdfParser');
       const result = await parseHistoricoPdf(file);
       if (result.entries.length === 0) {
-        show('Não foi possível reconhecer disciplinas neste PDF. Tente a entrada manual.');
+        const msg = `Não foi possível reconhecer disciplinas em "${file.name}". Verifique se é um histórico escolar válido do SIGAA ou use a entrada manual.`;
+        setFileName(undefined);
+        setPdfError(msg);
+        show(msg);
       } else {
         setReview(result.entries);
+        setReviewStudentName(result.studentName);
         setPrintedIra(result.printedIra);
       }
     } catch {
-      show('Falha ao ler o PDF. Tente novamente ou use a entrada manual.');
+      const msg = `Falha ao ler o PDF "${file.name}". O arquivo pode estar corrompido ou protegido — tente outro PDF ou use a entrada manual.`;
+      setFileName(undefined);
+      setPdfError(msg);
+      show(msg);
     } finally {
       setParsing(false);
     }
@@ -430,14 +474,19 @@ export default function Ira() {
         Math.abs(newRefIra - claimedStudent.ira) <= 0.02 &&
         (!newIngresso || newIngresso === claimedStudent.ingresso);
       if (!matchesClaimed) {
-        updateIdentity(null, false);
+        updateIdentity(null, false, reviewStudentName ?? null);
         setManualIngresso(null);
+      } else if (reviewStudentName) {
+        updateIdentity(claimedStudent, showNameInRanking, reviewStudentName);
       }
+    } else if (reviewStudentName) {
+      updateIdentity(null, showNameInRanking, reviewStudentName);
     }
 
     if (previousPdfIds.length > 0) removeEntries(previousPdfIds);
     addEntries(nextEntries);
     setReview(null);
+    setReviewStudentName(undefined);
     setFileName(undefined);
     setPrintedIra(undefined);
     show(previousPdfIds.length > 0 ? 'Histórico atualizado com sucesso!' : 'Histórico importado com sucesso!');
@@ -490,7 +539,7 @@ export default function Ira() {
               ghostIra={simulatedIra}
               course={comparisonCourse}
               group={statusGroup}
-              onCourseChange={setComparisonCourse}
+              onCourseChange={handleComparisonCourseChange}
             />
             <IraWhatIfSimulator
               entries={state.entries}
@@ -509,7 +558,7 @@ export default function Ira() {
           <IraIdentityMatch
             entries={state.entries}
             ira={officialIra ?? ira}
-            userName={currentUser.name}
+            studentName={studentName}
             claimed={claimedStudent}
             showNameInRanking={showNameInRanking}
             onClaim={(student) => {
@@ -517,6 +566,7 @@ export default function Ira() {
               if (student) show('Identidade confirmada na base SIGAA!');
             }}
             onToggleShowName={(next) => updateIdentity(claimedStudent, next)}
+            onStudentNameChange={(nextName) => updateIdentity(claimedStudent, showNameInRanking, nextName)}
           />
 
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
@@ -544,13 +594,13 @@ export default function Ira() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <IraRanking
                   ira={ira}
-                  myCourse={myCourse}
+                  myCourse={comparisonCourse}
                   ingresso={ingresso}
                   ingressoOptions={ingressoOptions}
                   onIngressoChange={setManualIngresso}
                   filter={rankingFilter}
                   onFilterChange={setRankingFilter}
-                  displayName={showNameInRanking ? currentUser.name : null}
+                  displayName={showNameInRanking && studentName?.trim() ? studentName.trim() : null}
                   isEstimate={hasSimulated}
                   officialIra={officialIra}
                   podiumSize={podiumSize}
@@ -592,6 +642,25 @@ export default function Ira() {
       <div className="mb-6">
         <div className="font-heading font-bold text-sm mb-2">Importar histórico do SIGAA (PDF)</div>
         <UploadDropzone fileName={parsing ? 'Lendo PDF...' : fileName} onFile={handleFile} accept="application/pdf" />
+        {pdfError && (
+          <div
+            role="alert"
+            className="mt-2.5 flex items-start justify-between gap-2.5 rounded-md border border-danger/40 bg-danger-tint px-3.5 py-2.5 text-xs text-danger"
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" aria-hidden />
+              <span>{pdfError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPdfError(null)}
+              aria-label="Fechar aviso"
+              className="shrink-0 p-0.5 rounded hover:bg-danger/10 cursor-pointer"
+            >
+              <X size={14} aria-hidden />
+            </button>
+          </div>
+        )}
 
         {review && review.length > 0 && (
           <div className="bg-surface-sunken border border-line rounded-xl p-5 mt-3 mb-6 shadow-sm">

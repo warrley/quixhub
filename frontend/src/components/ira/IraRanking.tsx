@@ -181,11 +181,12 @@ export function IraRanking({
   const myIra = showingPredicted ? estimatedIra : (realIra ?? estimatedIra);
   const altIra = showingPredicted ? realIra : (hasPrediction ? estimatedIra : null);
 
+  const isLoading = snapshot === null;
   const serverRanking = snapshot?.available ? snapshot.ranking : null;
   const blocker = serverRanking?.blocker ?? null;
   const ranking = serverRanking?.primary ?? null;
   const altRanking = serverRanking?.alt ?? null;
-  const tooSmall = !serverRanking || serverRanking.tooSmall || !ranking;
+  const tooSmall = !isLoading && (!serverRanking || serverRanking.tooSmall || !ranking);
   const max = ranking ? Math.max(10, ...ranking.rows.map((r) => r.ira)) : 10;
 
   const scopeText = filter.scope === 'curso' ? myCourse ?? 'seu curso' : 'campus';
@@ -195,7 +196,7 @@ export function IraRanking({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <CardKicker>Ranking</CardKicker>
-          <CardTitle>Top {podiumSize} do {filter.scope === 'curso' ? 'curso' : 'campus'}</CardTitle>
+          <CardTitle>Top {podiumSize} · {filter.scope === 'curso' ? (myCourse ?? 'curso') : 'Campus'}</CardTitle>
         </div>
         <Trophy size={20} className="text-accent-2-dark shrink-0 mt-1" aria-hidden />
       </div>
@@ -208,7 +209,7 @@ export function IraRanking({
             value={filter.scope}
             onChange={(scope) => onFilterChange({ ...filter, scope })}
             options={[
-              { value: 'curso', label: 'Meu curso', title: myCourse ?? 'Curso não informado', disabled: !myCourse },
+              { value: 'curso', label: 'Curso selecionado', title: myCourse ?? 'Selecione um curso acima', disabled: !myCourse },
               { value: 'campus', label: 'Campus', title: 'Todos os cursos de Quixadá' },
             ]}
           />
@@ -288,9 +289,13 @@ export function IraRanking({
         )}
       </div>
 
-      {blocker ? (
+      {isLoading ? (
+        <p className="text-13 text-ink-3 border border-dashed border-line rounded-md p-4 text-center my-auto">
+          Carregando ranking...
+        </p>
+      ) : blocker ? (
         <p className="text-13 text-ink-3 border border-dashed border-line rounded-md p-4 text-center my-auto">{blocker}</p>
-      ) : tooSmall ? (
+      ) : tooSmall || !ranking ? (
         <p className="text-13 text-ink-3 border border-dashed border-line rounded-md p-4 text-center my-auto">
           Menos de {MIN_GROUP_SIZE} alunos neste recorte — o ranking fica escondido para não expor ninguém.
         </p>
