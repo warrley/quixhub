@@ -2,9 +2,8 @@
 
 import { useId, useMemo, useState } from 'react';
 import type { IraEntry } from '@/data/types';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
 import { computeDisciplineBubbles, computeEvolution, computeIra } from '@/lib/ira';
-import { iraByStage } from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { EmptyChart } from './chartKit';
 import { fmt, linePath } from './chartFormat';
 import { dotColorByImpact } from './personalColors';
@@ -20,14 +19,12 @@ import { dotColorByImpact } from './personalColors';
  */
 export function SemesterBridgePlot({
   entries,
-  course,
   activeId,
   onHover,
   onSelect,
   large = false,
 }: {
   entries: IraEntry[];
-  course: string | null;
   activeId: string | null;
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
@@ -36,6 +33,7 @@ export function SemesterBridgePlot({
   const gradId = useId();
   const [hoverSemIdx, setHoverSemIdx] = useState<number | null>(null);
 
+  const snapshot = useCampusSnapshot();
   const points = useMemo(() => computeEvolution(entries), [entries]);
   const currentIra = useMemo(() => computeIra(entries), [entries]);
   const deltaById = useMemo(
@@ -43,9 +41,9 @@ export function SemesterBridgePlot({
     [entries],
   );
   const courseStages = useMemo(() => {
-    const pool = course ? CAMPUS_STUDENTS.filter((s) => s.course === course) : CAMPUS_STUDENTS;
-    return new Map(iraByStage(pool, CAMPUS_UPDATED_AT, 14).map((s) => [s.stage, s]));
-  }, [course]);
+    const list = snapshot?.available ? snapshot.insights.stagePoints : [];
+    return new Map(list.map((s) => [s.stage, s]));
+  }, [snapshot]);
 
   if (points.length === 0 || currentIra === null) {
     return <EmptyChart>Adicione ou importe disciplinas com semestre para ver a ponte entre períodos.</EmptyChart>;

@@ -1,23 +1,18 @@
 'use client';
 
 import { ArrowUp, Crown, Trophy } from 'lucide-react';
-import { useMemo, useState } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
 import { clampIra } from '@/lib/statistics';
 import {
   MIN_GROUP_SIZE,
-  buildRanking,
-  excludeClaimedStudent,
-  filterForRanking,
-  rankingFilterBlocker,
-  type CampusStudent,
   type RankingCohort,
   type RankingFilter,
   type RankingRow,
   type RankingScope,
 } from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
+import { CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { fmt, ordinal } from './chartFormat';
 
 const PLACE_NAME: Record<number, string> = {
@@ -153,10 +148,13 @@ export function IraRanking({
   onIngressoChange,
   filter,
   onFilterChange,
-  claimedStudent = null,
   displayName = null,
   isEstimate = false,
   officialIra = null,
+  podiumSize,
+  onPodiumSizeChange,
+  usePredicted,
+  onUsePredictedChange,
 }: {
   ira: number;
   /** The user's own course, already mapped onto the export's names. */
@@ -166,37 +164,29 @@ export function IraRanking({
   onIngressoChange: (ingresso: string | null) => void;
   filter: RankingFilter;
   onFilterChange: (filter: RankingFilter) => void;
-  claimedStudent?: CampusStudent | null;
   displayName?: string | null;
   isEstimate?: boolean;
   officialIra?: number | null;
+  podiumSize: 5 | 10;
+  onPodiumSizeChange: (size: 5 | 10) => void;
+  usePredicted: 'previsto' | 'real';
+  onUsePredictedChange: (value: 'previsto' | 'real') => void;
 }) {
+  const snapshot = useCampusSnapshot();
   const estimatedIra = clampIra(ira);
   const realIra = officialIra !== null ? clampIra(officialIra) : null;
   const hasPrediction = isEstimate && realIra !== null && Math.abs(realIra - estimatedIra) > 1e-6;
-  const [usePredicted, setUsePredicted] = useState<'previsto' | 'real'>('previsto');
-  const [showTop10, setShowTop10] = useState(false);
-  const podiumSize = showTop10 ? 10 : 5;
 
   const showingPredicted = hasPrediction && usePredicted === 'previsto';
   const myIra = showingPredicted ? estimatedIra : (realIra ?? estimatedIra);
-
-  const me = useMemo(() => ({ course: myCourse, ingresso }), [myCourse, ingresso]);
-  const blocker = rankingFilterBlocker(filter, me);
-  const pool = useMemo(() => excludeClaimedStudent(CAMPUS_STUDENTS, claimedStudent), [claimedStudent]);
-  const group = useMemo(() => filterForRanking(pool, filter, me), [pool, filter, me]);
-  const mappedGroup = useMemo(() => group.map((s) => ({ ira: s.ira, ingresso: s.ingresso })), [group]);
-  const ranking = useMemo(
-    () => buildRanking(mappedGroup, myIra, podiumSize, ingresso),
-    [mappedGroup, myIra, podiumSize, ingresso],
-  );
   const altIra = showingPredicted ? realIra : (hasPrediction ? estimatedIra : null);
-  const altRanking = useMemo(
-    () => (hasPrediction && altIra !== null ? buildRanking(mappedGroup, altIra, podiumSize, ingresso) : null),
-    [hasPrediction, mappedGroup, altIra, podiumSize, ingresso],
-  );
-  const tooSmall = !blocker && group.length < MIN_GROUP_SIZE;
-  const max = Math.max(10, ...ranking.rows.map((r) => r.ira));
+
+  const serverRanking = snapshot?.available ? snapshot.ranking : null;
+  const blocker = serverRanking?.blocker ?? null;
+  const ranking = serverRanking?.primary ?? null;
+  const altRanking = serverRanking?.alt ?? null;
+  const tooSmall = !serverRanking || serverRanking.tooSmall || !ranking;
+  const max = ranking ? Math.max(10, ...ranking.rows.map((r) => r.ira)) : 10;
 
   const scopeText = filter.scope === 'curso' ? myCourse ?? 'seu curso' : 'campus';
 
@@ -227,7 +217,7 @@ export function IraRanking({
               size="sm"
               ariaLabel="Nota usada no ranking"
               value={usePredicted}
-              onChange={setUsePredicted}
+              onChange={onUsePredictedChange}
               options={[
                 { value: 'real', label: 'IRA real' },
                 { value: 'previsto', label: 'IRA previsto' },
@@ -312,13 +302,13 @@ export function IraRanking({
             ))}
           </ol>
 
-          {group.length >= 6 && (
+          {ranking.total > 6 && (
             <button
               type="button"
-              onClick={() => setShowTop10((v) => !v)}
+              onClick={() => onPodiumSizeChange(podiumSize === 10 ? 5 : 10)}
               className="mt-1.5 self-start inline-flex items-center gap-1 text-11-5 font-heading font-semibold text-accent-dark hover:underline cursor-pointer"
             >
-              {showTop10 ? 'Mostrar apenas Top 5' : 'Ver Top 10'}
+              {podiumSize === 10 ? 'Mostrar apenas Top 5' : 'Ver Top 10'}
             </button>
           )}
 

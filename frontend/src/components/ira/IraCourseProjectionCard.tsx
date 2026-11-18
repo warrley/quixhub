@@ -5,14 +5,8 @@ import { useMemo, useState } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
 import type { IraEntry } from '@/data/types';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
 import { computeIraSensitivity } from '@/lib/ira';
-import {
-  computeCourseCohorts,
-  computeCourseTrajectory,
-  percentileBelow,
-  semestersAttended,
-} from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, groupIras } from '@/lib/iraCampusData';
 import { clampIra } from '@/lib/statistics';
 import { EmptyChart } from './chartKit';
 import { fmt, linePath, pct } from './chartFormat';
@@ -49,38 +43,18 @@ export function IraCourseProjectionCard({
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [hoverCohort, setHoverCohort] = useState<string | null>(null);
 
+  const snapshot = useCampusSnapshot();
   const displayIra = clampIra(ira);
   const sensitivity = useMemo(() => computeIraSensitivity(entries), [entries]);
 
-  // Determine the user's percentile inside their current stage (or course overall).
-  const { pct01, stageLabel } = useMemo(() => {
-    const ativos = groupIras(course, 'ativos');
-    const sem = ingresso ? semestersAttended(ingresso, CAMPUS_UPDATED_AT) : null;
-    if (sem !== null) {
-      const stagePool = CAMPUS_STUDENTS.filter((s) => {
-        if (s.status !== 'ativo') return false;
-        if (course && s.course !== course) return false;
-        const att = semestersAttended(s.ingresso, CAMPUS_UPDATED_AT);
-        return att !== null && Math.abs(att - sem) <= 1;
-      }).map((s) => s.ira);
-      if (stagePool.length >= 10) {
-        return {
-          pct01: percentileBelow(stagePool, displayIra) / 100,
-          stageLabel: `${sem}º sem.`,
-        };
-      }
-    }
-    return {
-      pct01: percentileBelow(ativos, displayIra) / 100,
-      stageLabel: 'curso',
-    };
-  }, [course, ingresso, displayIra]);
-
+  const proj = snapshot?.available ? snapshot.projection : null;
+  const pct01 = proj?.pct01 ?? 0;
+  const stageLabel = proj?.stageLabel ?? 'curso';
   const trajectory = useMemo(
-    () => computeCourseTrajectory(CAMPUS_STUDENTS, course, CAMPUS_UPDATED_AT, pct01),
-    [course, pct01],
+    () => proj?.trajectory ?? { stages: [], graduated: null },
+    [proj],
   );
-  const cohorts = useMemo(() => computeCourseCohorts(CAMPUS_STUDENTS, course), [course]);
+  const cohorts = useMemo(() => proj?.cohorts ?? [], [proj]);
 
   const allPoints = useMemo(
     () => (trajectory.graduated ? [...trajectory.stages, trajectory.graduated] : trajectory.stages),

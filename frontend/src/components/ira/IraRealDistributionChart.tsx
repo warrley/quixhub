@@ -4,9 +4,10 @@ import { ChartColumn, ChartSpline, CircleDot } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { StatBar } from '@/components/StatBar';
 import { Segmented } from '@/components/Segmented';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
 import { clampIra, normalPdf, truncatedNormalCdf } from '@/lib/statistics';
-import { MIN_GROUP_SIZE, histogram, iraGeral, kde, percentileBelow, quantile, summarize, type StatusGroup } from '@/lib/iraCampus';
-import { CAMPUS_COURSES, CAMPUS_UPDATED_AT, groupIras, groupSummary } from '@/lib/iraCampusData';
+import { MIN_GROUP_SIZE, iraGeral, type StatusGroup } from '@/lib/iraCampus';
+import { CAMPUS_COURSES, CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { EmptyChart, StatBadge } from './chartKit';
 import { MARGIN, PLOT_WIDTH, WIDTH, fmt, linePath, ordinal, pct, plural } from './chartFormat';
 
@@ -62,31 +63,28 @@ export function IraRealDistributionChart({
   const brownMarkerIra = hasGhost ? clampIra(ghostIra) : predictedIra;
   const brownMarkerLabel = hasGhost ? 'simulado' : 'previsão';
 
-  const values = useMemo(() => groupIras(course, group), [course, group]);
-  const summary = useMemo(() => summarize(values), [values]);
-  const ativos = course ? groupSummary(course, 'ativos') : null;
+  const snapshot = useCampusSnapshot();
+  const dist = snapshot?.available ? snapshot.distribution : null;
+  const summary = dist?.summary ?? null;
+  const ativos = dist?.ativosSummary ?? null;
+  const totalCount = dist?.totalCount ?? 0;
 
   const enough = summary !== null && summary.n >= MIN_GROUP_SIZE;
-
-  // Zoom onto where the students actually are: crop the sparse bottom 2%
-  // (shown as a "N abaixo" note instead), but always keep your own IRA in.
-  const sortedAsc = useMemo(() => [...values].sort((a, b) => a - b), [values]);
-  const domainMin = enough
-    ? Math.max(0, Math.floor((Math.min(quantile(sortedAsc, 0.02), displayIra, brownMarkerIra ?? CAP) - 0.2) * 2) / 2)
-    : 0;
-  const inDomain = useMemo(() => values.filter((v) => v >= domainMin), [values, domainMin]);
-  const belowDomain = values.length - inDomain.length;
+  const domainMin = dist?.domainMin ?? 0;
+  const belowDomain = dist?.belowDomain ?? 0;
 
   const xToSvg = (x: number) => MARGIN + ((x - domainMin) / (CAP - domainMin)) * PLOT_WIDTH;
   const svgToX = (svgX: number) => domainMin + ((svgX - MARGIN) / PLOT_WIDTH) * (CAP - domainMin);
 
-  const binWidth = mode === 'pontos' ? DOT_BIN : BAR_BIN;
-  const bins = useMemo(() => histogram(inDomain, binWidth, domainMin, CAP), [inDomain, binWidth, domainMin]);
+  const bins = useMemo(
+    () => (dist ? (mode === 'pontos' ? dist.dotBins : dist.barBins) : []),
+    [dist, mode],
+  );
   const maxCount = Math.max(1, ...bins.map((b) => b.count));
 
   // Dot geometry: one column per 0.2 bin; size dots up to fill the column
   // width and chart height, grouping into `perDot` students only when needed.
-  const colW = PLOT_WIDTH / bins.length;
+  const colW = PLOT_WIDTH / Math.max(1, bins.length);
   const maxR = Math.min(colW * 0.44, 4.4);
   const minR = Math.min(maxR, 2.6);
   const gap = 0.8;
@@ -101,14 +99,14 @@ export function IraRealDistributionChart({
     () => Array.from({ length: KDE_SAMPLES + 1 }, (_, i) => domainMin + (i / KDE_SAMPLES) * (CAP - domainMin)),
     [domainMin],
   );
-  const density = useMemo(() => kde(inDomain, xs), [inDomain, xs]);
-  // Density → expected students per bin, on the same vertical scale as the
-  // dots/bars, so the silhouette hugs them.
-  const expected = density.map((d) => d * inDomain.length * binWidth);
+  const expected = useMemo(
+    () => (dist ? (mode === 'pontos' ? dist.dotExpected : dist.barExpected) : xs.map(() => 0)),
+    [dist, mode, xs],
+  );
   const barScale = CHART_H / Math.max(maxCount, ...expected);
   const countToY = (count: number) =>
     mode === 'pontos' ? BASELINE_Y - (count / perDot) * pitch : BASELINE_Y - count * barScale;
-  const silhouette = linePath(xs.map((x, i) => ({ x: xToSvg(x), y: Math.max(TOP_Y - 6, countToY(expected[i])) })));
+  const silhouette = linePath(xs.map((x, i) => ({ x: xToSvg(x), y: Math.max(TOP_Y - 6, countToY(expected[i] ?? 0)) })));
   const silhouetteFill = `${silhouette} L ${xToSvg(CAP)} ${BASELINE_Y} L ${xToSvg(domainMin)} ${BASELINE_Y} Z`;
 
   const normalPeak = summary && summary.std > 0 ? normalPdf(summary.mean, summary.mean, summary.std) : 1;
@@ -123,10 +121,10 @@ export function IraRealDistributionChart({
     return { normalLine: line, normalFill: fill };
   }, [summary, xs, displayIra, normalPeak, domainMin]);
 
-  const percentile = percentileBelow(values, displayIra);
-  const rank = values.filter((v) => v > displayIra).length + 1;
-  const brownRank = brownMarkerIra !== null ? values.filter((v) => v > brownMarkerIra).length + 1 : null;
-  const brownPercentile = brownMarkerIra !== null ? percentileBelow(values, brownMarkerIra) : null;
+  const percentile = dist?.percentile ?? 0;
+  const rank = dist?.rank ?? 1;
+  const brownRank = dist?.brownRank ?? null;
+  const brownPercentile = dist?.brownPercentile ?? null;
   const normalGuess = summary && summary.std > 0 ? truncatedNormalCdf(displayIra, summary.mean, summary.std, CAP) * 100 : null;
   const geral = ativos ? iraGeral(displayIra, ativos.mean, ativos.std) : null;
 
@@ -190,7 +188,7 @@ export function IraRealDistributionChart({
               viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
               className="w-full h-auto select-none"
               role="img"
-              aria-label={`Distribuição real de IRA — ${plural(values.length, 'aluno', 'alunos')} de ${scopeLabel}; você supera ${pct(percentile)}`}
+              aria-label={`Distribuição real de IRA — ${plural(totalCount, 'aluno', 'alunos')} de ${scopeLabel}; você supera ${pct(percentile)}`}
             >
               {mode === 'normal' ? (
                 <>
@@ -205,14 +203,8 @@ export function IraRealDistributionChart({
                     ? bins.flatMap((b, i) => {
                         const dots = Math.ceil(b.count / perDot);
                         const cx = xToSvg(b.start + DOT_BIN / 2);
-                        const belowInBin =
-                          b.end <= displayIra + 1e-9 && b.end < CAP - 1e-9
-                            ? b.count
-                            : b.start >= displayIra
-                              ? 0
-                              : inDomain.filter((v) => v >= b.start && v < b.end && v < displayIra).length;
                         const surpassedDots =
-                          b.count > 0 ? Math.min(dots, Math.round((belowInBin / b.count) * dots)) : 0;
+                          b.count > 0 ? Math.min(dots, Math.round((b.belowInBin / b.count) * dots)) : 0;
                         const hovered = hoverBin === b;
                         return Array.from({ length: dots }, (_, k) => {
                           const isSurpassed = k < surpassedDots;
@@ -232,13 +224,7 @@ export function IraRealDistributionChart({
                         const x0 = xToSvg(b.start) + 0.6;
                         const w = Math.max(0.5, xToSvg(b.end) - xToSvg(b.start) - 1.2);
                         const h = b.count * barScale;
-                        const belowInBin =
-                          b.end <= displayIra + 1e-9 && b.end < CAP - 1e-9
-                            ? b.count
-                            : b.start >= displayIra
-                              ? 0
-                              : inDomain.filter((v) => v >= b.start && v < b.end && v < displayIra).length;
-                        const surpassedFrac = b.count > 0 ? belowInBin / b.count : 0;
+                        const surpassedFrac = b.count > 0 ? b.belowInBin / b.count : 0;
                         const blueH = h * surpassedFrac;
                         const grayH = h - blueH;
                         const opacity = hoverBin === b ? 1 : 0.8;
@@ -341,7 +327,7 @@ export function IraRealDistributionChart({
                   />
                   <text x={WIDTH / 2} y={9} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="var(--color-ink)">
                     {fmt(hoverBin.start)}–{fmt(Math.min(CAP, hoverBin.end - 0.01))} · {plural(hoverBin.count, 'aluno', 'alunos')} · com{' '}
-                    {fmt(hoverBin.start)} você superaria {pct(percentileBelow(values, hoverBin.start))}
+                    {fmt(hoverBin.start)} você superaria {pct(hoverBin.pctAtStart)}
                   </text>
                 </g>
               )}
@@ -474,7 +460,7 @@ export function IraRealDistributionChart({
             <p className="text-13 text-ink">
               <b>{ordinal(rank)}</b>{' '}
               <span className="text-ink-3">
-                de {(values.length + 1).toLocaleString('pt-BR')} · posição real entre {GROUP_LABEL[group]} · SIGAA {CAMPUS_UPDATED_AT}
+                de {(totalCount + 1).toLocaleString('pt-BR')} · posição real entre {GROUP_LABEL[group]} · SIGAA {CAMPUS_UPDATED_AT}
               </span>
             </p>
             {brownRank !== null && (

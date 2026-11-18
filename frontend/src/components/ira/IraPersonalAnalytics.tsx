@@ -32,11 +32,9 @@ type SidebarFilter = 'todas' | 'subiram' | 'cairam';
 export function IraPersonalAnalytics({
   ira,
   entries,
-  course,
 }: {
   ira: number;
   entries: IraEntry[];
-  course: string | null;
 }) {
   const [view, setView] = useState<PersonalView>('treemap');
   const [treemapSizing, setTreemapSizing] = useState<TreemapSizing>('impacto');
@@ -337,7 +335,6 @@ export function IraPersonalAnalytics({
       return (
         <SemesterBridgePlot
           entries={entries}
-          course={course}
           activeId={activeId}
           onHover={setHoverId}
           onSelect={togglePin}

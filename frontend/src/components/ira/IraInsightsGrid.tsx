@@ -3,15 +3,12 @@
 import { GraduationCap, Layers, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
 import {
   MIN_GROUP_SIZE,
-  iraByStage,
-  kde,
-  percentileBelow,
   semestersAttended,
-  summarize,
 } from '@/lib/iraCampus';
-import { CAMPUS_COURSES, CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, groupIras } from '@/lib/iraCampusData';
+import { CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { clampIra } from '@/lib/statistics';
 import { EmptyChart } from './chartKit';
 import { fmt, linePath, pct } from './chartFormat';
@@ -28,12 +25,11 @@ const PH = H - PAD_T - PAD_B;
 // ── 1. Survival funnel (Ativos vs Formados) ─────────────────────────────
 
 function SurvivalCard({ ira, course }: { ira: number; course: string | null }) {
+  const snapshot = useCampusSnapshot();
   const displayIra = clampIra(ira);
-  const ativos = useMemo(() => groupIras(course, 'ativos'), [course]);
-  const formados = useMemo(() => groupIras(course, 'formados'), [course]);
-
-  const sAtivos = useMemo(() => summarize(ativos), [ativos]);
-  const sFormados = useMemo(() => summarize(formados), [formados]);
+  const survival = snapshot?.available ? snapshot.insights.survival : null;
+  const sAtivos = survival?.ativosSummary ?? null;
+  const sFormados = survival?.formadosSummary ?? null;
   const hasBoth =
     sAtivos !== null && sAtivos.n >= MIN_GROUP_SIZE && sFormados !== null && sFormados.n >= MIN_GROUP_SIZE;
 
@@ -45,8 +41,8 @@ function SurvivalCard({ ira, course }: { ira: number; course: string | null }) {
     [],
   );
 
-  const dAtivos = useMemo(() => (hasBoth ? kde(ativos, xs) : []), [hasBoth, ativos, xs]);
-  const dFormados = useMemo(() => (hasBoth ? kde(formados, xs) : []), [hasBoth, formados, xs]);
+  const dAtivos = useMemo(() => survival?.dAtivos ?? [], [survival]);
+  const dFormados = useMemo(() => survival?.dFormados ?? [], [survival]);
   const peak = Math.max(1e-6, ...dAtivos, ...dFormados);
 
   const xTo = (x: number) => PAD_L + ((Math.max(DOMAIN_MIN, Math.min(CAP, x)) - DOMAIN_MIN) / (CAP - DOMAIN_MIN)) * PW;
@@ -133,12 +129,9 @@ function StageTimelineCard({
   course: string | null;
   ingresso: string | null;
 }) {
+  const snapshot = useCampusSnapshot();
   const displayIra = clampIra(ira);
-  const pool = useMemo(
-    () => (course ? CAMPUS_STUDENTS.filter((s) => s.course === course) : CAMPUS_STUDENTS),
-    [course],
-  );
-  const points = useMemo(() => iraByStage(pool, CAMPUS_UPDATED_AT, 12), [pool]);
+  const points = useMemo(() => snapshot?.available ? snapshot.insights.stagePoints : [], [snapshot]);
   const myStage = ingresso ? semestersAttended(ingresso, CAMPUS_UPDATED_AT) : null;
 
   const minS = points[0]?.stage ?? 1;
@@ -250,22 +243,15 @@ const SHORT_COURSE: Record<string, string> = {
 };
 
 function CourseCampusBenchmarkCard({ ira, course }: { ira: number; course: string | null }) {
+  const snapshot = useCampusSnapshot();
   const displayIra = clampIra(ira);
   const rows = useMemo(() => {
-    return CAMPUS_COURSES.map((c) => {
-      const vals = groupIras(c, 'ativos');
-      const s = summarize(vals);
-      return {
-        course: c,
-        short: SHORT_COURSE[c] ?? c,
-        n: s?.n ?? 0,
-        q1: s?.q1 ?? 0,
-        median: s?.median ?? 0,
-        q3: s?.q3 ?? 0,
-        pct: vals.length > 0 ? percentileBelow(vals, displayIra) : 0,
-      };
-    }).sort((a, b) => b.median - a.median);
-  }, [displayIra]);
+    const list = snapshot?.available ? snapshot.insights.campusBenchmark : [];
+    return list.map((r) => ({
+      ...r,
+      short: SHORT_COURSE[r.course] ?? r.course,
+    }));
+  }, [snapshot]);
 
   return (
     <Card padding="md" className="flex flex-col">

@@ -5,14 +5,14 @@ import { useMemo } from 'react';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import type { IraEntry } from '@/data/types';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
 import { computeIra } from '@/lib/ira';
 import {
-  findStudentMatches,
   semesterIndex,
   type CampusStatus,
   type CampusStudent,
 } from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
+import { CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { clampIra } from '@/lib/statistics';
 import { fmt } from './chartFormat';
 
@@ -30,8 +30,6 @@ const STATUS_TEXT: Record<CampusStatus, string> = {
 export function IraIdentityMatch({
   entries,
   ira,
-  myCourse,
-  inferredIngresso,
   userName,
   claimed,
   showNameInRanking,
@@ -40,14 +38,13 @@ export function IraIdentityMatch({
 }: {
   entries: IraEntry[];
   ira: number;
-  myCourse: string | null;
-  inferredIngresso: string | null;
   userName: string;
   claimed: CampusStudent | null;
   showNameInRanking: boolean;
   onClaim: (student: CampusStudent | null) => void;
   onToggleShowName: (show: boolean) => void;
 }) {
+  const snapshot = useCampusSnapshot();
   const hasPdf = entries.some((e) => e.source === 'pdf');
 
   const { referenceIra, latestClosedSemester, isOlderTranscript } = useMemo(() => {
@@ -76,13 +73,7 @@ export function IraIdentityMatch({
     };
   }, [entries, ira]);
 
-  const matches = useMemo(() => {
-    if (!hasPdf && !claimed) return [];
-    return findStudentMatches(CAMPUS_STUDENTS, referenceIra, {
-      course: myCourse,
-      ingresso: inferredIngresso,
-    });
-  }, [hasPdf, claimed, referenceIra, myCourse, inferredIngresso]);
+  const best = snapshot?.available ? snapshot.identityMatch.best : null;
 
   if (claimed) {
     return (
@@ -129,9 +120,7 @@ export function IraIdentityMatch({
     );
   }
 
-  if (!hasPdf || matches.length === 0) return null;
-
-  const best = matches[0];
+  if (!hasPdf || !best) return null;
 
   return (
     <Card

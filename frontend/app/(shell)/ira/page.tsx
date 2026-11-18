@@ -18,6 +18,8 @@ import { IraWhatIfSimulator } from '@/components/ira/IraWhatIfSimulator';
 import { QuickAddDisciplineForm } from '@/components/ira/QuickAddDisciplineForm';
 import { currentUser } from '@/data/mock';
 import type { IraEntry } from '@/data/types';
+import { CampusSnapshotContext } from '@/lib/campusSnapshotContext';
+import type { CampusSnapshotRequest, CampusSnapshotResponse } from '@/lib/iraCampusApi';
 import {
   computeIra,
   computeSemesterStats,
@@ -28,7 +30,7 @@ import {
   type Situacao,
 } from '@/lib/ira';
 import { semesterIndex, semesterLabel, type CampusStudent, type RankingFilter, type StatusGroup } from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, normalizeCourse } from '@/lib/iraCampusData';
+import { CAMPUS_UPDATED_AT, normalizeCourse } from '@/lib/iraCampusData';
 import { useIra } from '@/lib/iraStore';
 
 type DraftEntry = Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' };
@@ -232,13 +234,14 @@ export default function Ira() {
       ? rawIngresso.replace(/\.2$/, '.1')
       : rawIngresso;
 
-  const ingressoOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of CAMPUS_STUDENTS) {
-      if (s.ingresso.endsWith('.1') || s.ingresso === '2007.2') set.add(s.ingresso);
-    }
-    return [...set].sort((a, b) => b.localeCompare(a));
-  }, []);
+  const [podiumSize, setPodiumSize] = useState<5 | 10>(5);
+  const [usePredictedRanking, setUsePredictedRanking] = useState<'previsto' | 'real'>('previsto');
+  const [campusSnapshot, setCampusSnapshot] = useState<CampusSnapshotResponse | null>(null);
+
+  const ingressoOptions = useMemo(
+    () => (campusSnapshot?.available ? campusSnapshot.ingressoOptions : []),
+    [campusSnapshot],
+  );
 
   const [rankingFilter, setRankingFilter] = useState<RankingFilter>({
     scope: myCourse ? 'curso' : 'campus',
@@ -254,6 +257,76 @@ export default function Ira() {
     () => (hasSimulated ? computeIra(state.entries.filter((e) => !isEntryPredicted(e))) : ira),
     [hasSimulated, state.entries, ira],
   );
+
+  const referenceIra = useMemo(() => {
+    const baseIra = officialIra ?? ira;
+    if (baseIra === null) return 0;
+    const refIdx = semesterIndex(CAMPUS_UPDATED_AT);
+    const upToRef = state.entries.filter((e) => {
+      const idx = semesterIndex(e.semester);
+      return refIdx === null || idx === null || idx <= refIdx;
+    });
+    return (upToRef.length > 0 ? computeIra(upToRef) : null) ?? baseIra;
+  }, [state.entries, officialIra, ira]);
+
+  const hasPdf = useMemo(() => state.entries.some((e) => e.source === 'pdf'), [state.entries]);
+
+  useEffect(() => {
+    if (ira === null) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const payload: CampusSnapshotRequest = {
+        ira: officialIra ?? ira,
+        referenceIra,
+        ghostIra: simulatedIra,
+        predictedIra: hasSimulated ? ira : null,
+        course: comparisonCourse,
+        myCourse,
+        group: statusGroup,
+        rankingFilter,
+        podiumSize,
+        usePredictedRanking: usePredictedRanking === 'previsto',
+        ingresso,
+        inferredIngresso,
+        claimed: claimedStudent,
+        hasPdf,
+      };
+      try {
+        const res = await fetch('/api/ira/campus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as CampusSnapshotResponse;
+        setCampusSnapshot(data);
+      } catch {
+        // ignore aborted or offline fetch
+      }
+    }, 60);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [
+    ira,
+    officialIra,
+    referenceIra,
+    simulatedIra,
+    hasSimulated,
+    comparisonCourse,
+    myCourse,
+    statusGroup,
+    rankingFilter,
+    podiumSize,
+    usePredictedRanking,
+    ingresso,
+    inferredIngresso,
+    claimedStudent,
+    hasPdf,
+  ]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftEntry | null>(null);
@@ -392,7 +465,7 @@ export default function Ira() {
       </div>
 
       {ira !== null && (
-        <>
+        <CampusSnapshotContext.Provider value={campusSnapshot}>
           <Card className="mb-6" padding="md">
             <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
               <div>
@@ -423,7 +496,6 @@ export default function Ira() {
               entries={state.entries}
               currentIra={ira}
               course={comparisonCourse}
-              group={statusGroup}
               onSimulatedIraChange={setSimulatedIra}
               onApplyEntries={(updates) => {
                 for (const u of updates) {
@@ -437,8 +509,6 @@ export default function Ira() {
           <IraIdentityMatch
             entries={state.entries}
             ira={officialIra ?? ira}
-            myCourse={myCourse}
-            inferredIngresso={inferredIngresso}
             userName={currentUser.name}
             claimed={claimedStudent}
             showNameInRanking={showNameInRanking}
@@ -480,10 +550,13 @@ export default function Ira() {
                   onIngressoChange={setManualIngresso}
                   filter={rankingFilter}
                   onFilterChange={setRankingFilter}
-                  claimedStudent={claimedStudent}
                   displayName={showNameInRanking ? currentUser.name : null}
                   isEstimate={hasSimulated}
                   officialIra={officialIra}
+                  podiumSize={podiumSize}
+                  onPodiumSizeChange={setPodiumSize}
+                  usePredicted={usePredictedRanking}
+                  onUsePredictedChange={setUsePredictedRanking}
                 />
                 <IraCourseProjectionCard
                   ira={officialIra ?? ira}
@@ -511,9 +584,9 @@ export default function Ira() {
           </div>
 
           {showPersonalAnalytics && (
-            <IraPersonalAnalytics ira={ira} entries={state.entries} course={comparisonCourse} />
+            <IraPersonalAnalytics ira={ira} entries={state.entries} />
           )}
-        </>
+        </CampusSnapshotContext.Provider>
       )}
 
       <div className="mb-6">

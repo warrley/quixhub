@@ -16,14 +16,14 @@ import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
 import { Segmented } from '@/components/Segmented';
 import campusDisciplinesRaw from '@/data/campusDisciplines.json';
 import type { IraEntry } from '@/data/types';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
+import { estimateFromCdfBins } from '@/lib/iraCampusApi';
 import { isEntryPredicted, MIN_PASSING_GRADE, requiresGrade, type Situacao } from '@/lib/ira';
 import { clampIra } from '@/lib/statistics';
-import { iraGeral, percentileBelow, type StatusGroup } from '@/lib/iraCampus';
-import { groupIras, groupSummary } from '@/lib/iraCampusData';
+import { iraGeral } from '@/lib/iraCampus';
 import {
   analyzeRecoveryCost,
   compareLockVsRetake,
-  computeCourseMilestones,
   computeLockBreakEven,
   defaultWorkbenchSemester,
   runIraSimulation,
@@ -102,17 +102,16 @@ export function IraWhatIfSimulator({
   entries,
   currentIra,
   course,
-  group,
   onSimulatedIraChange,
   onApplyEntries,
 }: {
   entries: IraEntry[];
   currentIra: number;
   course: string | null;
-  group: StatusGroup;
   onSimulatedIraChange: (simulatedIra: number | null) => void;
   onApplyEntries?: (updates: AppliedEntryPatch[]) => void;
 }) {
+  const snapshot = useCampusSnapshot();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<SimTab>('plano');
 
@@ -191,25 +190,22 @@ export function IraWhatIfSimulator({
     onSimulatedIraChange(open ? simOutput.finalIra : null);
   }, [open, simOutput.finalIra, onSimulatedIraChange]);
 
-  const values = useMemo(() => groupIras(course, group), [course, group]);
-  const ativosSummary = useMemo(() => (course ? groupSummary(course, 'ativos') : null), [course]);
+  const dist = snapshot?.available ? snapshot.distribution : null;
+  const cdfBins = useMemo(() => dist?.cdfBins ?? [], [dist]);
+  const totalCount = dist?.totalCount ?? 0;
+  const ativosSummary = dist?.ativosSummary ?? null;
 
   const currentDisplay = clampIra(currentIra);
-  const currentRank = useMemo(
-    () => values.filter((v) => v > currentDisplay).length + 1,
-    [values, currentDisplay],
-  );
+  const currentRank = dist?.rank ?? 1;
 
   const simDisplay = simOutput.finalIra !== null ? clampIra(simOutput.finalIra) : null;
   const simDelta = simDisplay !== null ? simDisplay - currentDisplay : 0;
-  const simRank = useMemo(
-    () => (simDisplay !== null ? values.filter((v) => v > simDisplay).length + 1 : null),
-    [values, simDisplay],
+  const simEst = useMemo(
+    () => (simDisplay !== null && totalCount > 0 ? estimateFromCdfBins(cdfBins, totalCount, simDisplay) : null),
+    [cdfBins, totalCount, simDisplay],
   );
-  const simPct = useMemo(
-    () => (simDisplay !== null ? percentileBelow(values, simDisplay) : null),
-    [values, simDisplay],
-  );
+  const simRank = simEst?.rank ?? null;
+  const simPct = simEst?.pct ?? null;
   const simGeral =
     simDisplay !== null && ativosSummary
       ? iraGeral(simDisplay, ativosSummary.mean, ativosSummary.std)
@@ -241,7 +237,18 @@ export function IraWhatIfSimulator({
   );
 
   // Tab 3 computations: Milestones & Horizon Solver
-  const milestones = useMemo(() => computeCourseMilestones(values, currentDisplay), [values, currentDisplay]);
+  const milestones = useMemo(
+    () =>
+      dist?.milestones ?? [
+        {
+          key: 'plus01',
+          label: '+0,10 no IRA',
+          targetIra: Math.min(10, Number((currentDisplay + 0.1).toFixed(4))),
+          reached: false,
+        },
+      ],
+    [dist, currentDisplay],
+  );
   const defaultMilestoneTarget =
     milestones.find((m) => !m.reached)?.targetIra ??
     milestones[0]?.targetIra ??
@@ -268,7 +275,8 @@ export function IraWhatIfSimulator({
     return ENROLLMENT_STRATEGIES.map((st) => {
       const out = runIraSimulation(entries, [], [{ id: st.key, workload: st.workload, grade: st.grade, lockHours: 0 }]);
       const iraVal = out.finalIra !== null ? clampIra(out.finalIra) : null;
-      const rank = iraVal !== null ? values.filter((v) => v > iraVal).length + 1 : null;
+      const rank =
+        iraVal !== null && totalCount > 0 ? estimateFromCdfBins(cdfBins, totalCount, iraVal).rank : null;
       return {
         ...st,
         ira: iraVal,
@@ -276,7 +284,7 @@ export function IraWhatIfSimulator({
         rank,
       };
     });
-  }, [entries, values, currentDisplay]);
+  }, [entries, cdfBins, totalCount, currentDisplay]);
 
   // Workbench handlers
   function updateWorkbenchItem(item: SimDisciplineItem, patch: Partial<{ grade: number; mode: SimDisciplineMode }>) {
