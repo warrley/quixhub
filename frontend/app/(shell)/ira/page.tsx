@@ -164,6 +164,7 @@ export default function Ira() {
   const [manualIngresso, setManualIngresso] = useState<string | null>(null);
   const [claimedStudent, setClaimedStudent] = useState<CampusStudent | null>(null);
   const [showNameInRanking, setShowNameInRanking] = useState(false);
+  const [studentName, setStudentName] = useState<string | null>(null);
 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showStats, setShowStats] = useState(true);
@@ -173,9 +174,14 @@ export default function Ira() {
     try {
       const saved = localStorage.getItem('quixhub-ira-identity');
       if (saved) {
-        const parsed = JSON.parse(saved) as { claimed?: CampusStudent | null; showName?: boolean };
+        const parsed = JSON.parse(saved) as {
+          claimed?: CampusStudent | null;
+          showName?: boolean;
+          studentName?: string | null;
+        };
         if (parsed.claimed) setClaimedStudent(parsed.claimed);
         if (typeof parsed.showName === 'boolean') setShowNameInRanking(parsed.showName);
+        if (typeof parsed.studentName === 'string') setStudentName(parsed.studentName);
       }
       if (!localStorage.getItem('quixhub-ira-privacy-ack')) {
         setShowPrivacyModal(true);
@@ -222,10 +228,15 @@ export default function Ira() {
     }
   }
 
-  function updateIdentity(claimed: CampusStudent | null, showName: boolean) {
+  function updateIdentity(claimed: CampusStudent | null, showName: boolean, nextName: string | null = studentName) {
     setClaimedStudent(claimed);
     setShowNameInRanking(showName);
-    localStorage.setItem('quixhub-ira-identity', JSON.stringify({ claimed, showName }));
+    setStudentName(nextName);
+    try {
+      localStorage.setItem('quixhub-ira-identity', JSON.stringify({ claimed, showName, studentName: nextName }));
+    } catch {
+      // ignore storage errors
+    }
   }
 
   const rawIngresso = manualIngresso ?? claimedStudent?.ingresso ?? inferredIngresso;
@@ -366,6 +377,7 @@ export default function Ira() {
   const [fileName, setFileName] = useState<string>();
   const [parsing, setParsing] = useState(false);
   const [review, setReview] = useState<DraftEntry[] | null>(null);
+  const [reviewStudentName, setReviewStudentName] = useState<string | undefined>();
   const [printedIra, setPrintedIra] = useState<number | undefined>();
 
   const previewIra = review ? computeIra(review.map((e, i) => ({ ...toEntry(e), id: `preview-${i}` }))) : null;
@@ -381,6 +393,7 @@ export default function Ira() {
         show('Não foi possível reconhecer disciplinas neste PDF. Tente a entrada manual.');
       } else {
         setReview(result.entries);
+        setReviewStudentName(result.studentName);
         setPrintedIra(result.printedIra);
       }
     } catch {
@@ -430,14 +443,19 @@ export default function Ira() {
         Math.abs(newRefIra - claimedStudent.ira) <= 0.02 &&
         (!newIngresso || newIngresso === claimedStudent.ingresso);
       if (!matchesClaimed) {
-        updateIdentity(null, false);
+        updateIdentity(null, false, reviewStudentName ?? null);
         setManualIngresso(null);
+      } else if (reviewStudentName) {
+        updateIdentity(claimedStudent, showNameInRanking, reviewStudentName);
       }
+    } else if (reviewStudentName) {
+      updateIdentity(null, showNameInRanking, reviewStudentName);
     }
 
     if (previousPdfIds.length > 0) removeEntries(previousPdfIds);
     addEntries(nextEntries);
     setReview(null);
+    setReviewStudentName(undefined);
     setFileName(undefined);
     setPrintedIra(undefined);
     show(previousPdfIds.length > 0 ? 'Histórico atualizado com sucesso!' : 'Histórico importado com sucesso!');
@@ -509,7 +527,7 @@ export default function Ira() {
           <IraIdentityMatch
             entries={state.entries}
             ira={officialIra ?? ira}
-            userName={currentUser.name}
+            studentName={studentName}
             claimed={claimedStudent}
             showNameInRanking={showNameInRanking}
             onClaim={(student) => {
@@ -517,6 +535,7 @@ export default function Ira() {
               if (student) show('Identidade confirmada na base SIGAA!');
             }}
             onToggleShowName={(next) => updateIdentity(claimedStudent, next)}
+            onStudentNameChange={(nextName) => updateIdentity(claimedStudent, showNameInRanking, nextName)}
           />
 
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
@@ -550,7 +569,7 @@ export default function Ira() {
                   onIngressoChange={setManualIngresso}
                   filter={rankingFilter}
                   onFilterChange={setRankingFilter}
-                  displayName={showNameInRanking ? currentUser.name : null}
+                  displayName={showNameInRanking && studentName?.trim() ? studentName.trim() : null}
                   isEstimate={hasSimulated}
                   officialIra={officialIra}
                   podiumSize={podiumSize}

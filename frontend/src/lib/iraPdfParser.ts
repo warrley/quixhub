@@ -3,6 +3,34 @@ import type { IraEntry } from '@/data/types';
 export interface ParsedHistorico {
   entries: (Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' })[];
   printedIra?: number;
+  studentName?: string;
+}
+
+const LOWER_PREPOSITIONS = new Set(['da', 'de', 'do', 'das', 'dos', 'e']);
+
+function toTitleCaseName(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word, idx) => (idx > 0 && LOWER_PREPOSITIONS.has(word) ? word : word[0].toUpperCase() + word.slice(1)))
+    .join(' ');
+}
+
+/** Extracts the student's name from reconstructed SIGAA transcript header lines. */
+export function extractStudentNameFromLines(lines: string[]): string | undefined {
+  for (const line of lines) {
+    if (line.includes(SECTION_START)) break;
+    const match = line.match(
+      /(?:^|\s)Nome:\s*([A-ZÀ-ÿ][A-ZÀ-ÿ\s'.-]+?)(?:\s+(?:Matr[íi]cula|CPF|Data|Nascimento|Sexo|Curso|Status)\b|$)/i,
+    );
+    if (match?.[1]) {
+      const cleaned = match[1].trim();
+      if (cleaned.length >= 3) return toTitleCaseName(cleaned);
+    }
+  }
+  return undefined;
 }
 
 const ROW_RE =
@@ -109,5 +137,7 @@ export async function parseHistoricoPdf(file: File): Promise<ParsedHistorico> {
     });
   }
 
-  return { entries, printedIra };
+  const studentName = extractStudentNameFromLines(lines);
+
+  return { entries, printedIra, studentName };
 }

@@ -30,19 +30,21 @@ const STATUS_TEXT: Record<CampusStatus, string> = {
 export function IraIdentityMatch({
   entries,
   ira,
-  userName,
+  studentName,
   claimed,
   showNameInRanking,
   onClaim,
   onToggleShowName,
+  onStudentNameChange,
 }: {
   entries: IraEntry[];
   ira: number;
-  userName: string;
+  studentName: string | null;
   claimed: CampusStudent | null;
   showNameInRanking: boolean;
   onClaim: (student: CampusStudent | null) => void;
   onToggleShowName: (show: boolean) => void;
+  onStudentNameChange: (name: string | null) => void;
 }) {
   const snapshot = useCampusSnapshot();
   const hasPdf = entries.some((e) => e.source === 'pdf');
@@ -95,7 +97,7 @@ export function IraIdentityMatch({
             </div>
           </div>
 
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <label className="inline-flex items-center gap-2 text-xs font-medium text-ink cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -103,8 +105,22 @@ export function IraIdentityMatch({
                 onChange={(e) => onToggleShowName(e.target.checked)}
                 className="accent-[var(--color-accent)] w-4 h-4 cursor-pointer"
               />
-              <span>Mostrar meu nome ({userName.split(' ')[0]}) no ranking</span>
+              <span>
+                {studentName?.trim()
+                  ? `Mostrar meu nome (${studentName.trim().split(' ')[0]}) no ranking`
+                  : 'Mostrar meu nome no ranking'}
+              </span>
             </label>
+            {showNameInRanking && (
+              <input
+                type="text"
+                value={studentName ?? ''}
+                onChange={(e) => onStudentNameChange(e.target.value || null)}
+                placeholder="Seu nome no ranking"
+                aria-label="Nome exibido no ranking"
+                className="h-7 w-44 rounded-md border border-line bg-surface px-2 text-xs text-ink placeholder:text-ink-3 outline-none focus:border-accent"
+              />
+            )}
             <button
               type="button"
               onClick={() => onClaim(null)}
