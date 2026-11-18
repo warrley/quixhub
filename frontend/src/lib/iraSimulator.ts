@@ -83,8 +83,8 @@ export interface RecoveryAnalysis {
   deltaEvent: number;
   /** Number of 64h disciplines at `recoveryGrade` in `nextSemester` needed to recover `iraBefore` (null if > 20). */
   disciplinesToRecover: number | null;
-  /** Average needed in 256h in `nextSemester` to recover `iraBefore` (null if even 10 isn't enough). */
-  avg256hToRecover: number | null;
+  /** Average needed in 320h in `nextSemester` to recover `iraBefore` (null if even 10 isn't enough). */
+  avg320hToRecover: number | null;
 }
 
 export function nextSemesterAfterEntries(entries: IraEntry[]): string {
@@ -423,7 +423,7 @@ export function computeCourseMilestones(values: number[], currentIra: number): C
 export function solveTargetHorizons(
   entries: IraEntry[],
   targetIra: number,
-  hoursPerSemester = 256,
+  hoursPerSemester = 320,
   horizons = [1, 2, 3, 4],
   realisticCeiling = 10,
 ): HorizonSolution[] {
@@ -497,7 +497,7 @@ export function solveTargetHorizons(
 export function solveSemestersAtCeiling(
   entries: IraEntry[],
   targetIra: number,
-  hoursPerSemester = 256,
+  hoursPerSemester = 320,
   ceilingGrade = 9.0,
   maxSemesters = 12,
 ): number | null {
@@ -557,7 +557,7 @@ export function analyzeRecoveryCost(
   const deltaEvent = Number((iraAfterEvent - iraBefore).toFixed(4));
 
   let disciplinesToRecover: number | null = 0;
-  let avg256hToRecover: number | null = 0;
+  let avg320hToRecover: number | null = 0;
 
   if (iraAfterEvent < iraBefore - 1e-6) {
     disciplinesToRecover = null;
@@ -580,31 +580,31 @@ export function analyzeRecoveryCost(
       }
     }
 
-    const eval256 = (g: number) =>
+    const eval320 = (g: number) =>
       computeIra([
         ...withEvent,
         {
-          id: '__rec_256__',
-          disciplineName: 'Recuperação 256h',
+          id: '__rec_320__',
+          disciplineName: 'Recuperação 320h',
           grade: g,
-          workload: 256,
+          workload: 320,
           situacao: g < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado',
           source: 'manual',
           semester: nextSemester,
         },
       ]) ?? 0;
 
-    if (eval256(10) < iraBefore - 1e-6) {
-      avg256hToRecover = null;
+    if (eval320(10) < iraBefore - 1e-6) {
+      avg320hToRecover = null;
     } else {
       let lo = 0;
       let hi = 10;
       for (let i = 0; i < 24; i++) {
         const mid = (lo + hi) / 2;
-        if (eval256(mid) >= iraBefore) hi = mid;
+        if (eval320(mid) >= iraBefore) hi = mid;
         else lo = mid;
       }
-      avg256hToRecover = Math.min(10, Number((Math.ceil(hi * 100) / 100).toFixed(2)));
+      avg320hToRecover = Math.min(10, Number((Math.ceil(hi * 100) / 100).toFixed(2)));
     }
   }
 
@@ -615,6 +615,6 @@ export function analyzeRecoveryCost(
     iraAfterEvent,
     deltaEvent,
     disciplinesToRecover,
-    avg256hToRecover,
+    avg320hToRecover,
   };
 }

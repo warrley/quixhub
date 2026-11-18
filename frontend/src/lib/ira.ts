@@ -386,7 +386,7 @@ export interface IraSensitivity {
  */
 export function computeIraSensitivity(
   entries: IraEntry[],
-  nextSemesterHours = 256,
+  nextSemesterHours = 320,
   targetDelta = 0.1,
   targetTotalHours = 3200,
 ): IraSensitivity | null {
@@ -462,7 +462,7 @@ export function computeIraSensitivity(
     recentAverage = Number((recent.reduce((s, x) => s + x.average! * x.hours, 0) / rHours).toFixed(2));
     const remaining = Math.max(0, targetTotalHours - (gradedHours + lockedHours));
     if (remaining > 0) {
-      const steps = Math.max(1, Math.round(remaining / 256));
+      const steps = Math.max(1, Math.round(remaining / 320));
       const perStep = remaining / steps;
       const futureEntries = Array.from({ length: steps }, (_, i) => ({
         ...synth(recentAverage!, perStep, recentAverage! < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado'),

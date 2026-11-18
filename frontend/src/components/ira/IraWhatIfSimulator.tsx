@@ -134,7 +134,7 @@ export function IraWhatIfSimulator({
 
   // Goal Hunter state
   const [goalInput, setGoalInput] = useState<number | null>(null);
-  const [goalHours, setGoalHours] = useState(256);
+  const [goalHours, setGoalHours] = useState(320);
   const [realisticCeiling, setRealisticCeiling] = useState(9.0);
 
   // Risk & Enrollment Strategy state
@@ -176,7 +176,7 @@ export function IraWhatIfSimulator({
   const futureSemesters = useMemo<SimFutureSemester[]>(() => {
     if (customFutureSemesters !== null) return customFutureSemesters;
     if (transcriptWorkbenchEntries.length === 0 && customItems.length === 0) {
-      return [{ id: 'fs-default', workload: 256, grade: 8.5, lockHours: 0 }];
+      return [{ id: 'fs-default', workload: 320, grade: 8.5, lockHours: 0 }];
     }
     return [];
   }, [customFutureSemesters, transcriptWorkbenchEntries.length, customItems.length]);
@@ -359,7 +359,7 @@ export function IraWhatIfSimulator({
       for (let i = 0; i < toAdd; i++) {
         next.push({
           id: `fs-${customCounter + i}`,
-          workload: 256,
+          workload: 320,
           grade: 8.5,
           lockHours: 0,
         });
@@ -1373,9 +1373,9 @@ export function IraWhatIfSimulator({
                           ) : (
                             <>mais de 20 matérias de 64h com nota {fmt(recoveryGrade, 1)}</>
                           )}
-                          {recoveryInfo.avg256hToRecover !== null
-                            ? ` (ou fechar 256h com média ${fmt(recoveryInfo.avg256hToRecover, 2)}).`
-                            : ' (nem média 10 em 256h recupera em 1 período).'}
+                          {recoveryInfo.avg320hToRecover !== null
+                            ? ` (ou fechar 320h com média ${fmt(recoveryInfo.avg320hToRecover, 2)}).`
+                            : ' (nem média 10 em 320h recupera em 1 período).'}
                         </div>
                       ) : (
                         <div className="text-good font-medium">Esse evento não reduz o seu IRA atual.</div>

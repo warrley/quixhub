@@ -430,11 +430,11 @@ export function IraPersonalAnalytics({
             </div>
           </Card>
 
-          {/* Card 2: Interactive target average in 256h */}
+          {/* Card 2: Interactive target average in 320h */}
           <Card padding="sm" className="flex flex-col justify-between gap-2">
             <div className="flex items-center justify-between gap-2">
               <div className="font-heading font-bold text-10-5 uppercase tracking-wide text-ink-3">
-                Meta p/ próximo semestre (256h)
+                Meta p/ próximo semestre (320h)
               </div>
               <Target size={14} className="text-accent shrink-0" aria-hidden="true" />
             </div>
@@ -459,12 +459,12 @@ export function IraPersonalAnalytics({
             </div>
             {selectedTarget && selectedTarget.neededAvg !== null ? (
               <p className="text-xs text-ink-2 leading-snug">
-                Para subir <b className="text-ink tabular-nums">+{fmt(selectedTarget.delta, 2)}</b> em 256h, feche média{' '}
+                Para subir <b className="text-ink tabular-nums">+{fmt(selectedTarget.delta, 2)}</b> em 320h, feche média{' '}
                 <b className="font-heading text-accent-dark text-sm tabular-nums">{fmt(selectedTarget.neededAvg, 2)}</b>.
               </p>
             ) : (
               <p className="text-xs text-ink-2 leading-snug">
-                Mesmo com média 10 em 256h, seu ganho máximo no próximo período é{' '}
+                Mesmo com média 10 em 320h, seu ganho máximo no próximo período é{' '}
                 <b className="font-heading text-accent-dark tabular-nums">+{fmt(sensitivity.maxGainNextSemester, 4)}</b>.
               </p>
             )}
