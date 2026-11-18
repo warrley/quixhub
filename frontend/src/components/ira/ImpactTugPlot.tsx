@@ -137,7 +137,7 @@ export function ImpactTugPlot({
       )}
 
       {/* Diverging axis legend */}
-      <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(120px,1.5fr)_auto_auto] items-center gap-2 px-2 text-10-5 font-heading font-semibold text-ink-3">
+      <div className="hidden sm:grid sm:grid-cols-[minmax(0,1.25fr)_minmax(120px,1.5fr)_auto_auto] items-center gap-2 px-2 text-10-5 font-heading font-semibold text-ink-3">
         <span>{scope === 'disciplinas' ? 'Disciplina' : 'Semestre'}</span>
         <div className="flex items-center justify-between">
           <span className="text-danger">← Puxou p/ baixo</span>
@@ -176,7 +176,7 @@ export function ImpactTugPlot({
                       onSelect(b.id);
                     }
                   }}
-                  className={`grid grid-cols-[minmax(0,1.25fr)_minmax(120px,1.5fr)_auto_auto] items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-colors cursor-pointer ${
+                  className={`grid grid-cols-1 sm:grid-cols-[minmax(0,1.25fr)_minmax(120px,1.5fr)_auto_auto] items-stretch sm:items-center gap-2 px-2.5 py-2 sm:py-1.5 rounded-md border text-left transition-colors cursor-pointer ${
                     isExcluded
                       ? 'border-dashed border-accent bg-accent-tint/35 opacity-65'
                       : isFocus
@@ -209,29 +209,31 @@ export function ImpactTugPlot({
                     )}
                   </div>
 
-                  <span
-                    className={`font-heading font-bold text-11-5 tabular-nums text-right min-w-[66px] ${
-                      b.simulated ? 'text-accent-2-dark' : isPos ? 'text-good' : 'text-danger'
-                    }`}
-                  >
-                    {isPos ? '+' : ''}
-                    {fmt(b.delta, 4)}
-                  </span>
+                  <div className="flex items-center justify-between gap-2 sm:contents">
+                    <span
+                      className={`font-heading font-bold text-11-5 tabular-nums sm:text-right sm:min-w-[66px] ${
+                        b.simulated ? 'text-accent-2-dark' : isPos ? 'text-good' : 'text-danger'
+                      }`}
+                    >
+                      {isPos ? '+' : ''}
+                      {fmt(b.delta, 4)}
+                    </span>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleExclude(b.id);
-                    }}
-                    className={`text-10-5 font-heading font-semibold px-2 py-1 rounded border min-w-[76px] text-center cursor-pointer transition-colors ${
-                      isExcluded
-                        ? 'bg-accent text-accent-ink border-accent'
-                        : 'bg-surface-raised text-ink-2 border-line hover:border-accent hover:text-ink'
-                    }`}
-                  >
-                    {isExcluded ? 'Excluída' : 'Simular sem'}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExclude(b.id);
+                      }}
+                      className={`text-10-5 font-heading font-semibold px-2.5 py-1 rounded-full border min-w-[82px] text-center cursor-pointer transition-colors ${
+                        isExcluded
+                          ? 'bg-accent text-accent-ink border-accent'
+                          : 'bg-surface-raised text-ink-2 border-line hover:border-accent hover:text-ink'
+                      }`}
+                    >
+                      {isExcluded ? 'Excluída' : 'Simular sem'}
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -247,7 +249,7 @@ export function ImpactTugPlot({
               return (
                 <div
                   key={sem.semester}
-                  className={`grid grid-cols-[minmax(0,1.25fr)_minmax(120px,1.5fr)_auto_auto] items-center gap-2 px-2.5 py-2 rounded-md border transition-colors ${
+                  className={`grid grid-cols-1 sm:grid-cols-[minmax(0,1.25fr)_minmax(120px,1.5fr)_auto_auto] items-stretch sm:items-center gap-2 px-2.5 py-2 rounded-md border transition-colors ${
                     isExcluded
                       ? 'border-dashed border-accent bg-accent-tint/35 opacity-65'
                       : 'border-line bg-surface hover:bg-surface-sunken/70'
@@ -321,26 +323,28 @@ export function ImpactTugPlot({
                     })}
                   </div>
 
-                  <span
-                    className={`font-heading font-bold text-11-5 tabular-nums text-right min-w-[66px] ${
-                      sem.simulated ? 'text-accent-2-dark' : semPos ? 'text-good' : 'text-danger'
-                    }`}
-                  >
-                    {semPos ? '+' : ''}
-                    {fmt(sem.delta, 4)}
-                  </span>
+                  <div className="flex items-center justify-between gap-2 sm:contents">
+                    <span
+                      className={`font-heading font-bold text-11-5 tabular-nums sm:text-right sm:min-w-[66px] ${
+                        sem.simulated ? 'text-accent-2-dark' : semPos ? 'text-good' : 'text-danger'
+                      }`}
+                    >
+                      {semPos ? '+' : ''}
+                      {fmt(sem.delta, 4)}
+                    </span>
 
-                  <button
-                    type="button"
-                    onClick={() => toggleExclude(sem.semester)}
-                    className={`text-10-5 font-heading font-semibold px-2 py-1 rounded border min-w-[76px] text-center cursor-pointer transition-colors ${
-                      isExcluded
-                        ? 'bg-accent text-accent-ink border-accent'
-                        : 'bg-surface-raised text-ink-2 border-line hover:border-accent hover:text-ink'
-                    }`}
-                  >
-                    {isExcluded ? 'Excluído' : 'Simular sem'}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleExclude(sem.semester)}
+                      className={`text-10-5 font-heading font-semibold px-2.5 py-1 rounded-full border min-w-[82px] text-center cursor-pointer transition-colors ${
+                        isExcluded
+                          ? 'bg-accent text-accent-ink border-accent'
+                          : 'bg-surface-raised text-ink-2 border-line hover:border-accent hover:text-ink'
+                      }`}
+                    >
+                      {isExcluded ? 'Excluído' : 'Simular sem'}
+                    </button>
+                  </div>
                 </div>
               );
             })}

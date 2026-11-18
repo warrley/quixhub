@@ -3,7 +3,6 @@
 import {
   Check,
   FlaskConical,
-  FolderOpen,
   Plus,
   RotateCcw,
   Save,
@@ -523,7 +522,7 @@ export function IraWhatIfSimulator({
                             key={preset.g}
                             type="button"
                             onClick={() => applyPresetToWorkbench(preset.g)}
-                            className="text-10-5 font-heading font-semibold px-2 py-0.5 rounded bg-surface border border-line text-ink-2 hover:border-accent hover:text-ink cursor-pointer transition-colors"
+                            className="text-10-5 font-heading font-semibold px-2.5 py-1 rounded-full bg-surface border border-line text-ink-2 hover:border-accent hover:text-ink cursor-pointer transition-colors"
                           >
                             {preset.label}
                           </button>
@@ -535,7 +534,7 @@ export function IraWhatIfSimulator({
                             onApplyEntries(applicableUpdates);
                             setTranscriptOverrides({});
                           }}
-                          className="inline-flex items-center gap-1 text-10-5 font-heading font-semibold px-2.5 py-0.5 rounded bg-accent text-accent-ink hover:opacity-90 cursor-pointer transition-opacity"
+                          className="inline-flex items-center gap-1 text-10-5 font-heading font-semibold px-3 py-1 rounded-full bg-accent text-accent-ink hover:opacity-90 cursor-pointer transition-opacity"
                           title="Salvar as notas simuladas diretamente nas disciplinas do histórico"
                         >
                           <Save size={11} aria-hidden="true" />
@@ -581,7 +580,7 @@ export function IraWhatIfSimulator({
                                     key={m}
                                     type="button"
                                     onClick={() => updateWorkbenchItem(item, { mode: m })}
-                                    className={`text-10-5 font-heading font-semibold px-2 py-0.5 rounded border cursor-pointer transition-colors ${
+                                    className={`text-10-5 font-heading font-semibold px-2.5 py-0.5 rounded-full border cursor-pointer transition-colors ${
                                       item.mode === m
                                         ? m === 'trancar'
                                           ? 'bg-danger-tint text-danger border-danger/35'
@@ -758,7 +757,7 @@ export function IraWhatIfSimulator({
                         return (
                           <div
                             key={fs.id}
-                            className="rounded-md bg-surface border border-line px-2.5 py-2 grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-2"
+                            className="rounded-md bg-surface border border-line px-2.5 py-2 grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2"
                           >
                             <span className="font-heading font-bold text-11 text-ink tabular-nums">
                               {info?.semester ?? 'Próx.'}{' '}
@@ -1215,12 +1214,12 @@ export function IraWhatIfSimulator({
                   return (
                     <div
                       key={slot}
-                      className={`rounded-md border p-2 flex flex-col gap-1.5 transition-colors ${
+                      className={`min-w-0 overflow-hidden rounded-md border p-2 flex flex-col gap-1.5 transition-colors ${
                         isActiveSlot ? 'border-accent bg-accent-tint/45' : 'border-line bg-surface-sunken'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="inline-flex items-center gap-1.5 font-heading font-bold text-11 text-ink">
+                        <span className="inline-flex items-center gap-1.5 font-heading font-bold text-11 text-ink truncate">
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
                           Cenário {slot}
                         </span>
@@ -1228,7 +1227,7 @@ export function IraWhatIfSimulator({
                           type="button"
                           onClick={() => removeScenario(slot)}
                           aria-label={`Remover Cenário ${slot}`}
-                          className="text-ink-3 hover:text-danger cursor-pointer"
+                          className="text-ink-3 hover:text-danger cursor-pointer shrink-0"
                         >
                           <X size={12} aria-hidden="true" />
                         </button>
@@ -1243,21 +1242,20 @@ export function IraWhatIfSimulator({
                           {fmt(diff, 4)}
                         </div>
                       )}
-                      <div className="flex items-center gap-1 pt-0.5">
+                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
                         <button
                           type="button"
                           onClick={() => loadScenario(slot)}
-                          className="flex-1 inline-flex items-center justify-center gap-1 rounded px-1.5 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink cursor-pointer"
+                          className="flex-1 min-w-0 rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10 font-heading font-semibold text-ink text-center cursor-pointer truncate"
                           title={`Voltar para o Cenário ${slot} na bancada`}
                         >
-                          <FolderOpen size={11} aria-hidden="true" />
                           Carregar
                         </button>
                         <button
                           type="button"
                           onClick={() => saveScenario(slot)}
                           disabled={simDisplay === null}
-                          className="rounded px-1.5 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink-2 hover:text-ink cursor-pointer"
+                          className="flex-1 min-w-0 rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10 font-heading font-semibold text-ink-2 hover:text-ink text-center cursor-pointer truncate"
                           title={`Sobrescrever Cenário ${slot} com o atual`}
                         >
                           Atualizar

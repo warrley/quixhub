@@ -100,7 +100,7 @@ function Row({
   return (
     <li className={`flex items-center gap-2.5 h-11 px-2.5 rounded-md border ${rowClass}`}>
       <PositionBadge position={row.position} isYou={row.isYou} isEstimate={isEstimate} />
-      <div className="flex items-center gap-1.5 min-w-0 w-[148px] sm:w-[164px] shrink-0">
+      <div className="flex items-center gap-1.5 min-w-0 w-[112px] sm:w-[164px] shrink-0">
         <span
           className={`text-13 truncate ${row.isYou ? `font-heading font-bold ${textClass}` : 'text-ink-2'}`}
           title={label}
@@ -249,7 +249,7 @@ export function IraRanking({
               <select
                 value={ingresso ?? ''}
                 onChange={(e) => onIngressoChange(e.target.value || null)}
-                className="font-heading font-semibold text-12 text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
+                className="font-heading font-semibold text-xs text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
               >
                 <option value="">semestre…</option>
                 {ingressoOptions.map((s) => (
@@ -272,7 +272,7 @@ export function IraRanking({
             <select
               value={filter.fromIngresso ?? ''}
               onChange={(e) => onFilterChange({ ...filter, fromIngresso: e.target.value || null })}
-              className="font-heading font-semibold text-12 text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
+              className="font-heading font-semibold text-xs text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
             >
               <option value="">início…</option>
               {ingressoOptions.map((s) => (
@@ -285,7 +285,7 @@ export function IraRanking({
             <select
               value={filter.toIngresso ?? ''}
               onChange={(e) => onFilterChange({ ...filter, toIngresso: e.target.value || null })}
-              className="font-heading font-semibold text-12 text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
+              className="font-heading font-semibold text-xs text-ink bg-surface border border-line rounded-md py-1 px-2 cursor-pointer hover:border-accent focus:border-accent outline-none"
             >
               <option value="">fim…</option>
               {ingressoOptions.map((s) => (
@@ -363,7 +363,7 @@ export function IraRanking({
 
           {altRanking && altIra !== null && (
             <div
-              className={`mt-2 flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-12 ${showingPredicted ? '' : 'border-dashed'}`}
+              className={`mt-2 flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-xs ${showingPredicted ? '' : 'border-dashed'}`}
               style={
                 showingPredicted
                   ? { borderColor: 'var(--color-accent)', background: 'var(--color-accent-tint)' }

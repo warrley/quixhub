@@ -431,7 +431,7 @@ export default function Ira() {
             <button
               type="button"
               onClick={toggleStats}
-              className="inline-flex items-center gap-1.5 text-12 font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
             >
               <BarChart3 size={14} aria-hidden />
               {showStats ? 'Ocultar estatísticas do curso' : 'Mostrar estatísticas do curso'}
@@ -472,7 +472,7 @@ export default function Ira() {
             <button
               type="button"
               onClick={togglePersonalAnalytics}
-              className="inline-flex items-center gap-1.5 text-12 font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
             >
               <Layers size={14} aria-hidden="true" />
               {showPersonalAnalytics ? 'Ocultar análise das disciplinas' : 'Mostrar análise das disciplinas'}
@@ -492,7 +492,7 @@ export default function Ira() {
 
         {review && review.length > 0 && (
           <div className="bg-surface-sunken border border-line rounded-xl p-5 mt-3 mb-6 shadow-sm">
-            <div className="font-heading font-bold text-16 mb-2">
+            <div className="font-heading font-bold text-base mb-2">
               Revisar importação ({review.length} disciplinas)
             </div>
             <div className="flex flex-wrap gap-4 text-13 text-ink-3 mb-6 pb-4 border-b border-line">
@@ -510,13 +510,13 @@ export default function Ira() {
             {groupIndexedBySemester(review).map(([semester, items]) => (
               <div key={semester} className="mb-6 last:mb-0">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="font-heading font-bold text-14 text-ink-2">
+                  <div className="font-heading font-bold text-sm text-ink-2">
                     {semester === OUTROS ? OUTROS : `Semestre ${semester}`}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-danger hover:text-danger hover:bg-danger-tint h-7 text-12 px-2.5"
+                    className="text-danger hover:text-danger hover:bg-danger-tint h-7 text-xs px-2.5"
                     onClick={() => {
                       const indicesToRemove = new Set(items.map((i) => i.index));
                       setReview((cur) => cur?.filter((_, i) => !indicesToRemove.has(i)) ?? cur);
