@@ -98,14 +98,14 @@ export function IraIdentityMatch({
               <div className="font-heading font-bold text-13 text-ink">
                 Você confirmou sua nota na base SIGAA {CAMPUS_UPDATED_AT}
               </div>
-              <div className="text-12 text-ink-2">
+              <div className="text-xs text-ink-2">
                 {claimed.course} · Ingresso {claimed.ingresso} · IRA <b className="text-ink tabular-nums">{fmt(claimed.ira, 4)}</b>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4 flex-wrap">
-            <label className="inline-flex items-center gap-2 text-12 font-medium text-ink cursor-pointer select-none">
+            <label className="inline-flex items-center gap-2 text-xs font-medium text-ink cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={showNameInRanking}

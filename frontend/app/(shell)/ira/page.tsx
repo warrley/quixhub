@@ -28,7 +28,7 @@ import {
   type Situacao,
 } from '@/lib/ira';
 import { semesterIndex, semesterLabel, type CampusStudent, type RankingFilter, type StatusGroup } from '@/lib/iraCampus';
-import { CAMPUS_STUDENTS, normalizeCourse } from '@/lib/iraCampusData';
+import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT, normalizeCourse } from '@/lib/iraCampusData';
 import { useIra } from '@/lib/iraStore';
 
 type DraftEntry = Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' };
@@ -332,8 +332,38 @@ export default function Ira() {
       return;
     }
     const previousPdfIds = state.entries.filter((e) => e.source === 'pdf').map((e) => e.id);
+    const nextEntries = review.map(toEntry);
+
+    // If a different person's transcript is imported, unlink any previously claimed identity
+    // so the prior student's record returns to the ranking pool and the new PDF can match cleanly.
+    if (claimedStudent) {
+      const refIdx = semesterIndex(CAMPUS_UPDATED_AT);
+      let newIngresso: string | null = null;
+      let minIdx = Number.POSITIVE_INFINITY;
+      const upToRef: IraEntry[] = [];
+      nextEntries.forEach((e, idxNum) => {
+        const sIdx = semesterIndex(e.semester);
+        if (sIdx !== null && sIdx < minIdx) {
+          minIdx = sIdx;
+          newIngresso = e.semester ?? null;
+        }
+        if (refIdx === null || sIdx === null || sIdx <= refIdx) {
+          upToRef.push({ ...e, id: `chk-${idxNum}` });
+        }
+      });
+      const newRefIra = computeIra(upToRef.length > 0 ? upToRef : nextEntries.map((e, i) => ({ ...e, id: `chk-${i}` })));
+      const matchesClaimed =
+        newRefIra !== null &&
+        Math.abs(newRefIra - claimedStudent.ira) <= 0.02 &&
+        (!newIngresso || newIngresso === claimedStudent.ingresso);
+      if (!matchesClaimed) {
+        updateIdentity(null, false);
+        setManualIngresso(null);
+      }
+    }
+
     if (previousPdfIds.length > 0) removeEntries(previousPdfIds);
-    addEntries(review.map(toEntry));
+    addEntries(nextEntries);
     setReview(null);
     setFileName(undefined);
     setPrintedIra(undefined);
