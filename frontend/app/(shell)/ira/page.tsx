@@ -1,24 +1,36 @@
 'use client';
 
-import { ArrowUp, Check, Pencil, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { BarChart3, Check, ChevronDown, ChevronUp, Layers, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
-import { SelectField, TextField } from '@/components/Field';
-import { IraDistributionChart } from '@/components/IraDistributionChart';
+import { Segmented } from '@/components/Segmented';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { useToast } from '@/components/Toast';
+import { IraCourseProjectionCard } from '@/components/ira/IraCourseProjectionCard';
+import { IraIdentityMatch } from '@/components/ira/IraIdentityMatch';
+import { IraInsightsGrid } from '@/components/ira/IraInsightsGrid';
+import { IraPersonalAnalytics } from '@/components/ira/IraPersonalAnalytics';
+import { IraPrivacyModal } from '@/components/ira/IraPrivacyModal';
+import { IraRanking } from '@/components/ira/IraRanking';
+import { IraRealDistributionChart } from '@/components/ira/IraRealDistributionChart';
+import { IraWhatIfSimulator } from '@/components/ira/IraWhatIfSimulator';
+import { QuickAddDisciplineForm } from '@/components/ira/QuickAddDisciplineForm';
 import { currentUser } from '@/data/mock';
-import { IRA_DISTRIBUTIONS } from '@/data/iraDistribution';
 import type { IraEntry } from '@/data/types';
+import { CampusSnapshotContext } from '@/lib/campusSnapshotContext';
+import type { CampusSnapshotRequest, CampusSnapshotResponse } from '@/lib/iraCampusApi';
 import {
   computeIra,
   computeSemesterStats,
   gradeSituacaoError,
+  isEntryPredicted,
   requiresGrade,
   situacaoFromGrade,
   type Situacao,
 } from '@/lib/ira';
+import { semesterIndex, semesterLabel, type CampusStudent, type RankingFilter, type StatusGroup } from '@/lib/iraCampus';
+import { CAMPUS_UPDATED_AT, normalizeCourse } from '@/lib/iraCampusData';
 import { useIra } from '@/lib/iraStore';
 
 type DraftEntry = Omit<IraEntry, 'id' | 'grade'> & { grade: number | '' };
@@ -81,20 +93,15 @@ function gradeLocked(situacao: Situacao | undefined): boolean {
 // Grade-less entries (trancado / em andamento) are stored with a 0
 // placeholder: computeIra never reads their grade, and the list shows "—".
 function toEntry(draft: DraftEntry): Omit<IraEntry, 'id'> {
-  return { ...draft, grade: requiresGrade(draft.situacao) && draft.grade !== '' ? draft.grade : 0 };
+  return {
+    ...draft,
+    grade: requiresGrade(draft.situacao) && draft.grade !== '' ? draft.grade : 0,
+  };
 }
 
 // Manual entry only accepts these three workloads (imported PDF entries
 // aren't restricted, since real transcripts can list other values).
 const WORKLOAD_OPTIONS = [32, 64, 96];
-
-function emptyDraft(): DraftEntry {
-  return { disciplineName: '', grade: '', workload: 64, situacao: situacaoFromGrade(''), source: 'manual' };
-}
-
-function sortSemesters(semesters: string[]): string[] {
-  return [...new Set(semesters)].sort((a, b) => a.localeCompare(b));
-}
 
 const OUTROS = 'Outros';
 
@@ -128,40 +135,232 @@ function groupEntriesBySemester(entries: IraEntry[]): [string, IraEntry[]][] {
   });
 }
 
-const BUTTON_FIELD = 'flex flex-col gap-1.5 mb-4';
-const BUTTON_FIELD_LABEL = 'font-heading font-semibold text-xs invisible';
-const BUTTON_FIELD_SPACER = 'text-xs min-h-[16px] invisible';
-const TABLE = 'flex flex-col gap-2 mt-3';
-const ENTRY_ROW = 'grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-center py-2.5 px-3 rounded-md bg-surface border border-line text-13';
+const TABLE = 'grid grid-cols-1 lg:grid-cols-2 gap-2.5 mt-3 items-start';
+const ENTRY_ROW =
+  'grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] gap-2.5 items-center py-2.5 px-3 rounded-md bg-surface border border-line text-13';
 const BADGE = 'text-11 font-semibold py-0.5 px-2 rounded-full justify-self-start';
+const COMPACT_CTRL =
+  'h-9 w-full border-1-5 border-line rounded-md px-2.5 font-body text-13 text-ink bg-surface placeholder:text-ink-3 transition-colors focus-visible:outline-none focus-visible:border-accent disabled:opacity-50';
+const COMPACT_LABEL = 'font-heading font-semibold text-11 text-ink-3';
 
 export default function Ira() {
   const { state, ira, addEntry, addEntries, updateEntry, removeEntry, removeEntries } = useIra();
   const { show } = useToast();
   const semesterStats = computeSemesterStats(state.entries);
 
-  const [comparisonCourse, setComparisonCourse] = useState(currentUser.course);
-  const comparisonDist = IRA_DISTRIBUTIONS[comparisonCourse];
+  const myCourse = normalizeCourse(currentUser.course);
+  const [comparisonCourse, setComparisonCourse] = useState<string | null>(myCourse ?? currentUser.course);
+  const [statusGroup, setStatusGroup] = useState<StatusGroup>('ativos');
 
-  const [draft, setDraft] = useState<DraftEntry>(emptyDraft());
+  const inferredIngresso = useMemo(() => {
+    let earliest: { label: string; idx: number } | null = null;
+    for (const e of state.entries) {
+      const idx = semesterIndex(e.semester);
+      if (idx !== null && (!earliest || idx < earliest.idx)) earliest = { label: e.semester!, idx };
+    }
+    return earliest?.label ?? null;
+  }, [state.entries]);
+
+  const [manualIngresso, setManualIngresso] = useState<string | null>(null);
+  const [claimedStudent, setClaimedStudent] = useState<CampusStudent | null>(null);
+  const [showNameInRanking, setShowNameInRanking] = useState(false);
+
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showStats, setShowStats] = useState(true);
+  const [showPersonalAnalytics, setShowPersonalAnalytics] = useState(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('quixhub-ira-identity');
+      if (saved) {
+        const parsed = JSON.parse(saved) as { claimed?: CampusStudent | null; showName?: boolean };
+        if (parsed.claimed) setClaimedStudent(parsed.claimed);
+        if (typeof parsed.showName === 'boolean') setShowNameInRanking(parsed.showName);
+      }
+      if (!localStorage.getItem('quixhub-ira-privacy-ack')) {
+        setShowPrivacyModal(true);
+      }
+      const statsPref = localStorage.getItem('quixhub-ira-show-stats');
+      if (statsPref === '0') setShowStats(false);
+      const personalPref = localStorage.getItem('quixhub-ira-show-personal');
+      if (personalPref === '0') setShowPersonalAnalytics(false);
+    } catch {
+      // ignore invalid stored state
+    }
+  }, []);
+
+  function toggleStats() {
+    setShowStats((cur) => {
+      const next = !cur;
+      try {
+        localStorage.setItem('quixhub-ira-show-stats', next ? '1' : '0');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
+
+  function togglePersonalAnalytics() {
+    setShowPersonalAnalytics((cur) => {
+      const next = !cur;
+      try {
+        localStorage.setItem('quixhub-ira-show-personal', next ? '1' : '0');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
+
+  function acceptPrivacy() {
+    setShowPrivacyModal(false);
+    try {
+      localStorage.setItem('quixhub-ira-privacy-ack', '1');
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  function updateIdentity(claimed: CampusStudent | null, showName: boolean) {
+    setClaimedStudent(claimed);
+    setShowNameInRanking(showName);
+    localStorage.setItem('quixhub-ira-identity', JSON.stringify({ claimed, showName }));
+  }
+
+  const rawIngresso = manualIngresso ?? claimedStudent?.ingresso ?? inferredIngresso;
+  const ingresso =
+    rawIngresso && rawIngresso !== '2007.2' && rawIngresso.endsWith('.2')
+      ? rawIngresso.replace(/\.2$/, '.1')
+      : rawIngresso;
+
+  const [podiumSize, setPodiumSize] = useState<5 | 10>(5);
+  const [usePredictedRanking, setUsePredictedRanking] = useState<'previsto' | 'real'>('previsto');
+  const [campusSnapshot, setCampusSnapshot] = useState<CampusSnapshotResponse | null>(null);
+
+  const ingressoOptions = useMemo(
+    () => (campusSnapshot?.available ? campusSnapshot.ingressoOptions : []),
+    [campusSnapshot],
+  );
+
+  const [rankingFilter, setRankingFilter] = useState<RankingFilter>({
+    scope: myCourse ? 'curso' : 'campus',
+    cohort: 'ativos',
+    fromIngresso: '2023.1',
+    toIngresso: '2026.1',
+  });
+
+  const [simulatedIra, setSimulatedIra] = useState<number | null>(null);
+
+  const hasSimulated = useMemo(() => state.entries.some((e) => isEntryPredicted(e)), [state.entries]);
+  const officialIra = useMemo(
+    () => (hasSimulated ? computeIra(state.entries.filter((e) => !isEntryPredicted(e))) : ira),
+    [hasSimulated, state.entries, ira],
+  );
+
+  const referenceIra = useMemo(() => {
+    const baseIra = officialIra ?? ira;
+    if (baseIra === null) return 0;
+    const refIdx = semesterIndex(CAMPUS_UPDATED_AT);
+    const upToRef = state.entries.filter((e) => {
+      const idx = semesterIndex(e.semester);
+      return refIdx === null || idx === null || idx <= refIdx;
+    });
+    return (upToRef.length > 0 ? computeIra(upToRef) : null) ?? baseIra;
+  }, [state.entries, officialIra, ira]);
+
+  const hasPdf = useMemo(() => state.entries.some((e) => e.source === 'pdf'), [state.entries]);
+
+  useEffect(() => {
+    if (ira === null) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const payload: CampusSnapshotRequest = {
+        ira: officialIra ?? ira,
+        referenceIra,
+        ghostIra: simulatedIra,
+        predictedIra: hasSimulated ? ira : null,
+        course: comparisonCourse,
+        myCourse,
+        group: statusGroup,
+        rankingFilter,
+        podiumSize,
+        usePredictedRanking: usePredictedRanking === 'previsto',
+        ingresso,
+        inferredIngresso,
+        claimed: claimedStudent,
+        hasPdf,
+      };
+      try {
+        const res = await fetch('/api/ira/campus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as CampusSnapshotResponse;
+        setCampusSnapshot(data);
+      } catch {
+        // ignore aborted or offline fetch
+      }
+    }, 60);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [
+    ira,
+    officialIra,
+    referenceIra,
+    simulatedIra,
+    hasSimulated,
+    comparisonCourse,
+    myCourse,
+    statusGroup,
+    rankingFilter,
+    podiumSize,
+    usePredictedRanking,
+    ingresso,
+    inferredIngresso,
+    claimedStudent,
+    hasPdf,
+  ]);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<DraftEntry | null>(null);
 
   const [knownSemesters, setKnownSemesters] = useState<string[]>([]);
-  const [activeSemester, setActiveSemester] = useState('');
-  const [newSemesterInput, setNewSemesterInput] = useState('');
+  const [openAddSemester, setOpenAddSemester] = useState<string | null>(null);
 
-  const availableSemesters = sortSemesters([
-    ...knownSemesters,
-    ...state.entries.map((e) => e.semester).filter((s): s is string => Boolean(s)),
-  ]);
+  const groupedSemesters = useMemo(() => {
+    const groups = new Map<string, IraEntry[]>();
+    for (const [sem, list] of groupEntriesBySemester(state.entries)) groups.set(sem, list);
+    for (const sem of knownSemesters) {
+      if (!groups.has(sem)) groups.set(sem, []);
+    }
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === OUTROS) return 1;
+      if (b === OUTROS) return -1;
+      return b.localeCompare(a);
+    });
+  }, [state.entries, knownSemesters]);
 
-  function addSemester() {
-    const value = newSemesterInput.trim();
-    if (!value) return;
-    setKnownSemesters((cur) => (cur.includes(value) ? cur : [...cur, value]));
-    setActiveSemester(value);
-    setNewSemesterInput('');
+  const suggestedNextSemester = useMemo(() => {
+    let maxIdx = 0;
+    for (const [sem] of groupedSemesters) {
+      const idx = semesterIndex(sem);
+      if (idx !== null && idx > maxIdx) maxIdx = idx;
+    }
+    return maxIdx > 0 ? semesterLabel(maxIdx + 1) : '2026.1';
+  }, [groupedSemesters]);
+
+  function openOrCreateSemester(value: string) {
+    const sem = value.trim();
+    if (!sem) return;
+    setKnownSemesters((cur) => (cur.includes(sem) ? cur : [...cur, sem]));
+    setOpenAddSemester(sem);
   }
 
   const [fileName, setFileName] = useState<string>();
@@ -170,15 +369,6 @@ export default function Ira() {
   const [printedIra, setPrintedIra] = useState<number | undefined>();
 
   const previewIra = review ? computeIra(review.map((e, i) => ({ ...toEntry(e), id: `preview-${i}` }))) : null;
-
-  const draftError = gradeSituacaoError(draft.grade, draft.situacao);
-  const canAddManual = Boolean(activeSemester && draft.disciplineName && draft.workload > 0 && draftError === null);
-
-  function handleAddManual() {
-    if (!canAddManual) return;
-    addEntry({ ...toEntry(draft), semester: activeSemester });
-    setDraft(emptyDraft());
-  }
 
   async function handleFile(file: File) {
     setFileName(file.name);
@@ -214,189 +404,381 @@ export default function Ira() {
       show('Corrija as notas destacadas ou remova essas disciplinas.');
       return;
     }
-    addEntries(review.map(toEntry));
+    const previousPdfIds = state.entries.filter((e) => e.source === 'pdf').map((e) => e.id);
+    const nextEntries = review.map(toEntry);
+
+    // If a different person's transcript is imported, unlink any previously claimed identity
+    // so the prior student's record returns to the ranking pool and the new PDF can match cleanly.
+    if (claimedStudent) {
+      const refIdx = semesterIndex(CAMPUS_UPDATED_AT);
+      let newIngresso: string | null = null;
+      let minIdx = Number.POSITIVE_INFINITY;
+      const upToRef: IraEntry[] = [];
+      nextEntries.forEach((e, idxNum) => {
+        const sIdx = semesterIndex(e.semester);
+        if (sIdx !== null && sIdx < minIdx) {
+          minIdx = sIdx;
+          newIngresso = e.semester ?? null;
+        }
+        if (refIdx === null || sIdx === null || sIdx <= refIdx) {
+          upToRef.push({ ...e, id: `chk-${idxNum}` });
+        }
+      });
+      const newRefIra = computeIra(upToRef.length > 0 ? upToRef : nextEntries.map((e, i) => ({ ...e, id: `chk-${i}` })));
+      const matchesClaimed =
+        newRefIra !== null &&
+        Math.abs(newRefIra - claimedStudent.ira) <= 0.02 &&
+        (!newIngresso || newIngresso === claimedStudent.ingresso);
+      if (!matchesClaimed) {
+        updateIdentity(null, false);
+        setManualIngresso(null);
+      }
+    }
+
+    if (previousPdfIds.length > 0) removeEntries(previousPdfIds);
+    addEntries(nextEntries);
     setReview(null);
     setFileName(undefined);
     setPrintedIra(undefined);
-    show('Histórico importado com sucesso!');
+    show(previousPdfIds.length > 0 ? 'Histórico atualizado com sucesso!' : 'Histórico importado com sucesso!');
   }
 
   return (
     <div>
-      <div className="my-2 mb-5">
-        <h1 className="font-heading font-bold text-22 mb-1">Calculadora de IRA</h1>
-        <p className="text-13 text-ink-2">
-          Calculado localmente a partir das disciplinas que você informar — os dados ficam apenas no seu navegador.
-        </p>
+      <IraPrivacyModal open={showPrivacyModal} onAccept={acceptPrivacy} />
+
+      <div className="my-2 mb-5 flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-heading font-bold text-22 mb-1">Calculadora de IRA</h1>
+          <p className="text-13 text-ink-2">
+            Calculado localmente a partir das disciplinas que você informar — os dados ficam apenas no seu navegador.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowPrivacyModal(true)}
+          className="inline-flex items-center gap-1.5 text-11-5 font-heading font-semibold text-good bg-good-tint px-3 py-1.5 rounded-full cursor-pointer hover:opacity-90 transition-opacity"
+        >
+          <ShieldCheck size={14} aria-hidden />
+          100% no seu navegador
+        </button>
       </div>
 
       {ira !== null && (
-        <Card className="mb-6" padding="md">
-          <CardKicker>Comparativo</CardKicker>
-          <div className="flex items-center justify-between flex-wrap gap-x-4 mb-3">
-            <CardTitle>Sua posição no curso</CardTitle>
-          </div>
-          <div>
-            <IraDistributionChart
+        <CampusSnapshotContext.Provider value={campusSnapshot}>
+          <Card className="mb-6" padding="md">
+            <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+              <div>
+                <CardKicker>Comparativo</CardKicker>
+                <CardTitle>Sua posição no curso</CardTitle>
+              </div>
+              <Segmented<StatusGroup>
+                size="sm"
+                ariaLabel="Grupo de comparação"
+                value={statusGroup}
+                onChange={setStatusGroup}
+                options={[
+                  { value: 'ativos', label: 'Ativos' },
+                  { value: 'todos', label: 'Todos' },
+                ]}
+              />
+            </div>
+
+            <IraRealDistributionChart
               ira={ira}
-              courseName={comparisonCourse}
-              mean={comparisonDist?.mean ?? null}
-              std={comparisonDist?.std ?? null}
-              students={comparisonDist?.students}
-              courses={Object.keys(IRA_DISTRIBUTIONS)}
+              officialIra={officialIra}
+              ghostIra={simulatedIra}
+              course={comparisonCourse}
+              group={statusGroup}
               onCourseChange={setComparisonCourse}
             />
+            <IraWhatIfSimulator
+              entries={state.entries}
+              currentIra={ira}
+              course={comparisonCourse}
+              onSimulatedIraChange={setSimulatedIra}
+              onApplyEntries={(updates) => {
+                for (const u of updates) {
+                  updateEntry(u.id, { grade: u.grade, situacao: u.situacao });
+                }
+                show('Notas aplicadas às disciplinas do histórico!');
+              }}
+            />
+          </Card>
+
+          <IraIdentityMatch
+            entries={state.entries}
+            ira={officialIra ?? ira}
+            userName={currentUser.name}
+            claimed={claimedStudent}
+            showNameInRanking={showNameInRanking}
+            onClaim={(student) => {
+              updateIdentity(student, student ? showNameInRanking : false);
+              if (student) show('Identidade confirmada na base SIGAA!');
+            }}
+            onToggleShowName={(next) => updateIdentity(claimedStudent, next)}
+          />
+
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-heading font-bold text-13 text-ink-2">Estatísticas do curso e ranking</span>
+              {hasSimulated && officialIra !== null && (
+                <span className="text-11 font-heading font-semibold px-2.5 py-0.5 rounded-full bg-accent-2-tint text-accent-2-dark">
+                  Com previsão ({ira.toFixed(4)}) · Real: {officialIra.toFixed(4)}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={toggleStats}
+              className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+            >
+              <BarChart3 size={14} aria-hidden />
+              {showStats ? 'Ocultar estatísticas do curso' : 'Mostrar estatísticas do curso'}
+              {showStats ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
+            </button>
           </div>
-        </Card>
+
+          {showStats && (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <IraRanking
+                  ira={ira}
+                  myCourse={myCourse}
+                  ingresso={ingresso}
+                  ingressoOptions={ingressoOptions}
+                  onIngressoChange={setManualIngresso}
+                  filter={rankingFilter}
+                  onFilterChange={setRankingFilter}
+                  displayName={showNameInRanking ? currentUser.name : null}
+                  isEstimate={hasSimulated}
+                  officialIra={officialIra}
+                  podiumSize={podiumSize}
+                  onPodiumSizeChange={setPodiumSize}
+                  usePredicted={usePredictedRanking}
+                  onUsePredictedChange={setUsePredictedRanking}
+                />
+                <IraCourseProjectionCard
+                  ira={officialIra ?? ira}
+                  entries={state.entries}
+                  course={comparisonCourse}
+                  ingresso={ingresso}
+                />
+              </div>
+
+              <IraInsightsGrid ira={officialIra ?? ira} course={comparisonCourse} ingresso={ingresso} />
+            </>
+          )}
+
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <span className="font-heading font-bold text-13 text-ink-2">Análise individual por disciplina e semestre</span>
+            <button
+              type="button"
+              onClick={togglePersonalAnalytics}
+              className="inline-flex items-center gap-1.5 text-xs font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+            >
+              <Layers size={14} aria-hidden="true" />
+              {showPersonalAnalytics ? 'Ocultar análise das disciplinas' : 'Mostrar análise das disciplinas'}
+              {showPersonalAnalytics ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+            </button>
+          </div>
+
+          {showPersonalAnalytics && (
+            <IraPersonalAnalytics ira={ira} entries={state.entries} />
+          )}
+        </CampusSnapshotContext.Provider>
       )}
 
       <div className="mb-6">
-        <div className="font-heading font-bold text-sm mb-3">Semestre</div>
-        <div className="grid grid-cols-[2fr_auto] gap-3 items-end max-w-[480px]">
-          <TextField
-            label="Novo semestre"
-            placeholder="Ex: 2025.1"
-            value={newSemesterInput}
-            onChange={(e) => setNewSemesterInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addSemester();
-              }
-            }}
-          />
-          <div className={BUTTON_FIELD}>
-            <span className={BUTTON_FIELD_LABEL}>Adicionar semestre</span>
-            <Button variant="secondary" onClick={addSemester} disabled={!newSemesterInput.trim()}>
-              Adicionar semestre
-            </Button>
-            <span className={BUTTON_FIELD_SPACER}>spacer</span>
-          </div>
-        </div>
+        <div className="font-heading font-bold text-sm mb-2">Importar histórico do SIGAA (PDF)</div>
+        <UploadDropzone fileName={parsing ? 'Lendo PDF...' : fileName} onFile={handleFile} accept="application/pdf" />
 
-        {availableSemesters.length > 0 && (
-          <div className="flex gap-2 flex-wrap mt-3">
-            {availableSemesters.map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={`font-heading font-semibold text-12-5 py-1.5 px-3.5 rounded-full border-1-5 cursor-pointer [transition:border-color_0.15s_ease,background-color_0.15s_ease,color_0.15s_ease,box-shadow_0.15s_ease] ${
-                  s === activeSemester
-                    ? 'border-accent bg-accent text-ink-inverse shadow-sm'
-                    : 'border-line bg-surface text-ink-2 hover:border-line-strong'
-                }`}
-                onClick={() => setActiveSemester(s)}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-baseline justify-between mb-3 mt-5">
-          <div className="font-heading font-bold text-sm">
-            Adicionar disciplina manualmente
-            {activeSemester ? ` — Semestre ${activeSemester}` : ''}
-          </div>
-          <span className="text-11-5 text-ink-3">
-            {state.entries.length} {state.entries.length === 1 ? 'disciplina cadastrada' : 'disciplinas cadastradas'}
-          </span>
-        </div>
-        {!activeSemester && (
-          <div
-            className="flex items-center gap-2.5 rounded-md pl-3 pr-4 py-3 mb-3 border-l-[3px]"
-            style={{ borderColor: 'var(--color-accent-2)', background: 'var(--color-accent-2-tint)' }}
-          >
-            <ArrowUp size={16} className="shrink-0" style={{ color: 'var(--color-accent-2-dark)' }} />
-            <span className="text-13 font-medium" style={{ color: 'var(--color-accent-2-dark)' }}>
-              Defina um semestre acima para adicionar disciplinas.
-            </span>
-          </div>
-        )}
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-end">
-          <TextField
-            label="Disciplina"
-            placeholder="Nome da disciplina"
-            value={draft.disciplineName}
-            disabled={!activeSemester}
-            onChange={(e) => setDraft((d) => ({ ...d, disciplineName: e.target.value }))}
-          />
-          <TextField
-            label="Nota"
-            type="number"
-            min={0}
-            max={10}
-            step={0.1}
-            placeholder={requiresGrade(draft.situacao) ? undefined : '—'}
-            disabled={!activeSemester || gradeLocked(draft.situacao)}
-            value={draft.grade}
-            error={activeSemester ? (draftError ?? undefined) : undefined}
-            onChange={(e) => setDraft((d) => ({ ...d, ...gradeChange(e.target.value) }))}
-          />
-          <SelectField
-            label="CH"
-            disabled={!activeSemester}
-            value={draft.workload || ''}
-            onChange={(e) => setDraft((d) => ({ ...d, workload: Number(e.target.value) }))}
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {WORKLOAD_OPTIONS.map((h) => (
-              <option key={h} value={h}>
-                {h}h
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label="Situação"
-            disabled={!activeSemester}
-            value={draft.situacao}
-            onChange={(e) => {
-              const situacao = e.target.value as Situacao;
-              setDraft((d) => ({ ...d, ...situacaoChange(situacao, d.grade) }));
-            }}
-          >
-            <SituacaoOptions current={draft.situacao} />
-          </SelectField>
-          <div className={BUTTON_FIELD}>
-            <span className={BUTTON_FIELD_LABEL}>Adicionar</span>
-            <Button onClick={handleAddManual} disabled={!canAddManual}>
-              Adicionar
-            </Button>
-            <span className={BUTTON_FIELD_SPACER}>spacer</span>
-          </div>
-        </div>
-
-        <div>
-          {state.entries.length === 0 ? (
-            <div className="text-13 text-ink-3 py-3">Nenhuma disciplina adicionada ainda.</div>
-          ) : (
-            groupEntriesBySemester(state.entries).map(([semester, entries]) => {
-              const stat = semesterStats.find((s) => s.semester === semester);
-              const delta = stat && stat.average !== null && ira !== null ? stat.average - ira : null;
-              const sharePercent = stat && stat.contribution !== null && ira ? (stat.contribution / ira) * 100 : null;
-              return (
-              <div key={semester}>
-                <div className="flex justify-between items-center my-4 mb-1">
-                  <span className="font-heading font-bold text-12-5 text-ink-2">
+        {review && review.length > 0 && (
+          <div className="bg-surface-sunken border border-line rounded-xl p-5 mt-3 mb-6 shadow-sm">
+            <div className="font-heading font-bold text-base mb-2">
+              Revisar importação ({review.length} disciplinas)
+            </div>
+            <div className="flex flex-wrap gap-4 text-13 text-ink-3 mb-6 pb-4 border-b border-line">
+              <div>
+                IRA prévio estimado:{' '}
+                <b className="text-ink">{previewIra !== null && previewIra !== undefined ? previewIra.toFixed(4) : '—'}</b>
+              </div>
+              {printedIra !== undefined && (
+                <div>
+                  Valor impresso no PDF:{' '}
+                  <b className="text-ink">{printedIra}</b>
+                </div>
+              )}
+            </div>
+            {groupIndexedBySemester(review).map(([semester, items]) => (
+              <div key={semester} className="mb-6 last:mb-0">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-heading font-bold text-sm text-ink-2">
                     {semester === OUTROS ? OUTROS : `Semestre ${semester}`}
-                  </span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="text-danger hover:text-danger hover:bg-danger-tint h-7 text-xs px-2.5"
                     onClick={() => {
-                      removeEntries(entries.map((e) => e.id));
-                      if (editingId && entries.some((e) => e.id === editingId)) {
-                        setEditingId(null);
-                        setEditDraft(null);
-                      }
-                      show(`Semestre ${semester === OUTROS ? OUTROS : semester} removido.`);
+                      const indicesToRemove = new Set(items.map((i) => i.index));
+                      setReview((cur) => cur?.filter((_, i) => !indicesToRemove.has(i)) ?? cur);
                     }}
                   >
-                    <Trash2 size={14} />
-                    Excluir semestre
+                    Remover semestre
                   </Button>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
+                  {items.map(({ index: i, entry: e }) => {
+                    const rowError = gradeSituacaoError(e.grade, e.situacao);
+                    return (
+                      <div key={i} className="flex flex-col gap-2 p-3 rounded-md bg-surface border border-line text-13 shadow-sm hover:border-line-strong transition-colors">
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={e.disciplineName}
+                            aria-label="Disciplina"
+                            onChange={(ev) => updateReviewRow(i, { disciplineName: ev.target.value })}
+                            className={`${COMPACT_CTRL} flex-1 min-w-0 font-medium`}
+                          />
+                          <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
+                            <Trash2 size={16} className="text-danger opacity-70 hover:opacity-100" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <label className="flex flex-col gap-1">
+                            <span className={COMPACT_LABEL}>Nota</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              placeholder={requiresGrade(e.situacao) ? '0–10' : '—'}
+                              disabled={gradeLocked(e.situacao)}
+                              value={e.grade}
+                              onChange={(ev) => updateReviewRow(i, gradeChange(ev.target.value))}
+                              className={`${COMPACT_CTRL} tabular-nums ${rowError ? 'border-danger focus-visible:border-danger' : ''}`}
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1">
+                            <span className={COMPACT_LABEL}>CH</span>
+                            <div className="relative">
+                              <select
+                                value={e.workload}
+                                onChange={(ev) => updateReviewRow(i, { workload: Number(ev.target.value) })}
+                                className={`${COMPACT_CTRL} appearance-none pr-7 cursor-pointer`}
+                              >
+                                {WORKLOAD_OPTIONS.map((h) => (
+                                  <option key={h} value={h}>
+                                    {h}h
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-3" />
+                            </div>
+                          </label>
+                          <label className="flex flex-col gap-1">
+                            <span className={COMPACT_LABEL}>Situação</span>
+                            <div className="relative">
+                              <select
+                                value={e.situacao ?? 'outro'}
+                                onChange={(ev) => updateReviewRow(i, situacaoChange(ev.target.value as Situacao, e.grade))}
+                                className={`${COMPACT_CTRL} appearance-none pr-7 cursor-pointer`}
+                              >
+                                <SituacaoOptions current={e.situacao} />
+                              </select>
+                              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-3" />
+                            </div>
+                          </label>
+                        </div>
+                        {rowError && <p className="text-11 font-semibold text-danger">{rowError}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="mt-6 pt-4 border-t border-line flex justify-end">
+              <Button onClick={confirmReview} className="px-8 shadow-md">
+                Confirmar e salvar
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <div>
+            <div className="font-heading font-bold text-sm">Minhas disciplinas</div>
+            <span className="text-11-5 text-ink-3">
+              {state.entries.length} {state.entries.length === 1 ? 'disciplina cadastrada' : 'disciplinas cadastradas'}
+            </span>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => openOrCreateSemester(suggestedNextSemester)}
+          >
+            <Plus size={14} />
+            Semestre {suggestedNextSemester}
+          </Button>
+        </div>
+
+        <div>
+          {groupedSemesters.length === 0 ? (
+            <div className="text-13 text-ink-3 py-6 px-4 text-center border border-dashed border-line rounded-md">
+              Nenhuma disciplina ainda — importe seu histórico acima ou clique em{' '}
+              <button
+                type="button"
+                onClick={() => openOrCreateSemester(suggestedNextSemester)}
+                className="font-heading font-semibold text-accent hover:underline cursor-pointer"
+              >
+                + Semestre {suggestedNextSemester}
+              </button>
+              .
+            </div>
+          ) : (
+            groupedSemesters.map(([semester, entries]) => {
+              const stat = semesterStats.find((s) => s.semester === semester);
+              const delta = stat && stat.average !== null && ira !== null ? stat.average - ira : null;
+              const sharePercent = stat && stat.contribution !== null && ira ? (stat.contribution / ira) * 100 : null;
+              const isAddingHere = openAddSemester === semester;
+              return (
+              <div key={semester} className="mb-5">
+                <div className="flex justify-between items-center flex-wrap gap-2 my-3 mb-1.5">
+                  <span className="font-heading font-bold text-13 text-ink">
+                    {semester === OUTROS ? OUTROS : `Semestre ${semester}`}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {semester !== OUTROS && (
+                      <Button
+                        variant={isAddingHere ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setOpenAddSemester(isAddingHere ? null : semester)}
+                      >
+                        {isAddingHere ? <X size={14} /> : <Plus size={14} />}
+                        {isAddingHere ? 'Fechar' : 'Adicionar disciplina'}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (entries.length > 0) removeEntries(entries.map((e) => e.id));
+                        setKnownSemesters((cur) => cur.filter((s) => s !== semester));
+                        if (openAddSemester === semester) setOpenAddSemester(null);
+                        if (editingId && entries.some((e) => e.id === editingId)) {
+                          setEditingId(null);
+                          setEditDraft(null);
+                        }
+                        show(`Semestre ${semester === OUTROS ? OUTROS : semester} removido.`);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      Excluir semestre
+                    </Button>
+                  </div>
                 </div>
                 {stat && stat.average !== null && stat.contribution !== null && (
                   <div
@@ -420,80 +802,127 @@ export default function Ira() {
                     </span>
                   </div>
                 )}
+                {isAddingHere && semester !== OUTROS && (
+                  <QuickAddDisciplineForm semester={semester} autoFocus onAdd={addEntry} />
+                )}
+                {entries.length > 0 && (
                 <div className={TABLE}>
                   {entries.map((e) =>
-                    editingId === e.id && editDraft ? (
-                      <div key={e.id} className={ENTRY_ROW}>
-                        <TextField
-                          value={editDraft.disciplineName}
-                          onChange={(ev) => setEditDraft((d) => d && { ...d, disciplineName: ev.target.value })}
-                        />
-                        <TextField
-                          type="number"
-                          min={0}
-                          max={10}
-                          step={0.1}
-                          placeholder={requiresGrade(editDraft.situacao) ? undefined : '—'}
-                          disabled={gradeLocked(editDraft.situacao)}
-                          value={editDraft.grade}
-                          error={gradeSituacaoError(editDraft.grade, editDraft.situacao) ?? undefined}
-                          onChange={(ev) => {
-                            const patch = gradeChange(ev.target.value);
-                            setEditDraft((d) => d && { ...d, ...patch });
-                          }}
-                        />
-                        <SelectField
-                          value={editDraft.workload}
-                          onChange={(ev) => setEditDraft((d) => d && { ...d, workload: Number(ev.target.value) })}
-                        >
-                          {WORKLOAD_OPTIONS.map((h) => (
-                            <option key={h} value={h}>
-                              {h}h
-                            </option>
-                          ))}
-                        </SelectField>
-                        <SelectField
-                          value={editDraft.situacao ?? 'outro'}
-                          onChange={(ev) => {
-                            const situacao = ev.target.value as Situacao;
-                            setEditDraft((d) => d && { ...d, ...situacaoChange(situacao, d.grade) });
-                          }}
-                        >
-                          <SituacaoOptions current={editDraft.situacao} />
-                        </SelectField>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={gradeSituacaoError(editDraft.grade, editDraft.situacao) !== null}
-                            onClick={() => {
-                              if (gradeSituacaoError(editDraft.grade, editDraft.situacao) !== null) return;
-                              updateEntry(e.id, toEntry(editDraft));
-                              setEditingId(null);
-                              setEditDraft(null);
-                            }}
-                            aria-label="Salvar"
-                          >
-                            <Check size={16} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditingId(null);
-                              setEditDraft(null);
-                            }}
-                            aria-label="Cancelar"
-                          >
-                            <X size={16} />
-                          </Button>
+                    editingId === e.id && editDraft ? (() => {
+                      const editError = gradeSituacaoError(editDraft.grade, editDraft.situacao);
+                      return (
+                        <div key={e.id} className="flex flex-col gap-2 p-3 rounded-md bg-surface border border-accent text-13 shadow-sm">
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={editDraft.disciplineName}
+                              aria-label="Disciplina"
+                              onChange={(ev) => setEditDraft((d) => d && { ...d, disciplineName: ev.target.value })}
+                              className={`${COMPACT_CTRL} flex-1 min-w-0 font-medium`}
+                            />
+                            <div className="flex gap-1 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                disabled={editError !== null}
+                                onClick={() => {
+                                  if (editError !== null) return;
+                                  updateEntry(e.id, toEntry(editDraft));
+                                  setEditingId(null);
+                                  setEditDraft(null);
+                                }}
+                                aria-label="Salvar"
+                              >
+                                <Check size={16} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditingId(null);
+                                  setEditDraft(null);
+                                }}
+                                aria-label="Cancelar"
+                              >
+                                <X size={16} />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <label className="flex flex-col gap-1">
+                              <span className={COMPACT_LABEL}>Nota</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                placeholder={requiresGrade(editDraft.situacao) ? '0–10' : '—'}
+                                disabled={gradeLocked(editDraft.situacao)}
+                                value={editDraft.grade}
+                                onChange={(ev) => {
+                                  const patch = gradeChange(ev.target.value);
+                                  setEditDraft((d) => d && { ...d, ...patch });
+                                }}
+                                className={`${COMPACT_CTRL} tabular-nums ${editError ? 'border-danger focus-visible:border-danger' : ''}`}
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              <span className={COMPACT_LABEL}>CH</span>
+                              <div className="relative">
+                                <select
+                                  value={editDraft.workload}
+                                  onChange={(ev) => setEditDraft((d) => d && { ...d, workload: Number(ev.target.value) })}
+                                  className={`${COMPACT_CTRL} appearance-none pr-7 cursor-pointer`}
+                                >
+                                  {WORKLOAD_OPTIONS.map((h) => (
+                                    <option key={h} value={h}>
+                                      {h}h
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-3" />
+                              </div>
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              <span className={COMPACT_LABEL}>Situação</span>
+                              <div className="relative">
+                                <select
+                                  value={editDraft.situacao ?? 'outro'}
+                                  onChange={(ev) => {
+                                    const situacao = ev.target.value as Situacao;
+                                    setEditDraft((d) => d && { ...d, ...situacaoChange(situacao, d.grade) });
+                                  }}
+                                  className={`${COMPACT_CTRL} appearance-none pr-7 cursor-pointer`}
+                                >
+                                  <SituacaoOptions current={editDraft.situacao} />
+                                </select>
+                                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-3" />
+                              </div>
+                            </label>
+                          </div>
+                          {editError && <p className="text-11 font-semibold text-danger">{editError}</p>}
                         </div>
-                      </div>
-                    ) : (
+                      );
+                    })() : (
                       <div key={e.id} className={ENTRY_ROW}>
-                        <span className="font-medium">{e.disciplineName}</span>
-                        {requiresGrade(e.situacao) ? <span>{e.grade}</span> : <span className="text-ink-3">—</span>}
-                        <span>{e.workload}h</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium truncate" title={e.disciplineName}>
+                            {e.disciplineName}
+                          </span>
+                          {isEntryPredicted(e) && (
+                            <span
+                              className="text-10 font-heading font-semibold px-1.5 py-0.5 rounded bg-accent-2-tint text-accent-2-dark shrink-0"
+                              title="Semestre ainda em consolidação na UFC — usado apenas como previsão"
+                            >
+                              Previsão
+                            </span>
+                          )}
+                        </div>
+                        {requiresGrade(e.situacao) ? (
+                          <span className="tabular-nums font-medium">{e.grade}</span>
+                        ) : (
+                          <span className="text-ink-3">—</span>
+                        )}
+                        <span className="text-ink-2 tabular-nums">{e.workload}h</span>
                         <span className={`${BADGE} ${SITUACAO_BADGE[e.situacao ?? 'outro']}`}>
                           {SITUACAO_LABEL[e.situacao ?? 'outro']}
                         </span>
@@ -524,103 +953,12 @@ export default function Ira() {
                     ),
                   )}
                 </div>
+                )}
               </div>
               );
             })
           )}
         </div>
-      </div>
-
-      <div className="mb-6">
-        <div className="font-heading font-bold text-sm mb-3">Importar histórico (PDF)</div>
-        <UploadDropzone fileName={parsing ? 'Lendo PDF...' : fileName} onFile={handleFile} accept="application/pdf" />
-
-        {review && review.length > 0 && (
-          <>
-            <div className="bg-surface-sunken border border-line rounded-xl p-5 mb-6 shadow-sm">
-              <div className="font-heading font-bold text-16 mb-2">
-                Revisar importação ({review.length} disciplinas)
-              </div>
-              <div className="flex flex-wrap gap-4 text-13 text-ink-3 mb-6 pb-4 border-b border-line">
-                <div>
-                  IRA prévio estimado:{' '}
-                  <b className="text-ink">{previewIra !== null && previewIra !== undefined ? previewIra.toFixed(4) : '—'}</b>
-                </div>
-                {printedIra !== undefined && (
-                  <div>
-                    Valor impresso no PDF:{' '}
-                    <b className="text-ink">{printedIra}</b>
-                  </div>
-                )}
-              </div>
-              {groupIndexedBySemester(review).map(([semester, items]) => (
-                <div key={semester} className="mb-6 last:mb-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="font-heading font-bold text-14 text-ink-2">
-                      {semester === OUTROS ? OUTROS : `Semestre ${semester}`}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-danger hover:text-danger hover:bg-danger-tint h-7 text-12 px-2.5"
-                      onClick={() => {
-                        const indicesToRemove = new Set(items.map(i => i.index));
-                        setReview(cur => cur?.filter((_, i) => !indicesToRemove.has(i)) ?? cur);
-                      }}
-                    >
-                      Remover semestre
-                    </Button>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {items.map(({ index: i, entry: e }) => (
-                      <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-center py-2 px-3 rounded-md bg-surface border border-line text-13 shadow-sm hover:border-line-strong transition-colors">
-                        <TextField
-                          value={e.disciplineName}
-                          onChange={(ev) => updateReviewRow(i, { disciplineName: ev.target.value })}
-                        />
-                        <TextField
-                          type="number"
-                          min={0}
-                          max={10}
-                          step={0.1}
-                          placeholder={requiresGrade(e.situacao) ? undefined : '—'}
-                          disabled={gradeLocked(e.situacao)}
-                          value={e.grade}
-                          error={gradeSituacaoError(e.grade, e.situacao) ?? undefined}
-                          onChange={(ev) => updateReviewRow(i, gradeChange(ev.target.value))}
-                        />
-                        <SelectField
-                          value={e.workload}
-                          onChange={(ev) => updateReviewRow(i, { workload: Number(ev.target.value) })}
-                        >
-                          {WORKLOAD_OPTIONS.map((h) => (
-                            <option key={h} value={h}>
-                              {h}h
-                            </option>
-                          ))}
-                        </SelectField>
-                        <SelectField
-                          value={e.situacao ?? 'outro'}
-                          onChange={(ev) => updateReviewRow(i, situacaoChange(ev.target.value as Situacao, e.grade))}
-                        >
-                          <SituacaoOptions current={e.situacao} />
-                        </SelectField>
-                        <Button variant="ghost" size="icon" onClick={() => removeReviewRow(i)} aria-label="Remover">
-                          <Trash2 size={16} className="text-danger opacity-70 hover:opacity-100" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="mt-6 pt-4 border-t border-line flex justify-end">
-                <Button onClick={confirmReview} className="px-8 shadow-md">
-                  Confirmar e salvar
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

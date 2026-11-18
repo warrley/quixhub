@@ -65,7 +65,10 @@ export default function Register() {
           <option>Engenharia de Software</option>
           <option>Ciência da Computação</option>
           <option>Sistemas de Informação</option>
-          <option>Engenharia da Computação</option>
+          <option>Engenharia de Computação</option>
+          <option>Redes de Computadores</option>
+          <option>Design Digital</option>
+          <option>Inteligência Artificial</option>
         </SelectField>
         {error && <p className="text-13 text-danger mb-4">{error}</p>}
         <Button type="submit" block disabled={submitting}>

@@ -1,7 +1,21 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { IraEntry } from '@/data/types';
-import { computeIra, gradeSituacaoError, MIN_PASSING_GRADE, requiresGrade, situacaoFromGrade } from './ira';
+import {
+  computeDisciplineBubbles,
+  computeDisciplineImpacts,
+  computeEvolution,
+  computeIra,
+  computeIraSensitivity,
+  computeSemesterComposition,
+  computeSemesterImpacts,
+  gradeSituacaoError,
+  isEntryPredicted,
+  isSemesterConsolidated,
+  MIN_PASSING_GRADE,
+  requiresGrade,
+  situacaoFromGrade,
+} from './ira';
 
 function entry(patch: Partial<IraEntry>): IraEntry {
   return { id: 'x', disciplineName: 'X', grade: 0, workload: 64, situacao: 'aprovado', source: 'manual', ...patch };
@@ -16,11 +30,11 @@ describe('situacaoFromGrade', () => {
   });
 
   it('fails every grade below the cutoff', () => {
-    for (const grade of [0, 2, 3.9, 3.99]) assert.equal(situacaoFromGrade(grade), 'reprovado', `grade ${grade}`);
+    for (const grade of [0, 2, 3.9, 4, 4.5, 4.99]) assert.equal(situacaoFromGrade(grade), 'reprovado', `grade ${grade}`);
   });
 
   it('passes the cutoff itself and everything above it', () => {
-    for (const grade of [MIN_PASSING_GRADE, 4.1, 5, 7, 10]) assert.equal(situacaoFromGrade(grade), 'aprovado', `grade ${grade}`);
+    for (const grade of [MIN_PASSING_GRADE, 5.1, 7, 10]) assert.equal(situacaoFromGrade(grade), 'aprovado', `grade ${grade}`);
   });
 
   it('only ever derives combinations the forms accept', () => {
@@ -104,5 +118,64 @@ describe('computeIra', () => {
     const entries = [entry({ semester: '2024.1', grade: 9 }), entry({ semester: '2024.2', grade: 3 })];
     const relabeled = entries.map((e) => ({ ...e, situacao: situacaoFromGrade(e.grade) }));
     assert.equal(computeIra(entries), computeIra(relabeled));
+  });
+});
+
+describe('computeEvolution / impacts', () => {
+  const transcript = [
+    entry({ id: 'a', semester: '2024.1', grade: 8, workload: 64 }),
+    entry({ id: 'b', semester: '2024.2', grade: 10, workload: 64 }),
+    entry({ id: 'c', semester: '2024.2', grade: 4, workload: 64, situacao: 'reprovado' }),
+  ];
+
+  it('tracks cumulative IRA and semester averages chronologically', () => {
+    const evo = computeEvolution(transcript);
+    assert.equal(evo.length, 2);
+    assert.equal(evo[0].semester, '2024.1');
+    assert.equal(evo[0].cumulativeIra, 8);
+    assert.equal(evo[1].semester, '2024.2');
+    assert.equal(evo[1].semesterAverage, 7);
+    assert.equal(evo[1].cumulativeIra, 7.2);
+  });
+
+  it('computes positive and negative marginal discipline impacts', () => {
+    const impacts = computeDisciplineImpacts(transcript);
+    const byId = Object.fromEntries(impacts.map((i) => [i.id, i.delta]));
+    assert.ok(byId.b > 0);
+    assert.ok(byId.c < 0);
+    assert.equal(computeSemesterImpacts(transcript).length, 2);
+  });
+
+  it('computes discipline bubbles with effective weight (CH × recency)', () => {
+    const bubbles = computeDisciplineBubbles(transcript);
+    const byId = Object.fromEntries(bubbles.map((b) => [b.id, b]));
+    assert.equal(byId.a.effectiveWeight, 64);
+    assert.equal(byId.b.effectiveWeight, 128);
+  });
+
+  it('treats unconsolidated UFC semesters as not consolidated yet', () => {
+    const nov2026 = new Date('2026-11-17T12:00:00');
+    assert.equal(isSemesterConsolidated('2026.1', nov2026), true);
+    assert.equal(isSemesterConsolidated('2026.2', nov2026), false);
+    assert.equal(isSemesterConsolidated('2027.1', nov2026), false);
+    assert.equal(isEntryPredicted({ semester: '2026.2', situacao: 'aprovado' }, nov2026), true);
+    assert.equal(isEntryPredicted({ semester: '2026.2', situacao: 'em_andamento' }, nov2026), false);
+    assert.equal(isEntryPredicted({ semester: '2026.1', situacao: 'aprovado' }, nov2026), false);
+  });
+
+  it('computes IRA sensitivity and semester composition', () => {
+    const sens = computeIraSensitivity(transcript)!;
+    assert.ok(sens.deltaGrade10_64h > 0);
+    assert.ok(sens.deltaGrade5_64h < 0);
+    assert.ok(sens.deltaLock64h < 0);
+    assert.equal(sens.iraWithoutLocks, null);
+    assert.equal(sens.nextWeight, 3);
+    assert.equal(sens.targets.length, 3);
+    assert.ok(sens.recentWeightShare > 0);
+    assert.ok(sens.maxGainNextSemester > 0);
+    const comp = computeSemesterComposition(transcript);
+    assert.equal(comp.length, 2);
+    assert.equal(comp[1].weight, 2);
+    assert.equal(comp[1].disciplines.length, 2);
   });
 });

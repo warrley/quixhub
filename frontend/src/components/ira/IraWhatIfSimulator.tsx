@@ -1,0 +1,1585 @@
+'use client';
+
+import {
+  AlertTriangle,
+  Check,
+  FlaskConical,
+  Plus,
+  RotateCcw,
+  Save,
+  Scale,
+  Target,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
+import { Segmented } from '@/components/Segmented';
+import campusDisciplinesRaw from '@/data/campusDisciplines.json';
+import type { IraEntry } from '@/data/types';
+import { useCampusSnapshot } from '@/lib/campusSnapshotContext';
+import { estimateFromCdfBins } from '@/lib/iraCampusApi';
+import { isEntryPredicted, MIN_PASSING_GRADE, requiresGrade, type Situacao } from '@/lib/ira';
+import { clampIra } from '@/lib/statistics';
+import { iraGeral } from '@/lib/iraCampus';
+import {
+  analyzeRecoveryCost,
+  compareLockVsRetake,
+  computeLockBreakEven,
+  defaultWorkbenchSemester,
+  runIraSimulation,
+  solveSemestersAtCeiling,
+  solveTargetHorizons,
+  type SimDisciplineItem,
+  type SimDisciplineMode,
+  type SimFutureSemester,
+  type SimTrajectoryPoint,
+} from '@/lib/iraSimulator';
+import { fmt, ordinal, pct } from './chartFormat';
+import { IraSimulatorTrajectory } from './IraSimulatorTrajectory';
+
+type SimTab = 'plano' | 'metas' | 'trancar' | 'risco';
+type ScenarioSlot = 'A' | 'B' | 'C';
+
+const ENROLLMENT_STRATEGIES = [
+  { key: 'leve', label: '3 mat. (192h)', workload: 192, grade: 9.5 },
+  { key: 'padrao', label: '4 mat. (256h)', workload: 256, grade: 8.8 },
+  { key: 'pesada', label: '5 mat. (320h)', workload: 320, grade: 8.0 },
+  { key: 'cheia', label: '6 mat. (384h)', workload: 384, grade: 7.5 },
+];
+
+const SCENARIO_SLOTS: { slot: ScenarioSlot; color: string }[] = [
+  { slot: 'A', color: 'var(--color-accent-3)' },
+  { slot: 'B', color: 'var(--color-good)' },
+  { slot: 'C', color: 'var(--color-accent-4-dark)' },
+];
+
+const CATALOG = campusDisciplinesRaw as [string, number][];
+const CATALOG_WORKLOAD = new Map<string, number>(CATALOG.map(([name, ch]) => [name.toLowerCase(), ch]));
+const FUTURE_WORKLOAD_CHOICES = [64, 128, 192, 256, 320, 384, 448, 512, 576];
+const ITEM_WORKLOAD_CHOICES = [32, 64, 96];
+
+interface TranscriptOverride {
+  grade: number;
+  mode: SimDisciplineMode;
+  sourceSig: string;
+}
+
+interface SavedScenario {
+  slot: ScenarioSlot;
+  finalIra: number;
+  rank: number;
+  points: SimTrajectoryPoint[];
+  transcriptOverrides: Record<string, TranscriptOverride>;
+  customItems: SimDisciplineItem[];
+  futureSemesters: SimFutureSemester[] | null;
+}
+
+export interface AppliedEntryPatch {
+  id: string;
+  grade: number;
+  situacao: Situacao;
+}
+
+function sliderProgressStyle(value: number, min = 0, max = 10): CSSProperties {
+  const pctVal = Math.max(0, Math.min(100, ((value - min) / Math.max(0.01, max - min)) * 100));
+  return { '--range-progress': `${pctVal}%` } as CSSProperties;
+}
+
+function entrySourceSig(e: IraEntry): string {
+  return `${e.grade}|${e.situacao ?? ''}`;
+}
+
+/**
+ * Interactive Scenario & Strategy Lab ("Laboratório de Cenários"):
+ * 1. Montar cenário: grade/withdraw controls synced with "em_andamento" and
+ *    predicted transcript entries + catalog autocomplete + up to 6 future
+ *    semesters + up to 3 restorable saved scenarios (A, B, C).
+ * 2. Trancar vs. Cursar: exact binary-searched break-even grade + 2-semester
+ *    retake comparison.
+ * 3. Caçador de metas: real course percentiles + 1–4 semester horizon solver.
+ */
+export function IraWhatIfSimulator({
+  entries,
+  currentIra,
+  course,
+  onSimulatedIraChange,
+  onApplyEntries,
+}: {
+  entries: IraEntry[];
+  currentIra: number;
+  course: string | null;
+  onSimulatedIraChange: (simulatedIra: number | null) => void;
+  onApplyEntries?: (updates: AppliedEntryPatch[]) => void;
+}) {
+  const snapshot = useCampusSnapshot();
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<SimTab>('plano');
+
+  // Workbench state
+  const [transcriptOverrides, setTranscriptOverrides] = useState<Record<string, TranscriptOverride>>({});
+  const [customItems, setCustomItems] = useState<SimDisciplineItem[]>([]);
+  const [customFutureSemesters, setCustomFutureSemesters] = useState<SimFutureSemester[] | null>(null);
+  const [customCounter, setCustomCounter] = useState(1);
+
+  // Add-discipline micro-form state
+  const [newDiscName, setNewDiscName] = useState('');
+  const [newDiscWorkload, setNewDiscWorkload] = useState(64);
+  const [newDiscGrade, setNewDiscGrade] = useState(8.5);
+  const catalogDatalistId = useId();
+
+  // Break-even / Retake state
+  const [lockWorkload, setLockWorkload] = useState(64);
+  const [riskGrade, setRiskGrade] = useState(3.0);
+  const [retakeGrade, setRetakeGrade] = useState(8.5);
+
+  // Goal Hunter state
+  const [goalInput, setGoalInput] = useState<number | null>(null);
+  const [goalHours, setGoalHours] = useState(256);
+  const [realisticCeiling, setRealisticCeiling] = useState(9.0);
+
+  // Risk & Enrollment Strategy state
+  const [riskEventKind, setRiskEventKind] = useState<'rep3' | 'pass5' | 'lock' | 'zero'>('rep3');
+  const [riskEventCh, setRiskEventCh] = useState(64);
+  const [recoveryGrade, setRecoveryGrade] = useState(9.5);
+
+  // Up to 3 saved & restorable scenarios (A, B, C)
+  const [savedScenarios, setSavedScenarios] = useState<Partial<Record<ScenarioSlot, SavedScenario>>>({});
+  const [activeSlot, setActiveSlot] = useState<ScenarioSlot | null>(null);
+
+  const transcriptWorkbenchEntries = useMemo(
+    () => entries.filter((e) => e.situacao === 'em_andamento' || isEntryPredicted(e)),
+    [entries],
+  );
+  const workbenchSemester = useMemo(() => defaultWorkbenchSemester(entries), [entries]);
+
+  const workbench = useMemo<SimDisciplineItem[]>(() => {
+    const fromPdf: SimDisciplineItem[] = transcriptWorkbenchEntries.map((e) => {
+      const sig = entrySourceSig(e);
+      const rawOv = transcriptOverrides[e.id];
+      const ov = rawOv && rawOv.sourceSig === sig ? rawOv : undefined;
+      const defaultMode: SimDisciplineMode = e.situacao === 'trancado' ? 'trancar' : 'nota';
+      const defaultGrade = requiresGrade(e.situacao) ? e.grade : 8.5;
+
+      return {
+        id: e.id,
+        name: e.disciplineName,
+        workload: e.workload,
+        semester: e.semester ?? workbenchSemester,
+        grade: ov?.grade ?? defaultGrade,
+        mode: ov?.mode ?? defaultMode,
+        fromTranscript: true,
+      };
+    });
+    return [...fromPdf, ...customItems];
+  }, [transcriptWorkbenchEntries, transcriptOverrides, workbenchSemester, customItems]);
+
+  const futureSemesters = useMemo<SimFutureSemester[]>(() => {
+    if (customFutureSemesters !== null) return customFutureSemesters;
+    if (transcriptWorkbenchEntries.length === 0 && customItems.length === 0) {
+      return [{ id: 'fs-default', workload: 256, grade: 8.5, lockHours: 0 }];
+    }
+    return [];
+  }, [customFutureSemesters, transcriptWorkbenchEntries.length, customItems.length]);
+
+  const simOutput = useMemo(
+    () => runIraSimulation(entries, workbench, futureSemesters),
+    [entries, workbench, futureSemesters],
+  );
+
+  useEffect(() => {
+    onSimulatedIraChange(open ? simOutput.finalIra : null);
+  }, [open, simOutput.finalIra, onSimulatedIraChange]);
+
+  const dist = snapshot?.available ? snapshot.distribution : null;
+  const cdfBins = useMemo(() => dist?.cdfBins ?? [], [dist]);
+  const totalCount = dist?.totalCount ?? 0;
+  const ativosSummary = dist?.ativosSummary ?? null;
+
+  const currentDisplay = clampIra(currentIra);
+  const currentRank = dist?.rank ?? 1;
+
+  const simDisplay = simOutput.finalIra !== null ? clampIra(simOutput.finalIra) : null;
+  const simDelta = simDisplay !== null ? simDisplay - currentDisplay : 0;
+  const simEst = useMemo(
+    () => (simDisplay !== null && totalCount > 0 ? estimateFromCdfBins(cdfBins, totalCount, simDisplay) : null),
+    [cdfBins, totalCount, simDisplay],
+  );
+  const simRank = simEst?.rank ?? null;
+  const simPct = simEst?.pct ?? null;
+  const simGeral =
+    simDisplay !== null && ativosSummary
+      ? iraGeral(simDisplay, ativosSummary.mean, ativosSummary.std)
+      : null;
+
+  // Check if workbench has any changes compared to current saved transcript entries
+  const applicableUpdates = useMemo<AppliedEntryPatch[]>(() => {
+    const entryMap = new Map(transcriptWorkbenchEntries.map((e) => [e.id, e]));
+    const patches: AppliedEntryPatch[] = [];
+    for (const item of workbench) {
+      if (!item.fromTranscript || item.mode === 'ignorar') continue;
+      const orig = entryMap.get(item.id);
+      if (!orig) continue;
+      const nextSituacao: Situacao =
+        item.mode === 'trancar' ? 'trancado' : item.grade < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado';
+      const nextGrade = item.mode === 'trancar' ? 0 : item.grade;
+      if (orig.situacao !== nextSituacao || (requiresGrade(nextSituacao) && Math.abs(orig.grade - nextGrade) > 1e-6)) {
+        patches.push({ id: item.id, grade: nextGrade, situacao: nextSituacao });
+      }
+    }
+    return patches;
+  }, [workbench, transcriptWorkbenchEntries]);
+
+  // Tab 2 computations: Lock break-even & 2-semester retake
+  const breakEven = useMemo(() => computeLockBreakEven(entries, lockWorkload), [entries, lockWorkload]);
+  const retakeCmp = useMemo(
+    () => compareLockVsRetake(entries, lockWorkload, riskGrade, retakeGrade),
+    [entries, lockWorkload, riskGrade, retakeGrade],
+  );
+
+  // Tab 3 computations: Milestones & Horizon Solver
+  const milestones = useMemo(
+    () =>
+      dist?.milestones ?? [
+        {
+          key: 'plus01',
+          label: '+0,10 no IRA',
+          targetIra: Math.min(10, Number((currentDisplay + 0.1).toFixed(4))),
+          reached: false,
+        },
+      ],
+    [dist, currentDisplay],
+  );
+  const defaultMilestoneTarget =
+    milestones.find((m) => !m.reached)?.targetIra ??
+    milestones[0]?.targetIra ??
+    Math.min(10, Number((currentDisplay + 0.1).toFixed(4)));
+  const effectiveGoal = goalInput ?? defaultMilestoneTarget;
+
+  const horizonSolutions = useMemo(
+    () => solveTargetHorizons(entries, effectiveGoal, goalHours, [1, 2, 3, 4], realisticCeiling),
+    [entries, effectiveGoal, goalHours, realisticCeiling],
+  );
+  const semestersAtCeiling = useMemo(
+    () => solveSemestersAtCeiling(entries, effectiveGoal, goalHours, realisticCeiling, 12),
+    [entries, effectiveGoal, goalHours, realisticCeiling],
+  );
+
+  // Tab 4 computations: Recovery cost & Enrollment strategies
+  const recoveryInfo = useMemo(() => {
+    const isLock = riskEventKind === 'lock';
+    const g = riskEventKind === 'rep3' ? 3.0 : riskEventKind === 'pass5' ? 5.0 : 0;
+    return analyzeRecoveryCost(entries, g, riskEventCh, isLock, recoveryGrade);
+  }, [entries, riskEventKind, riskEventCh, recoveryGrade]);
+
+  const enrollmentComparisons = useMemo(() => {
+    return ENROLLMENT_STRATEGIES.map((st) => {
+      const out = runIraSimulation(entries, [], [{ id: st.key, workload: st.workload, grade: st.grade, lockHours: 0 }]);
+      const iraVal = out.finalIra !== null ? clampIra(out.finalIra) : null;
+      const rank =
+        iraVal !== null && totalCount > 0 ? estimateFromCdfBins(cdfBins, totalCount, iraVal).rank : null;
+      return {
+        ...st,
+        ira: iraVal,
+        delta: iraVal !== null ? iraVal - currentDisplay : null,
+        rank,
+      };
+    });
+  }, [entries, cdfBins, totalCount, currentDisplay]);
+
+  // Workbench handlers
+  function updateWorkbenchItem(item: SimDisciplineItem, patch: Partial<{ grade: number; mode: SimDisciplineMode }>) {
+    setActiveSlot(null);
+    if (item.fromTranscript) {
+      const orig = transcriptWorkbenchEntries.find((e) => e.id === item.id);
+      const sourceSig = orig ? entrySourceSig(orig) : '';
+      setTranscriptOverrides((cur) => {
+        const prev = cur[item.id] && cur[item.id].sourceSig === sourceSig ? cur[item.id] : undefined;
+        return {
+          ...cur,
+          [item.id]: {
+            grade: patch.grade ?? prev?.grade ?? item.grade,
+            mode: patch.mode ?? prev?.mode ?? item.mode,
+            sourceSig,
+          },
+        };
+      });
+    } else {
+      setCustomItems((cur) => cur.map((x) => (x.id === item.id ? { ...x, ...patch } : x)));
+    }
+  }
+
+  function applyPresetToWorkbench(grade: number) {
+    setActiveSlot(null);
+    const nextOverrides: Record<string, TranscriptOverride> = { ...transcriptOverrides };
+    for (const e of transcriptWorkbenchEntries) {
+      nextOverrides[e.id] = { grade, mode: 'nota', sourceSig: entrySourceSig(e) };
+    }
+    setTranscriptOverrides(nextOverrides);
+    setCustomItems((cur) => cur.map((x) => ({ ...x, grade, mode: 'nota' })));
+  }
+
+  function handleAddCustomDiscipline(ev: React.FormEvent) {
+    ev.preventDefault();
+    const trimmed = newDiscName.trim();
+    if (!trimmed) return;
+    setActiveSlot(null);
+    const id = `custom-${customCounter}`;
+    setCustomCounter((c) => c + 1);
+    setCustomItems((cur) => [
+      ...cur,
+      {
+        id,
+        name: trimmed,
+        workload: newDiscWorkload,
+        semester: workbenchSemester,
+        grade: newDiscGrade,
+        mode: 'nota',
+        fromTranscript: false,
+      },
+    ]);
+    setNewDiscName('');
+  }
+
+  function updateFutureSemester(id: string, patch: Partial<SimFutureSemester>) {
+    setActiveSlot(null);
+    setCustomFutureSemesters((cur) => {
+      const base = cur ?? futureSemesters;
+      return base.map((fs) => (fs.id === id ? { ...fs, ...patch } : fs));
+    });
+  }
+
+  function addFutureSemesters(count: number) {
+    setActiveSlot(null);
+    setCustomFutureSemesters((cur) => {
+      const base = cur ?? futureSemesters;
+      const room = Math.max(0, 6 - base.length);
+      const toAdd = Math.min(room, count);
+      if (toAdd === 0) return base;
+      const next = [...base];
+      for (let i = 0; i < toAdd; i++) {
+        next.push({
+          id: `fs-${customCounter + i}`,
+          workload: 256,
+          grade: 8.5,
+          lockHours: 0,
+        });
+      }
+      return next;
+    });
+    setCustomCounter((c) => c + count);
+  }
+
+  function removeFutureSemester(id: string) {
+    setActiveSlot(null);
+    setCustomFutureSemesters((cur) => {
+      const base = cur ?? futureSemesters;
+      return base.filter((fs) => fs.id !== id);
+    });
+  }
+
+  function resetAll() {
+    setTranscriptOverrides({});
+    setCustomItems([]);
+    setCustomFutureSemesters(null);
+    setActiveSlot(null);
+    setGoalInput(null);
+  }
+
+  function saveScenario(slot: ScenarioSlot) {
+    if (simDisplay === null || simRank === null) return;
+    setSavedScenarios((cur) => ({
+      ...cur,
+      [slot]: {
+        slot,
+        finalIra: simDisplay,
+        rank: simRank,
+        points: simOutput.points.map((p) => ({ ...p })),
+        transcriptOverrides: { ...transcriptOverrides },
+        customItems: customItems.map((c) => ({ ...c })),
+        futureSemesters: customFutureSemesters ? customFutureSemesters.map((f) => ({ ...f })) : null,
+      },
+    }));
+    setActiveSlot(slot);
+  }
+
+  function loadScenario(slot: ScenarioSlot) {
+    const saved = savedScenarios[slot];
+    if (!saved) return;
+    setTranscriptOverrides({ ...saved.transcriptOverrides });
+    setCustomItems(saved.customItems.map((c) => ({ ...c })));
+    setCustomFutureSemesters(saved.futureSemesters ? saved.futureSemesters.map((f) => ({ ...f })) : null);
+    setActiveSlot(slot);
+    setTab('plano');
+  }
+
+  function removeScenario(slot: ScenarioSlot) {
+    setSavedScenarios((cur) => {
+      const next = { ...cur };
+      delete next[slot];
+      return next;
+    });
+    if (activeSlot === slot) setActiveSlot(null);
+  }
+
+  function applyStrategyToChart(strategy: 'lockRetake' | 'keepRetake') {
+    setActiveSlot(null);
+    const ignoredOverrides: Record<string, TranscriptOverride> = {};
+    for (const e of transcriptWorkbenchEntries) {
+      ignoredOverrides[e.id] = { grade: 8.5, mode: 'ignorar', sourceSig: entrySourceSig(e) };
+    }
+    setTranscriptOverrides(ignoredOverrides);
+    const idDisc = `strat-disc-${customCounter}`;
+    const idRetake = `strat-ret-${customCounter}`;
+    setCustomCounter((c) => c + 1);
+    setCustomItems([
+      {
+        id: idDisc,
+        name: strategy === 'lockRetake' ? 'Disciplina trancada' : 'Disciplina cursada até o fim',
+        workload: lockWorkload,
+        semester: workbenchSemester,
+        grade: riskGrade,
+        mode: strategy === 'lockRetake' ? 'trancar' : 'nota',
+        fromTranscript: false,
+      },
+    ]);
+    setCustomFutureSemesters([
+      {
+        id: idRetake,
+        workload: lockWorkload,
+        grade: retakeGrade,
+        lockHours: 0,
+      },
+    ]);
+    setTab('plano');
+  }
+
+  function applySingleSemesterStrategy(workload: number, grade: number, isLock = false) {
+    setActiveSlot(null);
+    const ignoredOverrides: Record<string, TranscriptOverride> = {};
+    for (const e of transcriptWorkbenchEntries) {
+      ignoredOverrides[e.id] = { grade, mode: 'ignorar', sourceSig: entrySourceSig(e) };
+    }
+    setTranscriptOverrides(ignoredOverrides);
+    if (isLock) {
+      setCustomItems([
+        {
+          id: `risk-lock-${customCounter}`,
+          name: 'Trancamento simulado',
+          workload,
+          semester: workbenchSemester,
+          grade: 0,
+          mode: 'trancar',
+          fromTranscript: false,
+        },
+      ]);
+      setCustomFutureSemesters([]);
+    } else {
+      setCustomItems([]);
+      setCustomFutureSemesters([
+        {
+          id: `strat-sem-${customCounter}`,
+          workload,
+          grade,
+          lockHours: 0,
+        },
+      ]);
+    }
+    setCustomCounter((c) => c + 1);
+    setTab('plano');
+  }
+  function applyGoalHorizonToChart(semestersCount: number, neededAvg: number) {
+    setActiveSlot(null);
+    const ignoredOverrides: Record<string, TranscriptOverride> = {};
+    for (const e of transcriptWorkbenchEntries) {
+      ignoredOverrides[e.id] = { grade: neededAvg, mode: 'ignorar', sourceSig: entrySourceSig(e) };
+    }
+    setTranscriptOverrides(ignoredOverrides);
+    setCustomItems([]);
+    const planned: SimFutureSemester[] = Array.from({ length: semestersCount }, (_, i) => ({
+      id: `goal-${customCounter}-${i}`,
+      workload: goalHours,
+      grade: neededAvg,
+      lockHours: 0,
+    }));
+    setCustomCounter((c) => c + semestersCount);
+    setCustomFutureSemesters(planned);
+    setTab('plano');
+  }
+
+  const breakEvenPct = breakEven ? Math.max(0, Math.min(100, breakEven.breakEvenGrade * 10)) : 50;
+  const resolvedMap = new Map(simOutput.resolvedSemesters.map((r) => [r.id, r]));
+  const comparedScenarios = SCENARIO_SLOTS.flatMap(({ slot, color }) => {
+    const s = savedScenarios[slot];
+    return s ? [{ slot, points: s.points, color }] : [];
+  });
+
+  return (
+    <div className="mt-4 pt-4 border-t border-line">
+      {/* Lab Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex items-center gap-2 font-heading font-semibold text-12-5 text-ink hover:text-accent cursor-pointer transition-colors"
+        >
+          <FlaskConical
+            size={15}
+            className={open || transcriptWorkbenchEntries.length > 0 ? 'text-accent-2-dark' : 'text-ink-3'}
+            aria-hidden="true"
+          />
+          <span>Laboratório de Cenários</span>
+          <span
+            className={`text-10-5 px-2 py-0.5 rounded-full font-semibold ${
+              open
+                ? 'bg-accent-2-tint text-accent-2-dark'
+                : transcriptWorkbenchEntries.length > 0
+                  ? 'bg-accent-2-tint text-accent-2-dark'
+                  : 'bg-surface-sunken text-ink-3'
+            }`}
+          >
+            {open
+              ? 'ativo no gráfico'
+              : transcriptWorkbenchEntries.length > 0
+                ? `${transcriptWorkbenchEntries.length} ${transcriptWorkbenchEntries.length === 1 ? 'matéria pronta' : 'matérias prontas'} p/ simular`
+                : 'abrir laboratório'}
+          </span>
+        </button>
+
+        {open && (
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={resetAll}
+              className="inline-flex items-center gap-1 text-11-5 text-ink-3 hover:text-ink cursor-pointer"
+            >
+              <RotateCcw size={12} aria-hidden="true" />
+              Resetar bancada
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center gap-1 text-11-5 text-ink-3 hover:text-ink cursor-pointer"
+            >
+              <X size={13} aria-hidden="true" />
+              Fechar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {open && (
+        <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1.32fr_1fr] gap-4 items-start">
+          {/* LEFT COLUMN: 3 Interactive Strategy Labs */}
+          <div className="rounded-md bg-surface-sunken border border-line p-3.5 flex flex-col gap-3 min-w-0">
+            <Segmented<SimTab>
+              size="sm"
+              ariaLabel="Ferramentas do laboratório de cenários"
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'plano', label: 'Montar cenário' },
+                { value: 'metas', label: 'Caçador de metas' },
+                { value: 'trancar', label: 'Trancar vs. Cursar' },
+                { value: 'risco', label: 'Risco & Matrícula' },
+              ]}
+            />
+
+            {/* TAB 1: Workbench + Multi-semester plan */}
+            {tab === 'plano' && (
+              <div className="flex flex-col gap-3.5">
+                {/* Workbench section */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
+                      Bancada de matérias · {workbenchSemester}
+                    </span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {workbench.length > 0 &&
+                        [
+                          { label: 'Tudo 10', g: 10.0 },
+                          { label: 'Tudo 9,5', g: 9.5 },
+                          { label: 'Tudo 8,5', g: 8.5 },
+                          { label: 'Tudo 7,0', g: 7.0 },
+                          { label: 'Passar 5,0', g: 5.0 },
+                        ].map((preset) => (
+                          <button
+                            key={preset.g}
+                            type="button"
+                            onClick={() => applyPresetToWorkbench(preset.g)}
+                            className="text-10-5 font-heading font-semibold px-2.5 py-1 rounded-full bg-surface border border-line text-ink-2 hover:border-accent hover:text-ink cursor-pointer transition-colors"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      {onApplyEntries && applicableUpdates.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onApplyEntries(applicableUpdates);
+                            setTranscriptOverrides({});
+                          }}
+                          className="inline-flex items-center gap-1 text-10-5 font-heading font-semibold px-3 py-1 rounded-full bg-accent text-accent-ink hover:opacity-90 cursor-pointer transition-opacity"
+                          title="Salvar as notas simuladas diretamente nas disciplinas do histórico"
+                        >
+                          <Save size={11} aria-hidden="true" />
+                          Salvar no histórico ({applicableUpdates.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {workbench.length > 0 ? (
+                    <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-0.5">
+                      {workbench.map((item) => {
+                        const dVal = simOutput.itemDeltas.get(item.id) ?? null;
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-md bg-surface border p-2.5 flex flex-col gap-2 transition-opacity ${
+                              item.mode === 'ignorar' ? 'border-line opacity-65' : 'border-line'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-medium text-xs text-ink truncate" title={item.name}>
+                                  {item.name}
+                                </span>
+                                <span className="text-10 text-ink-3 shrink-0 tabular-nums">{item.workload}h</span>
+                                {item.fromTranscript && (
+                                  <span className="text-10 font-heading font-semibold px-1.5 py-px rounded bg-accent-tint text-accent-dark shrink-0">
+                                    Do histórico
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {(
+                                  [
+                                    ['nota', 'Nota'],
+                                    ['trancar', 'Trancar'],
+                                    ['ignorar', 'Ignorar'],
+                                  ] as const
+                                ).map(([m, label]) => (
+                                  <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => updateWorkbenchItem(item, { mode: m })}
+                                    className={`text-10-5 font-heading font-semibold px-2.5 py-0.5 rounded-full border cursor-pointer transition-colors ${
+                                      item.mode === m
+                                        ? m === 'trancar'
+                                          ? 'bg-danger-tint text-danger border-danger/35'
+                                          : m === 'nota'
+                                            ? 'bg-accent-2-tint text-accent-2-dark border-accent-2-dark/40'
+                                            : 'bg-surface-sunken text-ink border-line-strong'
+                                        : 'bg-surface-raised text-ink-3 border-line hover:text-ink'
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                                {!item.fromTranscript && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveSlot(null);
+                                      setCustomItems((cur) => cur.filter((x) => x.id !== item.id));
+                                    }}
+                                    aria-label={`Remover ${item.name}`}
+                                    className="p-1 text-ink-3 hover:text-danger cursor-pointer"
+                                  >
+                                    <Trash2 size={13} aria-hidden="true" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {item.mode === 'nota' ? (
+                              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2.5">
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={10}
+                                  step={0.1}
+                                  value={item.grade}
+                                  style={sliderProgressStyle(item.grade)}
+                                  onChange={(e) => updateWorkbenchItem(item, { grade: Number(e.target.value) })}
+                                  aria-label={`Nota simulada para ${item.name}`}
+                                  className="sim-range w-full cursor-pointer"
+                                />
+                                <span className="font-heading font-bold text-xs text-accent-2-dark tabular-nums min-w-[30px] text-right">
+                                  {fmt(item.grade, 1)}
+                                </span>
+                                {dVal !== null && (
+                                  <span
+                                    className={`text-11 font-heading font-bold tabular-nums min-w-[58px] text-right ${
+                                      dVal > 0.0005 ? 'text-good' : dVal < -0.0005 ? 'text-danger' : 'text-ink-3'
+                                    }`}
+                                  >
+                                    {dVal >= 0 ? '+' : ''}
+                                    {fmt(dVal, 4)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : item.mode === 'trancar' ? (
+                              <div className="flex items-center justify-between text-11 tabular-nums">
+                                <span className="text-danger font-medium">Simulando trancamento ({item.workload}h)</span>
+                                {dVal !== null && (
+                                  <span className="font-heading font-bold text-danger">
+                                    {dVal >= 0 ? '+' : ''}
+                                    {fmt(dVal, 4)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between text-11 text-ink-3 tabular-nums">
+                                <span>Excluída desta simulação</span>
+                                {dVal !== null && (
+                                  <span>
+                                    Com {fmt(item.grade, 1)}: {dVal >= 0 ? '+' : ''}
+                                    {fmt(dVal, 4)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-line bg-surface/60 px-3 py-2.5 text-11-5 text-ink-3">
+                      Nenhuma disciplina em andamento ou prevista no histórico — adicione matérias abaixo ou planeje os próximos semestres.
+                    </div>
+                  )}
+
+                  {/* Add extra discipline with campus catalog autocomplete */}
+                  <form
+                    onSubmit={handleAddCustomDiscipline}
+                    className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_76px_auto] gap-1.5 items-center pt-1"
+                  >
+                    <input
+                      list={catalogDatalistId}
+                      value={newDiscName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewDiscName(val);
+                        const ch = CATALOG_WORKLOAD.get(val.trim().toLowerCase());
+                        if (ch && ITEM_WORKLOAD_CHOICES.includes(ch)) setNewDiscWorkload(ch);
+                      }}
+                      placeholder="+ Simular outra matéria (ex.: Aprendizado de Máquina)"
+                      aria-label="Nome da matéria para simular"
+                      className="h-8 rounded-md border border-line bg-surface px-2.5 text-xs text-ink placeholder:text-ink-3 outline-none focus:border-accent"
+                    />
+                    <datalist id={catalogDatalistId}>
+                      {CATALOG.map(([name]) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                    <select
+                      value={newDiscWorkload}
+                      onChange={(e) => setNewDiscWorkload(Number(e.target.value))}
+                      aria-label="Carga horária da matéria"
+                      className="h-8 rounded-md border border-line bg-surface px-2 text-xs font-heading font-semibold text-ink cursor-pointer"
+                    >
+                      {ITEM_WORKLOAD_CHOICES.map((h) => (
+                        <option key={h} value={h}>
+                          {h}h
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      value={newDiscGrade}
+                      onChange={(e) => setNewDiscGrade(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
+                      aria-label="Nota esperada da matéria"
+                      className="h-8 rounded-md border border-line bg-surface px-2 text-xs font-heading font-semibold text-ink tabular-nums"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newDiscName.trim()}
+                      className="h-8 inline-flex items-center justify-center gap-1 rounded-md bg-accent text-accent-ink font-heading font-semibold text-11-5 px-2.5 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    >
+                      <Plus size={13} aria-hidden="true" />
+                      Adicionar
+                    </button>
+                  </form>
+                </div>
+
+                {/* Multi-semester future roadmap */}
+                <div className="pt-2.5 border-t border-line flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
+                      Roteiro dos próximos semestres ({futureSemesters.length}/6)
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={futureSemesters.length >= 6}
+                        onClick={() => addFutureSemesters(1)}
+                        className="inline-flex items-center gap-1 text-10-5 font-heading font-semibold px-2 py-1 rounded bg-surface border border-line text-ink-2 hover:border-accent hover:text-ink cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Plus size={12} aria-hidden="true" />
+                        Semestre
+                      </button>
+                      <button
+                        type="button"
+                        disabled={futureSemesters.length >= 6}
+                        onClick={() => addFutureSemesters(4)}
+                        className="text-10-5 font-heading font-semibold px-2 py-1 rounded bg-accent-tint text-accent-dark hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        + Planejar 4 sem.
+                      </button>
+                    </div>
+                  </div>
+
+                  {futureSemesters.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {futureSemesters.map((fs) => {
+                        const info = resolvedMap.get(fs.id);
+                        return (
+                          <div
+                            key={fs.id}
+                            className="rounded-md bg-surface border border-line px-2.5 py-2 grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_auto_auto] items-center gap-2"
+                          >
+                            <span className="font-heading font-bold text-11 text-ink tabular-nums">
+                              {info?.semester ?? 'Próx.'}{' '}
+                              <span className="text-10 font-semibold px-1 py-px rounded bg-surface-sunken text-ink-3">
+                                {info?.weight ?? 6}×
+                              </span>
+                            </span>
+
+                            <div className="flex items-center gap-2 min-w-0">
+                              <input
+                                type="range"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={fs.grade}
+                                style={sliderProgressStyle(fs.grade)}
+                                onChange={(e) => updateFutureSemester(fs.id, { grade: Number(e.target.value) })}
+                                aria-label={`Média esperada em ${info?.semester ?? 'semestre futuro'}`}
+                                className="sim-range w-full cursor-pointer"
+                              />
+                              <span className="font-heading font-bold text-xs text-accent-2-dark tabular-nums min-w-[28px] text-right">
+                                {fmt(fs.grade, 1)}
+                              </span>
+                            </div>
+
+                            <select
+                              value={fs.workload}
+                              onChange={(e) => updateFutureSemester(fs.id, { workload: Number(e.target.value) })}
+                              aria-label="Carga horária do semestre"
+                              className="h-7 rounded border border-line bg-surface-sunken px-1.5 text-11 font-heading font-semibold text-ink cursor-pointer"
+                            >
+                              {FUTURE_WORKLOAD_CHOICES.map((ch) => (
+                                <option key={ch} value={ch}>
+                                  {ch}h
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => updateFutureSemester(fs.id, { lockHours: fs.lockHours > 0 ? 0 : 64 })}
+                              className={`h-7 px-2 rounded border text-10-5 font-heading font-semibold cursor-pointer transition-colors ${
+                                fs.lockHours > 0
+                                  ? 'bg-danger-tint text-danger border-danger/35'
+                                  : 'bg-surface-sunken text-ink-3 border-line hover:text-ink'
+                              }`}
+                              title="Incluir 1 trancamento de 64h neste semestre"
+                            >
+                              {fs.lockHours > 0 ? '+64h tranc.' : 'Sem tranc.'}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => removeFutureSemester(fs.id)}
+                              aria-label={`Remover ${info?.semester ?? 'semestre'}`}
+                              className="p-1 text-ink-3 hover:text-danger cursor-pointer justify-self-end"
+                            >
+                              <X size={13} aria-hidden="true" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-11-5 text-ink-3">
+                      Sem semestres extras na fila — use &ldquo;+ Semestre&rdquo; ou &ldquo;+ Planejar 4 sem.&rdquo; para projetar até a formatura.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: Lock Break-Even & 2-Semester Retake Analyzer */}
+            {tab === 'trancar' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs font-heading font-bold text-ink">
+                    <Scale size={14} className="text-accent" aria-hidden="true" />
+                    Dilema: Trancar ou ir até o fim?
+                  </div>
+                  <div className="inline-flex gap-1 bg-surface border border-line rounded-full p-0.5">
+                    {ITEM_WORKLOAD_CHOICES.map((ch) => (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() => setLockWorkload(ch)}
+                        className={`px-2.5 py-0.5 rounded-full text-11 font-heading font-bold cursor-pointer transition-colors ${
+                          lockWorkload === ch ? 'bg-accent text-accent-ink' : 'text-ink-2 hover:text-ink'
+                        }`}
+                      >
+                        {ch}h
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {breakEven && retakeCmp ? (
+                  <>
+                    <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2">
+                      <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                        <span className="text-xs text-ink-2">
+                          Para uma matéria de <b>{lockWorkload}h</b> em <b>{breakEven.semester}</b> (peso{' '}
+                          <b>{breakEven.weight}×</b>):
+                        </span>
+                        <span className="font-heading font-extrabold text-sm text-accent-dark tabular-nums">
+                          Nota de corte: {fmt(breakEven.breakEvenGrade, 2)}
+                        </span>
+                      </div>
+
+                      <div className="relative h-3 rounded-full overflow-hidden flex border border-line">
+                        <div
+                          style={{ width: `${breakEvenPct}%` }}
+                          className="bg-danger/70 h-full"
+                          title="Abaixo da nota de corte: trancar protege mais"
+                        />
+                        <div
+                          style={{ width: `${100 - breakEvenPct}%` }}
+                          className="bg-good/70 h-full"
+                          title="Acima da nota de corte: permanecer vale mais"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-10-5 tabular-nums">
+                        <span className="text-danger font-semibold">
+                          &lt; {fmt(breakEven.breakEvenGrade, 2)}: trancar protege mais o IRA
+                        </span>
+                        <span className="text-good font-semibold">
+                          ≥ {fmt(breakEven.breakEvenGrade, 2)}: ir até o fim perde menos
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-1">
+                        <div className="rounded-sm bg-accent-2-tint/65 p-2 text-center">
+                          <div className="text-10 text-ink-3 uppercase font-semibold">Trancar {lockWorkload}h</div>
+                          <div className="font-heading font-extrabold text-13 text-accent-2-dark tabular-nums">
+                            {fmt(breakEven.iraIfLocked, 4)}
+                          </div>
+                          <div className="text-10-5 font-semibold text-danger tabular-nums">
+                            {fmt(breakEven.deltaIfLocked, 4)}
+                          </div>
+                        </div>
+                        <div className="rounded-sm bg-surface-sunken p-2 text-center">
+                          <div className="text-10 text-ink-3 uppercase font-semibold">Passar c/ 5,0</div>
+                          <div className="font-heading font-extrabold text-13 text-ink tabular-nums">
+                            {fmt(breakEven.iraAt5, 4)}
+                          </div>
+                          <div
+                            className={`text-10-5 font-semibold tabular-nums ${
+                              breakEven.deltaAt5 >= 0 ? 'text-good' : 'text-danger'
+                            }`}
+                          >
+                            {breakEven.deltaAt5 >= 0 ? '+' : ''}
+                            {fmt(breakEven.deltaAt5, 4)}
+                          </div>
+                        </div>
+                        <div className="rounded-sm bg-danger-tint/70 p-2 text-center">
+                          <div className="text-10 text-ink-3 uppercase font-semibold">Reprovar c/ 3,0</div>
+                          <div className="font-heading font-extrabold text-13 text-danger tabular-nums">
+                            {fmt(breakEven.iraAt3, 4)}
+                          </div>
+                          <div className="text-10-5 font-semibold text-danger tabular-nums">
+                            {fmt(breakEven.deltaAt3, 4)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2.5">
+                      <div className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
+                        Simulação em 2 tempos: agora ({retakeCmp.nextSemester}) + refazer em {retakeCmp.retakeSemester}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="flex flex-col gap-1">
+                          <div className="flex justify-between text-11">
+                            <span className="text-ink-2">Nota provável sem trancar</span>
+                            <b className="font-heading text-danger tabular-nums">{fmt(riskGrade, 1)}</b>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={10}
+                            step={0.1}
+                            value={riskGrade}
+                            style={sliderProgressStyle(riskGrade)}
+                            onChange={(e) => setRiskGrade(Number(e.target.value))}
+                            className="sim-range w-full cursor-pointer"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <div className="flex justify-between text-11">
+                            <span className="text-ink-2">Nota esperada ao refazer</span>
+                            <b className="font-heading text-good tabular-nums">{fmt(retakeGrade, 1)}</b>
+                          </div>
+                          <input
+                            type="range"
+                            min={5}
+                            max={10}
+                            step={0.1}
+                            value={retakeGrade}
+                            style={sliderProgressStyle(retakeGrade, 5, 10)}
+                            onChange={(e) => setRetakeGrade(Number(e.target.value))}
+                            className="sim-range w-full cursor-pointer"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => applyStrategyToChart('lockRetake')}
+                          className={`rounded-md p-2.5 border text-left cursor-pointer transition-colors ${
+                            retakeCmp.diffLockVsKeepRetake >= 0
+                              ? 'border-good bg-good-tint/55 hover:bg-good-tint'
+                              : 'border-line bg-surface-sunken hover:border-accent'
+                          }`}
+                        >
+                          <div className="text-10-5 font-heading font-bold text-ink">
+                            (A) Trancar agora + tirar {fmt(retakeGrade, 1)} depois
+                          </div>
+                          <div className="flex items-baseline justify-between mt-1 tabular-nums">
+                            <span className="font-heading font-extrabold text-15 text-ink">
+                              {fmt(retakeCmp.lockThenRetakeIra, 4)}
+                            </span>
+                            {retakeCmp.diffLockVsKeepRetake >= 0 && (
+                              <span className="text-10-5 font-bold text-good">
+                                Vence por +{fmt(retakeCmp.diffLockVsKeepRetake, 4)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-10 text-accent-dark font-semibold mt-1">
+                            Aplicar estratégia (A) no gráfico →
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => applyStrategyToChart('keepRetake')}
+                          className={`rounded-md p-2.5 border text-left cursor-pointer transition-colors ${
+                            retakeCmp.diffLockVsKeepRetake < 0
+                              ? 'border-good bg-good-tint/55 hover:bg-good-tint'
+                              : 'border-line bg-surface-sunken hover:border-accent'
+                          }`}
+                        >
+                          <div className="text-10-5 font-heading font-bold text-ink">
+                            (B) Ficar com {fmt(riskGrade, 1)} + tirar {fmt(retakeGrade, 1)} depois
+                          </div>
+                          <div className="flex items-baseline justify-between mt-1 tabular-nums">
+                            <span className="font-heading font-extrabold text-15 text-ink">
+                              {fmt(retakeCmp.keepThenRetakeIra, 4)}
+                            </span>
+                            {retakeCmp.diffLockVsKeepRetake < 0 && (
+                              <span className="text-10-5 font-bold text-good">
+                                Vence por +{fmt(Math.abs(retakeCmp.diffLockVsKeepRetake), 4)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-10 text-accent-dark font-semibold mt-1">
+                            Aplicar estratégia (B) no gráfico →
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-md border border-dashed border-line bg-surface p-4 text-xs text-ink-3">
+                    Adicione ao menos 1 disciplina com nota fechada no histórico para calcular a nota de corte de trancamento.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: Real Course Milestones & Multi-Horizon Solver */}
+            {tab === 'metas' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs font-heading font-bold text-ink">
+                    <Target size={14} className="text-accent" aria-hidden="true" />
+                    Degraus reais em {course ?? 'todo o campus'}
+                  </div>
+                  <div className="inline-flex flex-wrap gap-1 bg-surface border border-line rounded-full p-0.5">
+                    {[192, 256, 320, 384, 448, 512, 576].map((ch) => (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() => setGoalHours(ch)}
+                        className={`px-2 py-0.5 rounded-full text-11 font-heading font-bold cursor-pointer transition-colors ${
+                          goalHours === ch ? 'bg-accent text-accent-ink' : 'text-ink-2 hover:text-ink'
+                        }`}
+                      >
+                        {ch}h/sem
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Realistic ceiling picker */}
+                <div className="flex items-center justify-between gap-2 flex-wrap rounded-md bg-surface border border-line px-3 py-2">
+                  <span className="text-11 font-medium text-ink-2">Sua média realista máxima por semestre:</span>
+                  <div className="inline-flex flex-wrap gap-1">
+                    {[8.0, 8.5, 9.0, 9.5, 10.0].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setRealisticCeiling(c)}
+                        className={`px-2 py-0.5 rounded-full text-11 font-heading font-bold cursor-pointer border transition-colors tabular-nums ${
+                          realisticCeiling === c
+                            ? 'bg-accent-2-tint text-accent-2-dark border-accent-2-dark/40'
+                            : 'bg-surface-sunken text-ink-2 border-line hover:text-ink'
+                        }`}
+                      >
+                        {fmt(c, 1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {milestones.map((m) => {
+                    const selected = Math.abs(effectiveGoal - m.targetIra) < 0.0002;
+                    return (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => setGoalInput(m.targetIra)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-11 font-heading font-semibold cursor-pointer transition-colors tabular-nums ${
+                          selected
+                            ? 'bg-accent text-accent-ink border-accent'
+                            : m.reached
+                              ? 'bg-good-tint/70 text-good border-good/30 hover:opacity-90'
+                              : 'bg-surface text-ink-2 border-line hover:border-accent'
+                        }`}
+                      >
+                        {m.reached && <Check size={11} aria-hidden="true" />}
+                        <span>{m.label}</span>
+                        <span className="opacity-80">({fmt(m.targetIra, 2)})</span>
+                      </button>
+                    );
+                  })}
+
+                  <label className="inline-flex items-center gap-1.5 ml-auto text-11 text-ink-2">
+                    <span>Meta livre:</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.05}
+                      value={Number(effectiveGoal.toFixed(2))}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (Number.isFinite(v)) setGoalInput(Math.max(0, Math.min(10, v)));
+                      }}
+                      className="w-20 h-7 rounded-md border border-line bg-surface px-2 text-xs font-heading font-bold text-ink tabular-nums"
+                    />
+                  </label>
+                </div>
+
+                {/* Pace summary using chosen realistic ceiling */}
+                <div className="rounded-md bg-accent-tint/50 border border-accent/25 px-3 py-2 text-11-5 text-ink-2 tabular-nums">
+                  {semestersAtCeiling === 0 ? (
+                    <span>Você já atingiu a meta de <b className="text-ink">{fmt(effectiveGoal, 2)}</b>.</span>
+                  ) : semestersAtCeiling !== null ? (
+                    <span>
+                      Mantendo média realista <b className="text-ink">{fmt(realisticCeiling, 1)}</b> em{' '}
+                      <b className="text-ink">{goalHours}h/sem</b>, você chega em{' '}
+                      <b className="text-accent-dark font-heading">
+                        {semestersAtCeiling} {semestersAtCeiling === 1 ? 'semestre' : 'semestres'}
+                      </b>
+                      .
+                    </span>
+                  ) : (
+                    <span>
+                      Com média <b className="text-ink">{fmt(realisticCeiling, 1)}</b> em <b className="text-ink">{goalHours}h/sem</b>, a meta de{' '}
+                      <b className="text-ink">{fmt(effectiveGoal, 2)}</b> não é alcançável em até 12 semestres.
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {horizonSolutions.map((sol) => (
+                    <div
+                      key={sol.semesters}
+                      className="rounded-md bg-surface border border-line p-3 flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-heading font-bold text-xs text-ink">
+                          Em {sol.semesters} {sol.semesters === 1 ? 'semestre' : 'semestres'}
+                        </span>
+                        <span className="text-10-5 text-ink-3 tabular-nums">{sol.totalHours}h cursadas</span>
+                      </div>
+
+                      {sol.neededAvg !== null ? (
+                        <>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-11 text-ink-2">Média necessária:</span>
+                            <span
+                              className={`font-heading font-extrabold text-17 tabular-nums ${
+                                sol.withinCeiling ? 'text-accent-dark' : 'text-accent-2-dark'
+                              }`}
+                            >
+                              {fmt(sol.neededAvg, 2)}
+                            </span>
+                          </div>
+                          {!sol.withinCeiling && (
+                            <div className="text-10-5 text-accent-2-dark leading-snug tabular-nums">
+                              Acima do seu teto ({fmt(realisticCeiling, 1)}): com {fmt(realisticCeiling, 1)} chega a{' '}
+                              <b>{fmt(sol.maxIraAtCeiling, 4)}</b>.
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => applyGoalHorizonToChart(sol.semesters, sol.neededAvg!)}
+                            className="w-full py-1.5 px-2.5 rounded-full bg-accent-tint hover:bg-accent-tint-2 text-accent-dark font-heading font-semibold text-11 cursor-pointer transition-colors"
+                          >
+                            Simular roteiro de {sol.semesters} {sol.semesters === 1 ? 'sem.' : 'sems.'} →
+                          </button>
+                        </>
+                      ) : (
+                        <div className="text-11 text-ink-3 leading-snug tabular-nums">
+                          Não cabe nesse prazo: com seu teto ({fmt(realisticCeiling, 1)}) chega a{' '}
+                          <b className="text-ink">{fmt(sol.maxIraAtCeiling, 4)}</b> (com 10: {fmt(sol.maxIraAt10, 4)}).
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: Recovery Cost & Enrollment Strategy */}
+            {tab === 'risco' && (
+              <div className="flex flex-col gap-3">
+                {/* Recovery calculator */}
+                <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-xs font-heading font-bold text-ink">
+                      <AlertTriangle size={14} className="text-accent-2-dark" aria-hidden="true" />
+                      Calculadora de Recuperação
+                    </div>
+                    <div className="inline-flex gap-1 bg-surface-sunken border border-line rounded-full p-0.5">
+                      {ITEM_WORKLOAD_CHOICES.map((ch) => (
+                        <button
+                          key={ch}
+                          type="button"
+                          onClick={() => setRiskEventCh(ch)}
+                          className={`px-2 py-0.5 rounded-full text-10-5 font-heading font-bold cursor-pointer ${
+                            riskEventCh === ch ? 'bg-accent text-accent-ink' : 'text-ink-2 hover:text-ink'
+                          }`}
+                        >
+                          {ch}h
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(
+                      [
+                        ['rep3', 'Reprovar c/ 3,0'],
+                        ['pass5', 'Passar c/ 5,0'],
+                        ['lock', 'Trancar'],
+                        ['zero', 'Zerar (0,0)'],
+                      ] as const
+                    ).map(([kind, label]) => (
+                      <button
+                        key={kind}
+                        type="button"
+                        onClick={() => setRiskEventKind(kind)}
+                        className={`px-2.5 py-1 rounded-full border text-11 font-heading font-semibold cursor-pointer transition-colors ${
+                          riskEventKind === kind
+                            ? 'bg-danger-tint text-danger border-danger/40'
+                            : 'bg-surface-sunken text-ink-2 border-line hover:text-ink'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 flex-wrap text-11 text-ink-2">
+                    <span>Nota para recuperar depois:</span>
+                    <div className="inline-flex gap-1">
+                      {[8.5, 9.0, 9.5, 10.0].map((rg) => (
+                        <button
+                          key={rg}
+                          type="button"
+                          onClick={() => setRecoveryGrade(rg)}
+                          className={`px-2 py-0.5 rounded-full border text-10-5 font-heading font-bold cursor-pointer tabular-nums ${
+                            recoveryGrade === rg
+                              ? 'bg-good-tint text-good border-good/40'
+                              : 'bg-surface-sunken text-ink-2 border-line hover:text-ink'
+                          }`}
+                        >
+                          {fmt(rg, 1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {recoveryInfo ? (
+                    <div className="rounded-md bg-surface-sunken border border-line p-2.5 flex flex-col gap-1.5 text-11-5 tabular-nums">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-ink-2">
+                          IRA após o evento: <b className="font-heading text-ink">{fmt(recoveryInfo.iraAfterEvent, 4)}</b>
+                        </span>
+                        <span
+                          className={`font-heading font-bold ${
+                            recoveryInfo.deltaEvent >= 0 ? 'text-good' : 'text-danger'
+                          }`}
+                        >
+                          {recoveryInfo.deltaEvent >= 0 ? '+' : ''}
+                          {fmt(recoveryInfo.deltaEvent, 4)}
+                        </span>
+                      </div>
+
+                      {recoveryInfo.deltaEvent < 0 ? (
+                        <div className="text-ink-2 leading-snug">
+                          Para voltar a <b className="text-ink">{fmt(recoveryInfo.iraBefore, 4)}</b> em{' '}
+                          <b>{recoveryInfo.nextSemester}</b>:{' '}
+                          {recoveryInfo.disciplinesToRecover !== null ? (
+                            <>
+                              precisa de{' '}
+                              <b className="text-accent-dark font-heading">
+                                {recoveryInfo.disciplinesToRecover}{' '}
+                                {recoveryInfo.disciplinesToRecover === 1 ? 'matéria' : 'matérias'} de 64h
+                              </b>{' '}
+                              com nota {fmt(recoveryGrade, 1)}
+                            </>
+                          ) : (
+                            <>mais de 20 matérias de 64h com nota {fmt(recoveryGrade, 1)}</>
+                          )}
+                          {recoveryInfo.avg256hToRecover !== null
+                            ? ` (ou fechar 256h com média ${fmt(recoveryInfo.avg256hToRecover, 2)}).`
+                            : ' (nem média 10 em 256h recupera em 1 período).'}
+                        </div>
+                      ) : (
+                        <div className="text-good font-medium">Esse evento não reduz o seu IRA atual.</div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applySingleSemesterStrategy(
+                            riskEventCh,
+                            riskEventKind === 'rep3' ? 3.0 : riskEventKind === 'pass5' ? 5.0 : 0,
+                            riskEventKind === 'lock',
+                          )
+                        }
+                        className="self-start text-10-5 font-heading font-semibold text-accent-dark hover:underline cursor-pointer"
+                      >
+                        Simular esse evento na bancada →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-11 text-ink-3">Adicione ao menos 1 matéria com nota fechada no histórico.</div>
+                  )}
+                </div>
+
+                {/* Enrollment Strategy Comparator */}
+                <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2">
+                  <div className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
+                    Estratégia de matrícula: menos matérias c/ nota alta vs. grade cheia
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {enrollmentComparisons.map((st) => (
+                      <button
+                        key={st.key}
+                        type="button"
+                        onClick={() => applySingleSemesterStrategy(st.workload, st.grade, false)}
+                        className="rounded-md bg-surface-sunken hover:border-accent border border-line p-2.5 text-left cursor-pointer transition-colors flex flex-col gap-1"
+                      >
+                        <div className="flex items-center justify-between gap-2 text-11">
+                          <b className="font-heading text-ink">{st.label}</b>
+                          <span className="text-ink-3 tabular-nums">média {fmt(st.grade, 1)}</span>
+                        </div>
+                        {st.ira !== null && st.delta !== null && (
+                          <div className="flex items-baseline justify-between gap-2 tabular-nums">
+                            <span className="font-heading font-extrabold text-sm text-accent-2-dark">
+                              {fmt(st.ira, 4)}
+                            </span>
+                            <span className={`text-10-5 font-bold ${st.delta >= 0 ? 'text-good' : 'text-danger'}`}>
+                              {st.delta >= 0 ? '+' : ''}
+                              {fmt(st.delta, 4)} {st.rank !== null ? `· ${ordinal(st.rank)}` : ''}
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: Live Output KPI + 3-Scenario Slots (A, B, C) + Trajectory */}
+          <div className="rounded-md bg-surface border border-line p-3.5 flex flex-col gap-3">
+            {simDisplay !== null ? (
+              <div className="rounded-md p-3 border border-dashed bg-accent-2-tint/55 border-accent-2-dark/50 flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-10 font-heading font-bold uppercase tracking-wide text-accent-2-dark">
+                    IRA projetado no cenário
+                  </div>
+                  <div className="flex items-baseline gap-2 mt-0.5 tabular-nums">
+                    <span className="font-heading font-extrabold text-25 leading-none text-accent-2-dark">
+                      {simDisplay.toFixed(4)}
+                    </span>
+                    <span
+                      className={`text-xs font-heading font-bold ${
+                        simDelta > 0.0005 ? 'text-good' : simDelta < -0.0005 ? 'text-danger' : 'text-ink-3'
+                      }`}
+                    >
+                      {simDelta >= 0 ? '+' : ''}
+                      {simDelta.toFixed(4)}
+                    </span>
+                  </div>
+                </div>
+
+                {simRank !== null && simPct !== null && (
+                  <div className="text-11-5 text-ink-2 text-right tabular-nums">
+                    <div>
+                      Posição: <b className="text-ink">{ordinal(simRank)}</b>
+                      {simRank !== currentRank && (
+                        <span className={simRank < currentRank ? 'text-good font-semibold' : 'text-danger font-semibold'}>
+                          {' '}
+                          ({simRank < currentRank ? `+${currentRank - simRank}` : `${currentRank - simRank}`})
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      Supera <b className="text-ink">{pct(simPct)}</b>
+                    </div>
+                    {simGeral !== null && (
+                      <div>
+                        IRA-G <b className="text-ink">{fmt(simGeral, 4)}</b>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-md p-3 bg-surface-sunken text-xs text-ink-3">
+                Ative ou adicione ao menos uma disciplina/semestre para calcular o IRA simulado.
+              </div>
+            )}
+
+            {/* 3 Restorable Scenario Slots (A, B, C) */}
+            <div className="flex flex-col gap-1.5">
+              <div className="font-heading font-bold text-10-5 uppercase tracking-wide text-ink-3">
+                Comparar e alternar cenários (A, B, C)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                {SCENARIO_SLOTS.map(({ slot, color }) => {
+                  const saved = savedScenarios[slot];
+                  const isActiveSlot = activeSlot === slot;
+                  if (!saved) {
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={simDisplay === null}
+                        onClick={() => saveScenario(slot)}
+                        className="rounded-md border border-dashed border-line hover:border-accent px-2.5 py-2 text-11 font-heading font-semibold text-ink-2 hover:text-ink cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Plus size={12} aria-hidden="true" />
+                        Salvar {slot}
+                      </button>
+                    );
+                  }
+                  const diff = simDisplay !== null ? simDisplay - saved.finalIra : null;
+                  const hasDiff = diff !== null && Math.abs(diff) > 0.0001;
+                  return (
+                    <div
+                      key={slot}
+                      className={`min-w-0 overflow-hidden rounded-md border p-2 flex flex-col justify-between gap-1.5 transition-colors ${
+                        isActiveSlot ? 'border-accent bg-accent-tint/45' : 'border-line bg-surface-sunken'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="inline-flex items-center gap-1.5 font-heading font-bold text-11 text-ink truncate">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                            Cenário {slot}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeScenario(slot)}
+                            aria-label={`Remover Cenário ${slot}`}
+                            className="text-ink-3 hover:text-danger cursor-pointer shrink-0"
+                          >
+                            <X size={12} aria-hidden="true" />
+                          </button>
+                        </div>
+                        <div className="flex items-baseline justify-between gap-1 tabular-nums">
+                          <b className="font-heading text-xs text-ink">{fmt(saved.finalIra, 4)}</b>
+                          <span className="text-10 text-ink-3">{ordinal(saved.rank)}</span>
+                        </div>
+                        <div
+                          className={`text-10 font-semibold tabular-nums min-h-[14px] ${
+                            hasDiff ? (diff! > 0 ? 'text-good' : 'text-danger') : 'text-ink-3 font-normal'
+                          }`}
+                        >
+                          {hasDiff ? `Atual ${diff! > 0 ? '+' : ''}${fmt(diff!, 4)}` : 'Igual ao atual'}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => loadScenario(slot)}
+                          className="w-full rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink text-center cursor-pointer"
+                          title={`Voltar para o Cenário ${slot} na bancada`}
+                        >
+                          Carregar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveScenario(slot)}
+                          disabled={simDisplay === null}
+                          className="w-full rounded-full px-2 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink-2 hover:text-ink text-center cursor-pointer"
+                          title={`Sobrescrever Cenário ${slot} com o atual`}
+                        >
+                          Atualizar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <IraSimulatorTrajectory
+              points={simOutput.points}
+              comparedScenarios={comparedScenarios}
+              goalIra={tab === 'metas' ? effectiveGoal : null}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
