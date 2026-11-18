@@ -46,7 +46,7 @@ const SCENARIO_SLOTS: { slot: ScenarioSlot; color: string }[] = [
 
 const CATALOG = campusDisciplinesRaw as [string, number][];
 const CATALOG_WORKLOAD = new Map<string, number>(CATALOG.map(([name, ch]) => [name.toLowerCase(), ch]));
-const FUTURE_WORKLOAD_CHOICES = [64, 128, 192, 256, 320, 384];
+const FUTURE_WORKLOAD_CHOICES = [64, 128, 192, 256, 320, 384, 448, 512, 576];
 const ITEM_WORKLOAD_CHOICES = [32, 64, 96];
 
 interface TranscriptOverride {
@@ -1039,13 +1039,13 @@ export function IraWhatIfSimulator({
                     <Target size={14} className="text-accent" aria-hidden="true" />
                     Degraus reais em {course ?? 'todo o campus'}
                   </div>
-                  <div className="inline-flex gap-1 bg-surface border border-line rounded-full p-0.5">
-                    {[192, 256, 320].map((ch) => (
+                  <div className="inline-flex flex-wrap gap-1 bg-surface border border-line rounded-full p-0.5">
+                    {[192, 256, 320, 384, 448, 512, 576].map((ch) => (
                       <button
                         key={ch}
                         type="button"
                         onClick={() => setGoalHours(ch)}
-                        className={`px-2.5 py-0.5 rounded-full text-11 font-heading font-bold cursor-pointer transition-colors ${
+                        className={`px-2 py-0.5 rounded-full text-11 font-heading font-bold cursor-pointer transition-colors ${
                           goalHours === ch ? 'bg-accent text-accent-ink' : 'text-ink-2 hover:text-ink'
                         }`}
                       >
