@@ -11,3 +11,4 @@ backend/uploads/
 
 # raw data exports (personal data) — only aggregates are committed
 data/raw/
+frontend/src/data/iraCampus.json
