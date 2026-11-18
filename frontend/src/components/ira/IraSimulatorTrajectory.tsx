@@ -17,16 +17,16 @@ const PH = H - PAD_T - PAD_B;
 /**
  * Compact SVG trajectory chart for the simulation panel:
  * connects consolidated real semesters (solid blue) with simulated future
- * semesters (dashed amber), optional Scenario A comparison (dotted slate),
+ * semesters (dashed amber), optional saved scenarios A/B/C (dotted lines),
  * and an optional horizontal goal line.
  */
 export function IraSimulatorTrajectory({
   points,
-  pinnedPoints,
+  comparedScenarios = [],
   goalIra,
 }: {
   points: SimTrajectoryPoint[];
-  pinnedPoints?: SimTrajectoryPoint[] | null;
+  comparedScenarios?: { slot: 'A' | 'B' | 'C'; points: SimTrajectoryPoint[]; color: string }[];
   goalIra?: number | null;
 }) {
   const gradId = useId();
@@ -37,14 +37,14 @@ export function IraSimulatorTrajectory({
 
   const allVals = [
     ...points.map((p) => p.cumulativeIra),
-    ...(pinnedPoints ? pinnedPoints.map((p) => p.cumulativeIra) : []),
+    ...comparedScenarios.flatMap((s) => s.points.map((p) => p.cumulativeIra)),
     ...(goalIra !== null && goalIra !== undefined ? [goalIra] : []),
   ];
   const minVal = Math.max(0, Math.floor((Math.min(...allVals) - 0.35) * 4) / 4);
   const maxVal = Math.min(10, Math.ceil((Math.max(...allVals) + 0.2) * 4) / 4);
   const span = Math.max(0.5, maxVal - minVal);
 
-  const count = Math.max(points.length, pinnedPoints?.length ?? 0);
+  const count = Math.max(points.length, ...comparedScenarios.map((s) => s.points.length));
   const xAt = (i: number) => (count <= 1 ? PAD_L + PW / 2 : PAD_L + (i / (count - 1)) * PW);
   const yAt = (v: number) => PAD_T + PH - ((Math.max(minVal, Math.min(maxVal, v)) - minVal) / span) * PH;
 
@@ -55,11 +55,6 @@ export function IraSimulatorTrajectory({
   const areaPath =
     points.length >= 2
       ? `${linePath(points.map((p, i) => ({ x: xAt(i), y: yAt(p.cumulativeIra) })))} L ${xAt(points.length - 1).toFixed(2)} ${PAD_T + PH} L ${xAt(0).toFixed(2)} ${PAD_T + PH} Z`
-      : '';
-
-  const pinnedPath =
-    pinnedPoints && pinnedPoints.length >= 2
-      ? linePath(pinnedPoints.map((p, i) => ({ x: xAt(i), y: yAt(p.cumulativeIra) })))
       : '';
 
   const lastRealIdx = points.reduce((acc, p, idx) => (!p.simulated ? idx : acc), -1);
@@ -80,7 +75,6 @@ export function IraSimulatorTrajectory({
           </linearGradient>
         </defs>
 
-        {/* Horizontal gridlines */}
         {yTicks.map((v) => (
           <g key={v}>
             <line
@@ -98,7 +92,6 @@ export function IraSimulatorTrajectory({
           </g>
         ))}
 
-        {/* Optional target goal line */}
         {goalIra !== null && goalIra !== undefined && goalIra >= minVal && goalIra <= maxVal && (
           <g>
             <line
@@ -124,19 +117,21 @@ export function IraSimulatorTrajectory({
 
         {areaPath && <path d={areaPath} fill={`url(#${gradId})`} />}
 
-        {/* Pinned Scenario A comparison curve */}
-        {pinnedPath && (
-          <path
-            d={pinnedPath}
-            fill="none"
-            stroke="var(--color-ink-3)"
-            strokeWidth={1.5}
-            strokeDasharray="2 2.5"
-            opacity={0.8}
-          />
+        {comparedScenarios.map(
+          (sc) =>
+            sc.points.length >= 2 && (
+              <path
+                key={sc.slot}
+                d={linePath(sc.points.map((p, i) => ({ x: xAt(i), y: yAt(p.cumulativeIra) })))}
+                fill="none"
+                stroke={sc.color}
+                strokeWidth={1.5}
+                strokeDasharray="2 2.5"
+                opacity={0.85}
+              />
+            ),
         )}
 
-        {/* Solid blue for real trajectory, dashed amber once simulation starts */}
         {points.slice(1).map((p, i) => {
           const prev = points[i];
           const isSim = p.simulated || prev.simulated;
@@ -154,12 +149,11 @@ export function IraSimulatorTrajectory({
           );
         })}
 
-        {/* Nodes & key labels */}
         {points.map((p, i) => {
           const cx = xAt(i);
           const cy = yAt(p.cumulativeIra);
           const showLabel = i === lastRealIdx || i === lastIdx;
-          const labelAnchor = i >= lastIdx - 0 && count > 2 ? 'end' : i === 0 && count > 2 ? 'start' : 'middle';
+          const labelAnchor = i >= lastIdx && count > 2 ? 'end' : i === 0 && count > 2 ? 'start' : 'middle';
           const showXTick = count <= 7 || i === 0 || i === lastIdx || i === lastRealIdx || i % 2 === 0;
 
           return (
@@ -208,12 +202,16 @@ export function IraSimulatorTrajectory({
           <span className="w-3 border-t-2 border-accent inline-block" /> Histórico real
         </span>
         <span className="inline-flex items-center gap-1.5 text-accent-2-dark font-medium">
-          <span className="w-3 border-t-2 border-dashed border-[var(--color-accent-2-dark)] inline-block" /> Simulado
+          <span className="w-3 border-t-2 border-dashed border-[var(--color-accent-2-dark)] inline-block" /> Cenário ativo
         </span>
-        {pinnedPoints && pinnedPoints.length >= 2 && (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-3 border-t-2 border-dotted border-ink-3 inline-block" /> Cenário A
-          </span>
+        {comparedScenarios.map(
+          (sc) =>
+            sc.points.length >= 2 && (
+              <span key={sc.slot} className="inline-flex items-center gap-1.5">
+                <span className="w-3 border-t-2 border-dotted inline-block" style={{ borderColor: sc.color }} />
+                Cenário {sc.slot}
+              </span>
+            ),
         )}
       </div>
     </div>

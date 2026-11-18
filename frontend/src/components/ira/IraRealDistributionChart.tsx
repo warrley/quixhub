@@ -205,35 +205,68 @@ export function IraRealDistributionChart({
                     ? bins.flatMap((b, i) => {
                         const dots = Math.ceil(b.count / perDot);
                         const cx = xToSvg(b.start + DOT_BIN / 2);
-                        const surpassed = b.end <= displayIra + 1e-9;
+                        const belowInBin =
+                          b.end <= displayIra + 1e-9 && b.end < CAP - 1e-9
+                            ? b.count
+                            : b.start >= displayIra
+                              ? 0
+                              : inDomain.filter((v) => v >= b.start && v < b.end && v < displayIra).length;
+                        const surpassedDots =
+                          b.count > 0 ? Math.min(dots, Math.round((belowInBin / b.count) * dots)) : 0;
                         const hovered = hoverBin === b;
-                        return Array.from({ length: dots }, (_, k) => (
-                          <circle
-                            key={`${i}-${k}`}
-                            cx={cx}
-                            cy={BASELINE_Y - r - 0.4 - k * pitch}
-                            r={r}
-                            fill={surpassed ? 'var(--color-accent)' : 'var(--color-line-strong)'}
-                            opacity={hovered ? 1 : surpassed ? 0.85 : 0.75}
-                          />
-                        ));
+                        return Array.from({ length: dots }, (_, k) => {
+                          const isSurpassed = k < surpassedDots;
+                          return (
+                            <circle
+                              key={`${i}-${k}`}
+                              cx={cx}
+                              cy={BASELINE_Y - r - 0.4 - k * pitch}
+                              r={r}
+                              fill={isSurpassed ? 'var(--color-accent)' : 'var(--color-line-strong)'}
+                              opacity={hovered ? 1 : isSurpassed ? 0.85 : 0.75}
+                            />
+                          );
+                        });
                       })
                     : bins.map((b, i) => {
                         const x0 = xToSvg(b.start) + 0.6;
                         const w = Math.max(0.5, xToSvg(b.end) - xToSvg(b.start) - 1.2);
                         const h = b.count * barScale;
-                        const surpassed = b.end <= displayIra + 1e-9;
+                        const belowInBin =
+                          b.end <= displayIra + 1e-9 && b.end < CAP - 1e-9
+                            ? b.count
+                            : b.start >= displayIra
+                              ? 0
+                              : inDomain.filter((v) => v >= b.start && v < b.end && v < displayIra).length;
+                        const surpassedFrac = b.count > 0 ? belowInBin / b.count : 0;
+                        const blueH = h * surpassedFrac;
+                        const grayH = h - blueH;
+                        const opacity = hoverBin === b ? 1 : 0.8;
                         return (
-                          <rect
-                            key={i}
-                            x={x0}
-                            y={BASELINE_Y - h}
-                            width={w}
-                            height={h}
-                            rx={1.5}
-                            fill={surpassed ? 'var(--color-accent)' : 'var(--color-line-strong)'}
-                            opacity={hoverBin === b ? 1 : 0.8}
-                          />
+                          <g key={i}>
+                            {grayH > 0 && (
+                              <rect
+                                x={x0}
+                                y={BASELINE_Y - h}
+                                width={w}
+                                height={grayH}
+                                rx={1.5}
+                                fill="var(--color-line-strong)"
+                                opacity={opacity}
+                              />
+                            )}
+                            {blueH > 0 && (
+                              <rect
+                                x={x0}
+                                y={BASELINE_Y - blueH}
+                                width={w}
+                                height={blueH}
+                                rx={1.5}
+                                fill="var(--color-accent)"
+                                opacity={opacity}
+                              />
+                            )}
+                          </g>
                         );
                       })}
 

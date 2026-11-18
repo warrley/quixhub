@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, Check, ChevronDown, ChevronUp, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, ChevronUp, Layers, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
@@ -165,6 +165,7 @@ export default function Ira() {
 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showStats, setShowStats] = useState(true);
+  const [showPersonalAnalytics, setShowPersonalAnalytics] = useState(true);
 
   useEffect(() => {
     try {
@@ -179,6 +180,8 @@ export default function Ira() {
       }
       const statsPref = localStorage.getItem('quixhub-ira-show-stats');
       if (statsPref === '0') setShowStats(false);
+      const personalPref = localStorage.getItem('quixhub-ira-show-personal');
+      if (personalPref === '0') setShowPersonalAnalytics(false);
     } catch {
       // ignore invalid stored state
     }
@@ -189,6 +192,18 @@ export default function Ira() {
       const next = !cur;
       try {
         localStorage.setItem('quixhub-ira-show-stats', next ? '1' : '0');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
+
+  function togglePersonalAnalytics() {
+    setShowPersonalAnalytics((cur) => {
+      const next = !cur;
+      try {
+        localStorage.setItem('quixhub-ira-show-personal', next ? '1' : '0');
       } catch {
         // ignore
       }
@@ -380,6 +395,12 @@ export default function Ira() {
               course={comparisonCourse}
               group={statusGroup}
               onSimulatedIraChange={setSimulatedIra}
+              onApplyEntries={(updates) => {
+                for (const u of updates) {
+                  updateEntry(u.id, { grade: u.grade, situacao: u.situacao });
+                }
+                show('Notas aplicadas às disciplinas do histórico!');
+              }}
             />
           </Card>
 
@@ -446,7 +467,22 @@ export default function Ira() {
             </>
           )}
 
-          <IraPersonalAnalytics ira={ira} entries={state.entries} course={comparisonCourse} />
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <span className="font-heading font-bold text-13 text-ink-2">Análise individual por disciplina e semestre</span>
+            <button
+              type="button"
+              onClick={togglePersonalAnalytics}
+              className="inline-flex items-center gap-1.5 text-12 font-heading font-semibold text-ink-2 hover:text-ink bg-surface border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+            >
+              <Layers size={14} aria-hidden="true" />
+              {showPersonalAnalytics ? 'Ocultar análise das disciplinas' : 'Mostrar análise das disciplinas'}
+              {showPersonalAnalytics ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+            </button>
+          </div>
+
+          {showPersonalAnalytics && (
+            <IraPersonalAnalytics ira={ira} entries={state.entries} course={comparisonCourse} />
+          )}
         </>
       )}
 

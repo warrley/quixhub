@@ -1,5 +1,5 @@
 import type { IraEntry } from '@/data/types';
-import { computeEvolution, computeIra, MIN_PASSING_GRADE, semesterWeight } from '@/lib/ira';
+import { computeEvolution, computeIra, isEntryPredicted, MIN_PASSING_GRADE, semesterWeight } from '@/lib/ira';
 import { quantile, semesterIndex, semesterLabel } from '@/lib/iraCampus';
 
 export type SimDisciplineMode = 'nota' | 'trancar' | 'ignorar';
@@ -84,13 +84,13 @@ export function nextSemesterAfterEntries(entries: IraEntry[]): string {
 }
 
 export function defaultWorkbenchSemester(entries: IraEntry[]): string {
-  let maxInProgIdx = 0;
+  let maxActiveIdx = 0;
   for (const e of entries) {
-    if (e.situacao !== 'em_andamento') continue;
+    if (e.situacao !== 'em_andamento' && !isEntryPredicted(e)) continue;
     const idx = semesterIndex(e.semester);
-    if (idx !== null && idx > maxInProgIdx) maxInProgIdx = idx;
+    if (idx !== null && idx > maxActiveIdx) maxActiveIdx = idx;
   }
-  if (maxInProgIdx > 0) return semesterLabel(maxInProgIdx);
+  if (maxActiveIdx > 0) return semesterLabel(maxActiveIdx);
   return nextSemesterAfterEntries(entries);
 }
 
@@ -99,7 +99,8 @@ export function buildSimulatedEntries(
   workbench: SimDisciplineItem[],
   futureSemesters: SimFutureSemester[],
 ) {
-  const baseEntries = entries.filter((e) => e.situacao !== 'em_andamento');
+  const workbenchIds = new Set(workbench.map((w) => w.id));
+  const baseEntries = entries.filter((e) => e.situacao !== 'em_andamento' && !workbenchIds.has(e.id));
 
   const activeWorkbenchEntries: IraEntry[] = workbench
     .filter((item) => item.mode !== 'ignorar')

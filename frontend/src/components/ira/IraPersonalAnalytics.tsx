@@ -1,6 +1,6 @@
 'use client';
 
-import { Anchor, ArrowUpRight, Compass, Expand, Gauge, Layers, Scale, Target, X } from 'lucide-react';
+import { Anchor, ArrowUpRight, Compass, Expand, Gauge, HelpCircle, Layers, Scale, Target, X } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Card, CardKicker, CardTitle } from '@/components/Card';
 import { Segmented } from '@/components/Segmented';
@@ -9,6 +9,7 @@ import { computeDisciplineBubbles, computeIraSensitivity } from '@/lib/ira';
 import { EmptyChart } from './chartKit';
 import { fmt } from './chartFormat';
 import { BubblesPlot } from './BubblesPlot';
+import { ChartGuideDialog } from './ChartGuideDialog';
 import { ImpactTugPlot } from './ImpactTugPlot';
 import {
   dotColorByImpact,
@@ -46,9 +47,52 @@ export function IraPersonalAnalytics({
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [listFilter, setListFilter] = useState<SidebarFilter>('todas');
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [seenGuides, setSeenGuides] = useState<PersonalView[]>([]);
+  const [skipAutoGuide, setSkipAutoGuide] = useState(false);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const dialogTitleId = useId();
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('quixhub-ira-chart-guides');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { seen?: PersonalView[]; skipAuto?: boolean };
+        if (Array.isArray(parsed.seen)) setSeenGuides(parsed.seen);
+        if (typeof parsed.skipAuto === 'boolean') setSkipAutoGuide(parsed.skipAuto);
+      }
+    } catch {
+      // ignore invalid storage
+    }
+  }, []);
+
+  function persistGuides(seen: PersonalView[], skipAuto: boolean) {
+    try {
+      localStorage.setItem('quixhub-ira-chart-guides', JSON.stringify({ seen, skipAuto }));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  function handleSelectView(nextView: PersonalView) {
+    setView(nextView);
+    if (!skipAutoGuide && !seenGuides.includes(nextView)) {
+      const nextSeen = [...seenGuides, nextView];
+      setSeenGuides(nextSeen);
+      persistGuides(nextSeen, skipAutoGuide);
+      setGuideOpen(true);
+    }
+  }
+
+  function handleOpenGuide() {
+    if (!seenGuides.includes(view)) {
+      const nextSeen = [...seenGuides, view];
+      setSeenGuides(nextSeen);
+      persistGuides(nextSeen, skipAutoGuide);
+    }
+    setGuideOpen(true);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -127,7 +171,7 @@ export function IraPersonalAnalytics({
         ? 'Ponte dos semestres e dispersão das notas'
         : view === 'bolhas'
           ? `Mapa de força e iso-impacto (${bubbles.length} disciplinas)`
-          : 'Balança de impacto ("E se sem?")';
+          : 'Balança de Impacto · Simulação de Exclusão';
 
   const renderControls = (isModal: boolean) => (
     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -135,12 +179,12 @@ export function IraPersonalAnalytics({
         size="sm"
         ariaLabel={isModal ? 'Visualização ampliada' : 'Visualização do seu histórico'}
         value={view}
-        onChange={setView}
+        onChange={handleSelectView}
         options={[
           { value: 'treemap', label: 'Treemap' },
           { value: 'ponte', label: 'Ponte dos semestres' },
           { value: 'bolhas', label: 'Bolhas' },
-          { value: 'balanca', label: 'Balança ("E se sem?")' },
+          { value: 'balanca', label: 'Balança de Impacto' },
         ]}
       />
 
@@ -523,15 +567,26 @@ export function IraPersonalAnalytics({
             <CardKicker>Análise do seu histórico</CardKicker>
             <CardTitle>{viewTitle}</CardTitle>
           </div>
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="inline-flex items-center gap-1.5 text-11-5 font-heading font-semibold text-ink-2 hover:text-ink bg-surface-sunken border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
-            title="Abrir visualização ampliada em tela quase cheia"
-          >
-            <Expand size={13} aria-hidden="true" />
-            Ampliar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleOpenGuide}
+              className="inline-flex items-center gap-1.5 text-11-5 font-heading font-semibold text-ink-2 hover:text-ink bg-surface-sunken border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+              title="Abrir legenda e guia explicativo deste gráfico"
+            >
+              <HelpCircle size={13} aria-hidden="true" />
+              Como ler?
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="inline-flex items-center gap-1.5 text-11-5 font-heading font-semibold text-ink-2 hover:text-ink bg-surface-sunken border border-line rounded-full px-3 py-1.5 cursor-pointer transition-colors"
+              title="Abrir visualização ampliada em tela quase cheia"
+            >
+              <Expand size={13} aria-hidden="true" />
+              Ampliar
+            </button>
+          </div>
         </div>
 
         {renderControls(false)}
@@ -539,6 +594,18 @@ export function IraPersonalAnalytics({
         <div>{renderChart(false)}</div>
         {renderLegend()}
       </Card>
+
+      {/* Legend / Guide Modal for each chart */}
+      <ChartGuideDialog
+        view={view}
+        open={guideOpen}
+        skipAuto={skipAutoGuide}
+        onToggleSkipAuto={(next) => {
+          setSkipAutoGuide(next);
+          persistGuides(seenGuides, next);
+        }}
+        onClose={() => setGuideOpen(false)}
+      />
 
       {/* Near-fullscreen native <dialog> expanded modal */}
       <dialog

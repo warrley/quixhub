@@ -3,10 +3,10 @@
 import {
   Check,
   FlaskConical,
-  Pin,
-  PinOff,
+  FolderOpen,
   Plus,
   RotateCcw,
+  Save,
   Scale,
   Target,
   Trash2,
@@ -16,6 +16,7 @@ import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
 import { Segmented } from '@/components/Segmented';
 import campusDisciplinesRaw from '@/data/campusDisciplines.json';
 import type { IraEntry } from '@/data/types';
+import { isEntryPredicted, MIN_PASSING_GRADE, requiresGrade, type Situacao } from '@/lib/ira';
 import { clampIra } from '@/lib/statistics';
 import { iraGeral, percentileBelow, type StatusGroup } from '@/lib/iraCampus';
 import { groupIras, groupSummary } from '@/lib/iraCampusData';
@@ -35,16 +36,39 @@ import { fmt, ordinal, pct } from './chartFormat';
 import { IraSimulatorTrajectory } from './IraSimulatorTrajectory';
 
 type SimTab = 'plano' | 'trancar' | 'metas';
+type ScenarioSlot = 'A' | 'B' | 'C';
+
+const SCENARIO_SLOTS: { slot: ScenarioSlot; color: string }[] = [
+  { slot: 'A', color: 'var(--color-accent-3)' },
+  { slot: 'B', color: 'var(--color-good)' },
+  { slot: 'C', color: 'var(--color-accent-4-dark)' },
+];
 
 const CATALOG = campusDisciplinesRaw as [string, number][];
 const CATALOG_WORKLOAD = new Map<string, number>(CATALOG.map(([name, ch]) => [name.toLowerCase(), ch]));
 const FUTURE_WORKLOAD_CHOICES = [64, 128, 192, 256, 320, 384];
 const ITEM_WORKLOAD_CHOICES = [32, 64, 96];
 
-interface PinnedScenario {
+interface TranscriptOverride {
+  grade: number;
+  mode: SimDisciplineMode;
+  sourceSig: string;
+}
+
+interface SavedScenario {
+  slot: ScenarioSlot;
   finalIra: number;
   rank: number;
   points: SimTrajectoryPoint[];
+  transcriptOverrides: Record<string, TranscriptOverride>;
+  customItems: SimDisciplineItem[];
+  futureSemesters: SimFutureSemester[] | null;
+}
+
+export interface AppliedEntryPatch {
+  id: string;
+  grade: number;
+  situacao: Situacao;
 }
 
 function sliderProgressStyle(value: number, min = 0, max = 10): CSSProperties {
@@ -52,10 +76,15 @@ function sliderProgressStyle(value: number, min = 0, max = 10): CSSProperties {
   return { '--range-progress': `${pctVal}%` } as CSSProperties;
 }
 
+function entrySourceSig(e: IraEntry): string {
+  return `${e.grade}|${e.situacao ?? ''}`;
+}
+
 /**
  * Interactive Scenario & Strategy Lab ("Laboratório de Cenários"):
- * 1. Montar cenário: grade/withdraw controls for every "em_andamento" subject
- *    from the transcript + catalog autocomplete + up to 6 future semesters.
+ * 1. Montar cenário: grade/withdraw controls synced with "em_andamento" and
+ *    predicted transcript entries + catalog autocomplete + up to 6 future
+ *    semesters + up to 3 restorable saved scenarios (A, B, C).
  * 2. Trancar vs. Cursar: exact binary-searched break-even grade + 2-semester
  *    retake comparison.
  * 3. Caçador de metas: real course percentiles + 1–4 semester horizon solver.
@@ -66,20 +95,20 @@ export function IraWhatIfSimulator({
   course,
   group,
   onSimulatedIraChange,
+  onApplyEntries,
 }: {
   entries: IraEntry[];
   currentIra: number;
   course: string | null;
   group: StatusGroup;
   onSimulatedIraChange: (simulatedIra: number | null) => void;
+  onApplyEntries?: (updates: AppliedEntryPatch[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<SimTab>('plano');
 
   // Workbench state
-  const [transcriptOverrides, setTranscriptOverrides] = useState<
-    Record<string, { grade: number; mode: SimDisciplineMode }>
-  >({});
+  const [transcriptOverrides, setTranscriptOverrides] = useState<Record<string, TranscriptOverride>>({});
   const [customItems, setCustomItems] = useState<SimDisciplineItem[]>([]);
   const [customFutureSemesters, setCustomFutureSemesters] = useState<SimFutureSemester[] | null>(null);
   const [customCounter, setCustomCounter] = useState(1);
@@ -99,38 +128,44 @@ export function IraWhatIfSimulator({
   const [goalInput, setGoalInput] = useState<number | null>(null);
   const [goalHours, setGoalHours] = useState(256);
 
-  // Comparison Snapshot (Scenario A)
-  const [pinnedScenario, setPinnedScenario] = useState<PinnedScenario | null>(null);
+  // Up to 3 saved & restorable scenarios (A, B, C)
+  const [savedScenarios, setSavedScenarios] = useState<Partial<Record<ScenarioSlot, SavedScenario>>>({});
+  const [activeSlot, setActiveSlot] = useState<ScenarioSlot | null>(null);
 
-  const inProgressEntries = useMemo(
-    () => entries.filter((e) => e.situacao === 'em_andamento'),
+  const transcriptWorkbenchEntries = useMemo(
+    () => entries.filter((e) => e.situacao === 'em_andamento' || isEntryPredicted(e)),
     [entries],
   );
   const workbenchSemester = useMemo(() => defaultWorkbenchSemester(entries), [entries]);
 
   const workbench = useMemo<SimDisciplineItem[]>(() => {
-    const fromPdf: SimDisciplineItem[] = inProgressEntries.map((e) => {
-      const ov = transcriptOverrides[e.id];
+    const fromPdf: SimDisciplineItem[] = transcriptWorkbenchEntries.map((e) => {
+      const sig = entrySourceSig(e);
+      const rawOv = transcriptOverrides[e.id];
+      const ov = rawOv && rawOv.sourceSig === sig ? rawOv : undefined;
+      const defaultMode: SimDisciplineMode = e.situacao === 'trancado' ? 'trancar' : 'nota';
+      const defaultGrade = requiresGrade(e.situacao) ? e.grade : 8.5;
+
       return {
         id: e.id,
         name: e.disciplineName,
         workload: e.workload,
         semester: e.semester ?? workbenchSemester,
-        grade: ov?.grade ?? 8.5,
-        mode: ov?.mode ?? 'nota',
+        grade: ov?.grade ?? defaultGrade,
+        mode: ov?.mode ?? defaultMode,
         fromTranscript: true,
       };
     });
     return [...fromPdf, ...customItems];
-  }, [inProgressEntries, transcriptOverrides, workbenchSemester, customItems]);
+  }, [transcriptWorkbenchEntries, transcriptOverrides, workbenchSemester, customItems]);
 
   const futureSemesters = useMemo<SimFutureSemester[]>(() => {
     if (customFutureSemesters !== null) return customFutureSemesters;
-    if (inProgressEntries.length === 0 && customItems.length === 0) {
+    if (transcriptWorkbenchEntries.length === 0 && customItems.length === 0) {
       return [{ id: 'fs-default', workload: 256, grade: 8.5, lockHours: 0 }];
     }
     return [];
-  }, [customFutureSemesters, inProgressEntries.length, customItems.length]);
+  }, [customFutureSemesters, transcriptWorkbenchEntries.length, customItems.length]);
 
   const simOutput = useMemo(
     () => runIraSimulation(entries, workbench, futureSemesters),
@@ -165,6 +200,24 @@ export function IraWhatIfSimulator({
       ? iraGeral(simDisplay, ativosSummary.mean, ativosSummary.std)
       : null;
 
+  // Check if workbench has any changes compared to current saved transcript entries
+  const applicableUpdates = useMemo<AppliedEntryPatch[]>(() => {
+    const entryMap = new Map(transcriptWorkbenchEntries.map((e) => [e.id, e]));
+    const patches: AppliedEntryPatch[] = [];
+    for (const item of workbench) {
+      if (!item.fromTranscript || item.mode === 'ignorar') continue;
+      const orig = entryMap.get(item.id);
+      if (!orig) continue;
+      const nextSituacao: Situacao =
+        item.mode === 'trancar' ? 'trancado' : item.grade < MIN_PASSING_GRADE ? 'reprovado' : 'aprovado';
+      const nextGrade = item.mode === 'trancar' ? 0 : item.grade;
+      if (orig.situacao !== nextSituacao || (requiresGrade(nextSituacao) && Math.abs(orig.grade - nextGrade) > 1e-6)) {
+        patches.push({ id: item.id, grade: nextGrade, situacao: nextSituacao });
+      }
+    }
+    return patches;
+  }, [workbench, transcriptWorkbenchEntries]);
+
   // Tab 2 computations: Lock break-even & 2-semester retake
   const breakEven = useMemo(() => computeLockBreakEven(entries, lockWorkload), [entries, lockWorkload]);
   const retakeCmp = useMemo(
@@ -187,23 +240,31 @@ export function IraWhatIfSimulator({
 
   // Workbench handlers
   function updateWorkbenchItem(item: SimDisciplineItem, patch: Partial<{ grade: number; mode: SimDisciplineMode }>) {
+    setActiveSlot(null);
     if (item.fromTranscript) {
-      setTranscriptOverrides((cur) => ({
-        ...cur,
-        [item.id]: {
-          grade: patch.grade ?? cur[item.id]?.grade ?? item.grade,
-          mode: patch.mode ?? cur[item.id]?.mode ?? item.mode,
-        },
-      }));
+      const orig = transcriptWorkbenchEntries.find((e) => e.id === item.id);
+      const sourceSig = orig ? entrySourceSig(orig) : '';
+      setTranscriptOverrides((cur) => {
+        const prev = cur[item.id] && cur[item.id].sourceSig === sourceSig ? cur[item.id] : undefined;
+        return {
+          ...cur,
+          [item.id]: {
+            grade: patch.grade ?? prev?.grade ?? item.grade,
+            mode: patch.mode ?? prev?.mode ?? item.mode,
+            sourceSig,
+          },
+        };
+      });
     } else {
       setCustomItems((cur) => cur.map((x) => (x.id === item.id ? { ...x, ...patch } : x)));
     }
   }
 
   function applyPresetToWorkbench(grade: number) {
-    const nextOverrides: Record<string, { grade: number; mode: SimDisciplineMode }> = { ...transcriptOverrides };
-    for (const e of inProgressEntries) {
-      nextOverrides[e.id] = { grade, mode: 'nota' };
+    setActiveSlot(null);
+    const nextOverrides: Record<string, TranscriptOverride> = { ...transcriptOverrides };
+    for (const e of transcriptWorkbenchEntries) {
+      nextOverrides[e.id] = { grade, mode: 'nota', sourceSig: entrySourceSig(e) };
     }
     setTranscriptOverrides(nextOverrides);
     setCustomItems((cur) => cur.map((x) => ({ ...x, grade, mode: 'nota' })));
@@ -213,6 +274,7 @@ export function IraWhatIfSimulator({
     ev.preventDefault();
     const trimmed = newDiscName.trim();
     if (!trimmed) return;
+    setActiveSlot(null);
     const id = `custom-${customCounter}`;
     setCustomCounter((c) => c + 1);
     setCustomItems((cur) => [
@@ -231,6 +293,7 @@ export function IraWhatIfSimulator({
   }
 
   function updateFutureSemester(id: string, patch: Partial<SimFutureSemester>) {
+    setActiveSlot(null);
     setCustomFutureSemesters((cur) => {
       const base = cur ?? futureSemesters;
       return base.map((fs) => (fs.id === id ? { ...fs, ...patch } : fs));
@@ -238,6 +301,7 @@ export function IraWhatIfSimulator({
   }
 
   function addFutureSemesters(count: number) {
+    setActiveSlot(null);
     setCustomFutureSemesters((cur) => {
       const base = cur ?? futureSemesters;
       const room = Math.max(0, 6 - base.length);
@@ -258,6 +322,7 @@ export function IraWhatIfSimulator({
   }
 
   function removeFutureSemester(id: string) {
+    setActiveSlot(null);
     setCustomFutureSemesters((cur) => {
       const base = cur ?? futureSemesters;
       return base.filter((fs) => fs.id !== id);
@@ -268,23 +333,51 @@ export function IraWhatIfSimulator({
     setTranscriptOverrides({});
     setCustomItems([]);
     setCustomFutureSemesters(null);
-    setPinnedScenario(null);
+    setActiveSlot(null);
     setGoalInput(null);
   }
 
-  function pinCurrentScenario() {
+  function saveScenario(slot: ScenarioSlot) {
     if (simDisplay === null || simRank === null) return;
-    setPinnedScenario({
-      finalIra: simDisplay,
-      rank: simRank,
-      points: simOutput.points,
+    setSavedScenarios((cur) => ({
+      ...cur,
+      [slot]: {
+        slot,
+        finalIra: simDisplay,
+        rank: simRank,
+        points: simOutput.points.map((p) => ({ ...p })),
+        transcriptOverrides: { ...transcriptOverrides },
+        customItems: customItems.map((c) => ({ ...c })),
+        futureSemesters: customFutureSemesters ? customFutureSemesters.map((f) => ({ ...f })) : null,
+      },
+    }));
+    setActiveSlot(slot);
+  }
+
+  function loadScenario(slot: ScenarioSlot) {
+    const saved = savedScenarios[slot];
+    if (!saved) return;
+    setTranscriptOverrides({ ...saved.transcriptOverrides });
+    setCustomItems(saved.customItems.map((c) => ({ ...c })));
+    setCustomFutureSemesters(saved.futureSemesters ? saved.futureSemesters.map((f) => ({ ...f })) : null);
+    setActiveSlot(slot);
+    setTab('plano');
+  }
+
+  function removeScenario(slot: ScenarioSlot) {
+    setSavedScenarios((cur) => {
+      const next = { ...cur };
+      delete next[slot];
+      return next;
     });
+    if (activeSlot === slot) setActiveSlot(null);
   }
 
   function applyStrategyToChart(strategy: 'lockRetake' | 'keepRetake') {
-    const ignoredOverrides: Record<string, { grade: number; mode: SimDisciplineMode }> = {};
-    for (const e of inProgressEntries) {
-      ignoredOverrides[e.id] = { grade: 8.5, mode: 'ignorar' };
+    setActiveSlot(null);
+    const ignoredOverrides: Record<string, TranscriptOverride> = {};
+    for (const e of transcriptWorkbenchEntries) {
+      ignoredOverrides[e.id] = { grade: 8.5, mode: 'ignorar', sourceSig: entrySourceSig(e) };
     }
     setTranscriptOverrides(ignoredOverrides);
     const idDisc = `strat-disc-${customCounter}`;
@@ -313,9 +406,10 @@ export function IraWhatIfSimulator({
   }
 
   function applyGoalHorizonToChart(semestersCount: number, neededAvg: number) {
-    const ignoredOverrides: Record<string, { grade: number; mode: SimDisciplineMode }> = {};
-    for (const e of inProgressEntries) {
-      ignoredOverrides[e.id] = { grade: neededAvg, mode: 'ignorar' };
+    setActiveSlot(null);
+    const ignoredOverrides: Record<string, TranscriptOverride> = {};
+    for (const e of transcriptWorkbenchEntries) {
+      ignoredOverrides[e.id] = { grade: neededAvg, mode: 'ignorar', sourceSig: entrySourceSig(e) };
     }
     setTranscriptOverrides(ignoredOverrides);
     setCustomItems([]);
@@ -332,6 +426,10 @@ export function IraWhatIfSimulator({
 
   const breakEvenPct = breakEven ? Math.max(0, Math.min(100, breakEven.breakEvenGrade * 10)) : 50;
   const resolvedMap = new Map(simOutput.resolvedSemesters.map((r) => [r.id, r]));
+  const comparedScenarios = SCENARIO_SLOTS.flatMap(({ slot, color }) => {
+    const s = savedScenarios[slot];
+    return s ? [{ slot, points: s.points, color }] : [];
+  });
 
   return (
     <div className="mt-4 pt-4 border-t border-line">
@@ -344,56 +442,36 @@ export function IraWhatIfSimulator({
         >
           <FlaskConical
             size={15}
-            className={open || inProgressEntries.length > 0 ? 'text-accent-2-dark' : 'text-ink-3'}
+            className={open || transcriptWorkbenchEntries.length > 0 ? 'text-accent-2-dark' : 'text-ink-3'}
             aria-hidden="true"
           />
-          <span>Laboratório de Cenários (&ldquo;E se eu fizer…&rdquo;)</span>
+          <span>Laboratório de Cenários</span>
           <span
             className={`text-10-5 px-2 py-0.5 rounded-full font-semibold ${
               open
                 ? 'bg-accent-2-tint text-accent-2-dark'
-                : inProgressEntries.length > 0
+                : transcriptWorkbenchEntries.length > 0
                   ? 'bg-accent-2-tint text-accent-2-dark'
                   : 'bg-surface-sunken text-ink-3'
             }`}
           >
             {open
               ? 'ativo no gráfico'
-              : inProgressEntries.length > 0
-                ? `${inProgressEntries.length} ${inProgressEntries.length === 1 ? 'matéria em andamento pronta' : 'matérias em andamento prontas'} p/ simular`
+              : transcriptWorkbenchEntries.length > 0
+                ? `${transcriptWorkbenchEntries.length} ${transcriptWorkbenchEntries.length === 1 ? 'matéria pronta' : 'matérias prontas'} p/ simular`
                 : 'abrir laboratório'}
           </span>
         </button>
 
         {open && (
           <div className="flex items-center gap-3 flex-wrap">
-            {simDisplay !== null && simRank !== null && (
-              <button
-                type="button"
-                onClick={pinCurrentScenario}
-                className="inline-flex items-center gap-1 text-11-5 font-heading font-semibold text-accent-dark hover:underline cursor-pointer"
-              >
-                <Pin size={12} aria-hidden="true" />
-                {pinnedScenario ? 'Atualizar Cenário A' : 'Fixar Cenário A'}
-              </button>
-            )}
-            {pinnedScenario && (
-              <button
-                type="button"
-                onClick={() => setPinnedScenario(null)}
-                className="inline-flex items-center gap-1 text-11-5 text-ink-3 hover:text-ink cursor-pointer"
-              >
-                <PinOff size={12} aria-hidden="true" />
-                Soltar A
-              </button>
-            )}
             <button
               type="button"
               onClick={resetAll}
               className="inline-flex items-center gap-1 text-11-5 text-ink-3 hover:text-ink cursor-pointer"
             >
               <RotateCcw size={12} aria-hidden="true" />
-              Resetar
+              Resetar bancada
             </button>
             <button
               type="button"
@@ -432,9 +510,10 @@ export function IraWhatIfSimulator({
                     <span className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
                       Bancada de matérias · {workbenchSemester}
                     </span>
-                    {workbench.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {[
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {workbench.length > 0 &&
+                        [
+                          { label: 'Tudo 10', g: 10.0 },
                           { label: 'Tudo 9,5', g: 9.5 },
                           { label: 'Tudo 8,5', g: 8.5 },
                           { label: 'Tudo 7,0', g: 7.0 },
@@ -449,8 +528,21 @@ export function IraWhatIfSimulator({
                             {preset.label}
                           </button>
                         ))}
-                      </div>
-                    )}
+                      {onApplyEntries && applicableUpdates.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onApplyEntries(applicableUpdates);
+                            setTranscriptOverrides({});
+                          }}
+                          className="inline-flex items-center gap-1 text-10-5 font-heading font-semibold px-2.5 py-0.5 rounded bg-accent text-accent-ink hover:opacity-90 cursor-pointer transition-opacity"
+                          title="Salvar as notas simuladas diretamente nas disciplinas do histórico"
+                        >
+                          <Save size={11} aria-hidden="true" />
+                          Salvar no histórico ({applicableUpdates.length})
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {workbench.length > 0 ? (
@@ -472,7 +564,7 @@ export function IraWhatIfSimulator({
                                 <span className="text-10 text-ink-3 shrink-0 tabular-nums">{item.workload}h</span>
                                 {item.fromTranscript && (
                                   <span className="text-10 font-heading font-semibold px-1.5 py-px rounded bg-accent-tint text-accent-dark shrink-0">
-                                    Em andamento
+                                    Do histórico
                                   </span>
                                 )}
                               </div>
@@ -505,7 +597,10 @@ export function IraWhatIfSimulator({
                                 {!item.fromTranscript && (
                                   <button
                                     type="button"
-                                    onClick={() => setCustomItems((cur) => cur.filter((x) => x.id !== item.id))}
+                                    onClick={() => {
+                                      setActiveSlot(null);
+                                      setCustomItems((cur) => cur.filter((x) => x.id !== item.id));
+                                    }}
                                     aria-label={`Remover ${item.name}`}
                                     className="p-1 text-ink-3 hover:text-danger cursor-pointer"
                                   >
@@ -569,7 +664,7 @@ export function IraWhatIfSimulator({
                     </div>
                   ) : (
                     <div className="rounded-md border border-dashed border-line bg-surface/60 px-3 py-2.5 text-11-5 text-ink-3">
-                      Nenhuma disciplina marcada como &ldquo;Em andamento&rdquo; no seu histórico — adicione matérias abaixo ou planeje seus próximos semestres.
+                      Nenhuma disciplina em andamento ou prevista no histórico — adicione matérias abaixo ou planeje os próximos semestres.
                     </div>
                   )}
 
@@ -729,7 +824,7 @@ export function IraWhatIfSimulator({
                     </div>
                   ) : (
                     <p className="text-11-5 text-ink-3">
-                      Sem semestres extras na fila — clique em &ldquo;+ Semestre&rdquo; ou &ldquo;+ Planejar 4 sem.&rdquo; para projetar até a formatura.
+                      Sem semestres extras na fila — use &ldquo;+ Semestre&rdquo; ou &ldquo;+ Planejar 4 sem.&rdquo; para projetar até a formatura.
                     </p>
                   )}
                 </div>
@@ -762,7 +857,6 @@ export function IraWhatIfSimulator({
 
                 {breakEven && retakeCmp ? (
                   <>
-                    {/* Break-even ruler */}
                     <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2">
                       <div className="flex items-baseline justify-between gap-2 flex-wrap">
                         <span className="text-xs text-ink-2">
@@ -832,7 +926,6 @@ export function IraWhatIfSimulator({
                       </div>
                     </div>
 
-                    {/* 2-semester retake simulator */}
                     <div className="rounded-md bg-surface border border-line p-3 flex flex-col gap-2.5">
                       <div className="font-heading font-bold text-11 uppercase tracking-wide text-ink-2">
                         Simulação em 2 tempos: agora ({retakeCmp.nextSemester}) + refazer em {retakeCmp.retakeSemester}
@@ -841,7 +934,7 @@ export function IraWhatIfSimulator({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label className="flex flex-col gap-1">
                           <div className="flex justify-between text-11">
-                            <span className="text-ink-2">Nota agora se NÃO trancar</span>
+                            <span className="text-ink-2">Nota provável sem trancar</span>
                             <b className="font-heading text-danger tabular-nums">{fmt(riskGrade, 1)}</b>
                           </div>
                           <input
@@ -857,7 +950,7 @@ export function IraWhatIfSimulator({
                         </label>
                         <label className="flex flex-col gap-1">
                           <div className="flex justify-between text-11">
-                            <span className="text-ink-2">Nota esperada ao refazer depois</span>
+                            <span className="text-ink-2">Nota esperada ao refazer</span>
                             <b className="font-heading text-good tabular-nums">{fmt(retakeGrade, 1)}</b>
                           </div>
                           <input
@@ -932,7 +1025,7 @@ export function IraWhatIfSimulator({
                   </>
                 ) : (
                   <div className="rounded-md border border-dashed border-line bg-surface p-4 text-xs text-ink-3">
-                    Adicione ao menos 1 disciplina com nota fechada no seu histórico para calcular a nota de corte de trancamento.
+                    Adicione ao menos 1 disciplina com nota fechada no histórico para calcular a nota de corte de trancamento.
                   </div>
                 )}
               </div>
@@ -962,7 +1055,6 @@ export function IraWhatIfSimulator({
                   </div>
                 </div>
 
-                {/* Milestone selector pills + free target input */}
                 <div className="flex flex-wrap gap-1.5 items-center">
                   {milestones.map((m) => {
                     const selected = Math.abs(effectiveGoal - m.targetIra) < 0.0002;
@@ -1003,7 +1095,6 @@ export function IraWhatIfSimulator({
                   </label>
                 </div>
 
-                {/* 4-Horizon solution grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {horizonSolutions.map((sol) => (
                     <div
@@ -1046,81 +1137,141 @@ export function IraWhatIfSimulator({
             )}
           </div>
 
-          {/* RIGHT COLUMN: Live Output KPI + Scenario A Comparator + Trajectory */}
+          {/* RIGHT COLUMN: Live Output KPI + 3-Scenario Slots (A, B, C) + Trajectory */}
           <div className="rounded-md bg-surface border border-line p-3.5 flex flex-col gap-3">
             {simDisplay !== null ? (
-              <>
-                <div className="rounded-md p-3 border border-dashed bg-accent-2-tint/55 border-accent-2-dark/50 flex items-start justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="text-10 font-heading font-bold uppercase tracking-wide text-accent-2-dark">
-                      IRA projetado no cenário
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-0.5 tabular-nums">
-                      <span className="font-heading font-extrabold text-25 leading-none text-accent-2-dark">
-                        {simDisplay.toFixed(4)}
-                      </span>
-                      <span
-                        className={`text-xs font-heading font-bold ${
-                          simDelta > 0.0005 ? 'text-good' : simDelta < -0.0005 ? 'text-danger' : 'text-ink-3'
-                        }`}
-                      >
-                        {simDelta >= 0 ? '+' : ''}
-                        {simDelta.toFixed(4)}
-                      </span>
-                    </div>
+              <div className="rounded-md p-3 border border-dashed bg-accent-2-tint/55 border-accent-2-dark/50 flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-10 font-heading font-bold uppercase tracking-wide text-accent-2-dark">
+                    IRA projetado no cenário
                   </div>
-
-                  {simRank !== null && simPct !== null && (
-                    <div className="text-11-5 text-ink-2 text-right tabular-nums">
-                      <div>
-                        Posição: <b className="text-ink">{ordinal(simRank)}</b>
-                        {simRank !== currentRank && (
-                          <span className={simRank < currentRank ? 'text-good font-semibold' : 'text-danger font-semibold'}>
-                            {' '}
-                            ({simRank < currentRank ? `+${currentRank - simRank}` : `${currentRank - simRank}`})
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        Supera <b className="text-ink">{pct(simPct)}</b>
-                      </div>
-                      {simGeral !== null && (
-                        <div>
-                          IRA-G <b className="text-ink">{fmt(simGeral, 4)}</b>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {pinnedScenario && (
-                  <div className="rounded-md px-3 py-2 bg-surface-sunken border border-line flex items-center justify-between gap-2 flex-wrap text-11-5 tabular-nums">
-                    <span className="text-ink-2">
-                      <b>Atual</b> ({fmt(simDisplay, 4)}) vs <b>Cenário A</b> ({fmt(pinnedScenario.finalIra, 4)})
+                  <div className="flex items-baseline gap-2 mt-0.5 tabular-nums">
+                    <span className="font-heading font-extrabold text-25 leading-none text-accent-2-dark">
+                      {simDisplay.toFixed(4)}
                     </span>
                     <span
-                      className={`font-heading font-bold ${
-                        simDisplay - pinnedScenario.finalIra >= 0 ? 'text-good' : 'text-danger'
+                      className={`text-xs font-heading font-bold ${
+                        simDelta > 0.0005 ? 'text-good' : simDelta < -0.0005 ? 'text-danger' : 'text-ink-3'
                       }`}
                     >
-                      {simDisplay - pinnedScenario.finalIra >= 0 ? '+' : ''}
-                      {fmt(simDisplay - pinnedScenario.finalIra, 4)}
-                      {simRank !== null && simRank !== pinnedScenario.rank && (
-                        <> ({simRank < pinnedScenario.rank ? `+${pinnedScenario.rank - simRank}` : `${pinnedScenario.rank - simRank}`} pos.)</>
-                      )}
+                      {simDelta >= 0 ? '+' : ''}
+                      {simDelta.toFixed(4)}
                     </span>
                   </div>
+                </div>
+
+                {simRank !== null && simPct !== null && (
+                  <div className="text-11-5 text-ink-2 text-right tabular-nums">
+                    <div>
+                      Posição: <b className="text-ink">{ordinal(simRank)}</b>
+                      {simRank !== currentRank && (
+                        <span className={simRank < currentRank ? 'text-good font-semibold' : 'text-danger font-semibold'}>
+                          {' '}
+                          ({simRank < currentRank ? `+${currentRank - simRank}` : `${currentRank - simRank}`})
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      Supera <b className="text-ink">{pct(simPct)}</b>
+                    </div>
+                    {simGeral !== null && (
+                      <div>
+                        IRA-G <b className="text-ink">{fmt(simGeral, 4)}</b>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </>
+              </div>
             ) : (
               <div className="rounded-md p-3 bg-surface-sunken text-xs text-ink-3">
                 Ative ou adicione ao menos uma disciplina/semestre para calcular o IRA simulado.
               </div>
             )}
 
+            {/* 3 Restorable Scenario Slots (A, B, C) */}
+            <div className="flex flex-col gap-1.5">
+              <div className="font-heading font-bold text-10-5 uppercase tracking-wide text-ink-3">
+                Comparar e alternar cenários (A, B, C)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                {SCENARIO_SLOTS.map(({ slot, color }) => {
+                  const saved = savedScenarios[slot];
+                  const isActiveSlot = activeSlot === slot;
+                  if (!saved) {
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={simDisplay === null}
+                        onClick={() => saveScenario(slot)}
+                        className="rounded-md border border-dashed border-line hover:border-accent px-2.5 py-2 text-11 font-heading font-semibold text-ink-2 hover:text-ink cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Plus size={12} aria-hidden="true" />
+                        Salvar {slot}
+                      </button>
+                    );
+                  }
+                  const diff = simDisplay !== null ? simDisplay - saved.finalIra : null;
+                  return (
+                    <div
+                      key={slot}
+                      className={`rounded-md border p-2 flex flex-col gap-1.5 transition-colors ${
+                        isActiveSlot ? 'border-accent bg-accent-tint/45' : 'border-line bg-surface-sunken'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="inline-flex items-center gap-1.5 font-heading font-bold text-11 text-ink">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                          Cenário {slot}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeScenario(slot)}
+                          aria-label={`Remover Cenário ${slot}`}
+                          className="text-ink-3 hover:text-danger cursor-pointer"
+                        >
+                          <X size={12} aria-hidden="true" />
+                        </button>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-1 tabular-nums">
+                        <b className="font-heading text-xs text-ink">{fmt(saved.finalIra, 4)}</b>
+                        <span className="text-10 text-ink-3">{ordinal(saved.rank)}</span>
+                      </div>
+                      {diff !== null && Math.abs(diff) > 0.0001 && (
+                        <div className={`text-10 font-semibold tabular-nums ${diff > 0 ? 'text-good' : 'text-danger'}`}>
+                          Atual {diff > 0 ? '+' : ''}
+                          {fmt(diff, 4)}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => loadScenario(slot)}
+                          className="flex-1 inline-flex items-center justify-center gap-1 rounded px-1.5 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink cursor-pointer"
+                          title={`Voltar para o Cenário ${slot} na bancada`}
+                        >
+                          <FolderOpen size={11} aria-hidden="true" />
+                          Carregar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveScenario(slot)}
+                          disabled={simDisplay === null}
+                          className="rounded px-1.5 py-1 bg-surface border border-line hover:border-accent text-10-5 font-heading font-semibold text-ink-2 hover:text-ink cursor-pointer"
+                          title={`Sobrescrever Cenário ${slot} com o atual`}
+                        >
+                          Atualizar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <IraSimulatorTrajectory
               points={simOutput.points}
-              pinnedPoints={pinnedScenario?.points ?? null}
+              comparedScenarios={comparedScenarios}
               goalIra={tab === 'metas' ? effectiveGoal : null}
             />
           </div>

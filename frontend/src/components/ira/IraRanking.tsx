@@ -20,9 +20,18 @@ import {
 import { CAMPUS_STUDENTS, CAMPUS_UPDATED_AT } from '@/lib/iraCampusData';
 import { fmt, ordinal } from './chartFormat';
 
-const PODIUM_SIZE = 5;
-
-const PLACE_NAME: Record<number, string> = { 1: 'Primeiro', 2: 'Segundo', 3: 'Terceiro', 4: 'Quarto', 5: 'Quinto' };
+const PLACE_NAME: Record<number, string> = {
+  1: 'Primeiro',
+  2: 'Segundo',
+  3: 'Terceiro',
+  4: 'Quarto',
+  5: 'Quinto',
+  6: 'Sexto',
+  7: 'Sétimo',
+  8: 'Oitavo',
+  9: 'Nono',
+  10: 'Décimo',
+};
 
 const COHORT_OPTIONS: { value: RankingCohort; label: string; title: string }[] = [
   { value: 'ativos', label: 'Ativos', title: 'Todos os alunos ainda matriculados' },
@@ -166,6 +175,8 @@ export function IraRanking({
   const realIra = officialIra !== null ? clampIra(officialIra) : null;
   const hasPrediction = isEstimate && realIra !== null && Math.abs(realIra - estimatedIra) > 1e-6;
   const [usePredicted, setUsePredicted] = useState<'previsto' | 'real'>('previsto');
+  const [showTop10, setShowTop10] = useState(false);
+  const podiumSize = showTop10 ? 10 : 5;
 
   const showingPredicted = hasPrediction && usePredicted === 'previsto';
   const myIra = showingPredicted ? estimatedIra : (realIra ?? estimatedIra);
@@ -176,13 +187,13 @@ export function IraRanking({
   const group = useMemo(() => filterForRanking(pool, filter, me), [pool, filter, me]);
   const mappedGroup = useMemo(() => group.map((s) => ({ ira: s.ira, ingresso: s.ingresso })), [group]);
   const ranking = useMemo(
-    () => buildRanking(mappedGroup, myIra, PODIUM_SIZE, ingresso),
-    [mappedGroup, myIra, ingresso],
+    () => buildRanking(mappedGroup, myIra, podiumSize, ingresso),
+    [mappedGroup, myIra, podiumSize, ingresso],
   );
   const altIra = showingPredicted ? realIra : (hasPrediction ? estimatedIra : null);
   const altRanking = useMemo(
-    () => (hasPrediction && altIra !== null ? buildRanking(mappedGroup, altIra, PODIUM_SIZE, ingresso) : null),
-    [hasPrediction, mappedGroup, altIra, ingresso],
+    () => (hasPrediction && altIra !== null ? buildRanking(mappedGroup, altIra, podiumSize, ingresso) : null),
+    [hasPrediction, mappedGroup, altIra, podiumSize, ingresso],
   );
   const tooSmall = !blocker && group.length < MIN_GROUP_SIZE;
   const max = Math.max(10, ...ranking.rows.map((r) => r.ira));
@@ -194,7 +205,7 @@ export function IraRanking({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <CardKicker>Ranking</CardKicker>
-          <CardTitle>Top {PODIUM_SIZE} do {filter.scope === 'curso' ? 'curso' : 'campus'}</CardTitle>
+          <CardTitle>Top {podiumSize} do {filter.scope === 'curso' ? 'curso' : 'campus'}</CardTitle>
         </div>
         <Trophy size={20} className="text-accent-2-dark shrink-0 mt-1" aria-hidden />
       </div>
@@ -295,11 +306,21 @@ export function IraRanking({
         </p>
       ) : (
         <>
-          <ol className="flex flex-col gap-0.5" aria-label={`Top ${PODIUM_SIZE}`}>
+          <ol className="flex flex-col gap-0.5" aria-label={`Top ${podiumSize}`}>
             {ranking.rows.map((row, i) => (
               <Row key={i} row={row} max={max} displayName={displayName} isEstimate={showingPredicted} />
             ))}
           </ol>
+
+          {group.length >= 6 && (
+            <button
+              type="button"
+              onClick={() => setShowTop10((v) => !v)}
+              className="mt-1.5 self-start inline-flex items-center gap-1 text-11-5 font-heading font-semibold text-accent-dark hover:underline cursor-pointer"
+            >
+              {showTop10 ? 'Mostrar apenas Top 5' : 'Ver Top 10'}
+            </button>
+          )}
 
           {!ranking.youInTop && (
             <>
@@ -372,13 +393,13 @@ export function IraRanking({
             {ranking.youInTop ? (
               <span className="flex items-center gap-1.5">
                 <Crown size={13} className="text-accent-2-dark" aria-hidden />
-                Você está no top {PODIUM_SIZE} — {ordinal(ranking.you.position)} de {ranking.total.toLocaleString('pt-BR')}.
+                Você está no top {podiumSize} — {ordinal(ranking.you.position)} de {ranking.total.toLocaleString('pt-BR')}.
               </span>
             ) : (
               ranking.podiumIra !== undefined && (
                 <span className="flex items-center gap-1.5">
                   <Trophy size={13} className="text-accent-2-dark" aria-hidden />
-                  Para entrar no top {PODIUM_SIZE}: IRA <b className="text-ink tabular-nums">{fmt(ranking.podiumIra, 4)}</b> (+
+                  Para entrar no top {podiumSize}: IRA <b className="text-ink tabular-nums">{fmt(ranking.podiumIra, 4)}</b> (+
                   {fmt(Math.max(0, ranking.podiumIra - myIra), 4)})
                 </span>
               )
