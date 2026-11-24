@@ -11,7 +11,7 @@
 
 - `src/components/` — reusable UI primitives (Button + ButtonLink — use the latter instead of wrapping a `<Button>` in a `<Link>`; Card, Field, Tag, Avatar, EmptyState, StatBar, Dialog, Toast, AppShell) and domain components (DisciplineCard, MaterialCard, EventChip, UploadDropzone, ModerationBadge, Greeting), styled with Tailwind utility classes.
 - `app/(auth)/` and `app/(shell)/` — one route folder per screen; `app/providers.tsx` composes all client-side context providers, `app/layout.tsx` is the root layout.
-- `src/data/` — `types.ts` + `mock.ts`, the fixture data standing in for the backend for screens not yet wired.
+- `src/data/` — `types.ts` + `mock.ts`, the fixture data standing in for the backend for screens not yet wired. `MOCK_TODAY` is the fixed "today" the fixture dates are built around — the calendar and Home's upcoming-events use it instead of the real clock.
 - `src/lib/api.ts` — thin fetch client for the real backend (`NEXT_PUBLIC_API_URL`, defaults to `http://localhost:4000/api`), `credentials: 'include'` for the auth cookie. Used by Opiniões and the Catálogo detail page.
 - `src/lib/theme.tsx` — light/dark theme context (persisted to `localStorage`, defaults to OS preference). The initial theme is applied before first paint by an inline `<head>` script (`THEME_INIT_SCRIPT` in `src/lib/themeScript.ts`, kept outside the `'use client'` file so `app/layout.tsx` can import it as a plain string); the provider reads the attribute that script set instead of guessing, so there's no light-mode flash.
 - `src/lib/calendarStore.tsx` — in-memory context for calendar events (add/confirm), since there's no backend yet to persist them.

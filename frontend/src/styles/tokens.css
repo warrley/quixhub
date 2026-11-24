@@ -71,7 +71,11 @@
 
   /* breakpoint — the mobile-bottom-nav to desktop-sidebar switch, reused
      identically across AppShell/AuthLayout. Use mid: instead of an
-     arbitrary min-[900px]: variant. */
+     arbitrary min-[900px]: variant.
+     Gotcha: px breakpoints (this one, and any arbitrary min-[Npx]:) are
+     emitted *before* Tailwind's rem ones (sm/md/lg/xl), so on the same
+     property they always lose — `sm:grid-cols-2 min-[1000px]:grid-cols-3`
+     never reaches 3 columns. Don't mix them on one element; use lg:/xl:. */
   --breakpoint-mid: 900px;
 
   /* type */
