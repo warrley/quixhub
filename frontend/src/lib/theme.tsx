@@ -1,30 +1,29 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { THEME_STORAGE_KEY } from './themeScript';
 
 type Theme = 'light' | 'dark';
 
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void } | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  // null until mounted: the server can't know the theme, and writing a
+  // default to <html> before reading the real one is what caused the flash.
+  const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('quixhub-theme');
-    if (stored === 'light' || stored === 'dark') {
-      setTheme(stored);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
-    }
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
   }, []);
 
   useEffect(() => {
+    if (!theme) return;
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('quixhub-theme', theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')) }}>
+    <ThemeContext.Provider value={{ theme: theme ?? 'light', toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')) }}>
       {children}
     </ThemeContext.Provider>
   );

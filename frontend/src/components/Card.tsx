@@ -9,6 +9,15 @@ const PAD: Record<'none' | 'sm' | 'md', string> = {
   none: 'p-0',
 };
 
+// The accent bar spans 10–16px from the left edge, so padded content has to
+// start past it (28px) or it sits flush against the bar. padding="none" cards
+// own their inner padding and must apply the same offset themselves.
+const ACCENT_PAD: Record<'none' | 'sm' | 'md', string> = {
+  md: 'pl-7',
+  sm: 'pl-7',
+  none: '',
+};
+
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md';
   interactive?: boolean;
@@ -20,6 +29,7 @@ export function Card({ padding = 'md', interactive, accent, className, children,
   const classes = [
     BASE,
     PAD[padding],
+    accent ? ACCENT_PAD[padding] : '',
     interactive ? 'cursor-pointer hover:shadow-md hover:border-line-strong hover:-translate-y-0.5' : '',
     className,
   ]

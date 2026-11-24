@@ -17,7 +17,9 @@
   /* ink */
   --color-ink: oklch(22% 0.03 262);
   --color-ink-2: oklch(46% 0.025 262);
-  --color-ink-3: oklch(65% 0.018 262);
+  /* ink-3 is used for small meta text (10–13px) all over, so it must clear
+     WCAG AA 4.5:1 on surface, bg and surface-sunken — don't lighten it. */
+  --color-ink-3: oklch(53% 0.018 262);
   --color-ink-inverse: oklch(98% 0.005 262);
 
   /* accent ramp — indigo/blue primary */
@@ -69,7 +71,11 @@
 
   /* breakpoint — the mobile-bottom-nav to desktop-sidebar switch, reused
      identically across AppShell/AuthLayout. Use mid: instead of an
-     arbitrary min-[900px]: variant. */
+     arbitrary min-[900px]: variant.
+     Gotcha: px breakpoints (this one, and any arbitrary min-[Npx]:) are
+     emitted *before* Tailwind's rem ones (sm/md/lg/xl), so on the same
+     property they always lose — `sm:grid-cols-2 min-[1000px]:grid-cols-3`
+     never reaches 3 columns. Don't mix them on one element; use lg:/xl:. */
   --breakpoint-mid: 900px;
 
   /* type */
@@ -141,7 +147,7 @@
 
   --color-ink: oklch(96% 0.008 262);
   --color-ink-2: oklch(78% 0.015 262);
-  --color-ink-3: oklch(58% 0.02 262);
+  --color-ink-3: oklch(64% 0.02 262);
   --color-ink-inverse: oklch(18% 0.02 262);
 
   --color-accent: oklch(72% 0.15 264);
@@ -196,7 +202,7 @@
     --color-line-strong: oklch(40% 0.02 262);
     --color-ink: oklch(96% 0.008 262);
     --color-ink-2: oklch(78% 0.015 262);
-    --color-ink-3: oklch(58% 0.02 262);
+    --color-ink-3: oklch(64% 0.02 262);
     --color-ink-inverse: oklch(18% 0.02 262);
     --color-accent: oklch(72% 0.15 264);
     --color-accent-hover: oklch(78% 0.14 264);

@@ -21,8 +21,8 @@ export function MaterialCard({ material }: { material: Material }) {
   const tone = TYPE_TONE[material.type];
   const Icon = material.type === 'codigo' ? Code2 : FileText;
   return (
-    <Card interactive padding="none">
-      <Link href={`/materiais/${material.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link href={`/materiais/${material.id}`} className="block rounded-lg" style={{ textDecoration: 'none', color: 'inherit' }}>
+      <Card interactive padding="none">
         <div className="flex gap-3.5 p-4 items-center">
           <div
             className="w-[42px] h-[42px] rounded-md shrink-0 flex items-center justify-center text-white relative shadow-sm after:content-[''] after:absolute after:top-0 after:right-0 after:w-0 after:h-0 after:border-solid after:[border-width:0_11px_11px_0] after:[border-color:transparent_oklch(0%_0%_0%_/_18%)_transparent_transparent] after:rounded-tr-md"
@@ -44,7 +44,7 @@ export function MaterialCard({ material }: { material: Material }) {
             <Download size={17} color="var(--color-ink-3)" />
           </div>
         </div>
-      </Link>
-    </Card>
+      </Card>
+    </Link>
   );
 }

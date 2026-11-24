@@ -1,5 +1,10 @@
 import type { CalendarEvent, Discipline, Material } from './types';
 
+// The fixture events/materials below are dated around July 2026, so screens
+// that need "today" (calendar highlight, home's upcoming events) use this
+// fixed date instead of the real clock until they're wired to the backend.
+export const MOCK_TODAY = '2026-07-16';
+
 export const currentUser = {
   name: 'Guilherme Farias',
   email: 'guilherme.farias@alu.ufc.br',

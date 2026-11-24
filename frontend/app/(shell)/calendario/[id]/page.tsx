@@ -5,7 +5,7 @@ import { UnderConstruction } from '@/components/UnderConstruction';
 import { ArrowLeft, CalendarDays, CircleCheck, CircleDashed } from 'lucide-react';
 import Link from 'next/link';
 import { redirect, useParams } from 'next/navigation';
-import { Button } from '@/components/Button';
+import { Button, ButtonLink } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Tag } from '@/components/Tag';
 import { disciplineById, materials } from '@/data/mock';
@@ -55,11 +55,9 @@ export default function EventDetail() {
 
         {linkedMaterial && (
           <div className="mt-5">
-            <Link href={`/materiais/${linkedMaterial.id}`}>
-              <Button variant="secondary" size="sm">
-                Ver material vinculado: {linkedMaterial.title}
-              </Button>
-            </Link>
+            <ButtonLink href={`/materiais/${linkedMaterial.id}`} variant="secondary" size="sm">
+              Ver material vinculado: {linkedMaterial.title}
+            </ButtonLink>
           </div>
         )}
 

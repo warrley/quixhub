@@ -4,8 +4,7 @@ import { UnderConstruction } from '@/components/UnderConstruction';
 
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/Button';
+import { ButtonLink } from '@/components/Button';
 import { MaterialCard } from '@/components/MaterialCard';
 import { TagButton } from '@/components/Tag';
 import { disciplineById, materials } from '@/data/mock';
@@ -48,11 +47,9 @@ export default function Materials() {
           <h1 className="font-heading font-bold text-22 mb-1">Materiais</h1>
           <p className="text-13 text-ink-2">Provas, resumos e código enviados pela turma.</p>
         </div>
-        <Link href="/materiais/enviar">
-          <Button>
-            <Plus size={16} /> Enviar material
-          </Button>
-        </Link>
+        <ButtonLink href="/materiais/enviar">
+          <Plus size={16} /> Enviar material
+        </ButtonLink>
       </div>
 
       <div className="flex gap-1.5 flex-wrap mb-3">

@@ -8,7 +8,7 @@ import { Dialog } from '@/components/Dialog';
 import { SelectField, TextField } from '@/components/Field';
 import { EventChip } from '@/components/EventChip';
 import { useCalendar } from '@/lib/calendarStore';
-import { disciplineById, disciplines } from '@/data/mock';
+import { MOCK_TODAY, disciplineById, disciplines } from '@/data/mock';
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
@@ -56,7 +56,7 @@ export default function Calendar() {
     return cells;
   }, [cursor]);
 
-  const today = isoDate(new Date(2026, 6, 16));
+  const today = MOCK_TODAY;
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, typeof events>();
