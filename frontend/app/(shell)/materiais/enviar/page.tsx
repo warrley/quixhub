@@ -4,8 +4,7 @@ import { UnderConstruction } from '@/components/UnderConstruction';
 
 import { Clock3 } from 'lucide-react';
 import { useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/Button';
+import { Button, ButtonLink } from '@/components/Button';
 import { SelectField, TextareaField } from '@/components/Field';
 import { ModerationBadge } from '@/components/ModerationBadge';
 import { UploadDropzone } from '@/components/UploadDropzone';
@@ -31,11 +30,9 @@ export default function Upload() {
           aprovado. Isso costuma levar até 24h.
         </p>
         <ModerationBadge />
-        <Link href="/materiais">
-          <Button variant="secondary" className="mt-4">
-            Voltar para materiais
-          </Button>
-        </Link>
+        <ButtonLink href="/materiais" variant="secondary" className="mt-4">
+          Voltar para materiais
+        </ButtonLink>
       </div>
     );
   }

@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import Link from 'next/link';
+import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'warm';
 type Size = 'sm' | 'md' | 'icon';
@@ -26,11 +27,31 @@ const VARIANT: Record<Variant, string> = {
   warm: 'border-transparent bg-gradient-warm text-accent-2-ink shadow-glow-warm hover:brightness-105',
 };
 
-export function Button({ variant = 'primary', size = 'md', block, className, children, ...rest }: ButtonProps) {
-  const classes = [BASE, SIZE[size], VARIANT[variant], block ? 'w-full' : '', className].filter(Boolean).join(' ');
+function buttonClasses({ variant = 'primary', size = 'md', block, className }: Pick<ButtonProps, 'variant' | 'size' | 'block' | 'className'>) {
+  return [BASE, SIZE[size], VARIANT[variant], block ? 'w-full' : '', className].filter(Boolean).join(' ');
+}
+
+export function Button({ variant, size, block, className, children, ...rest }: ButtonProps) {
   return (
-    <button className={classes} {...rest}>
+    <button className={buttonClasses({ variant, size, block, className })} {...rest}>
       {children}
     </button>
+  );
+}
+
+interface ButtonLinkProps extends Omit<ComponentProps<typeof Link>, 'className'> {
+  variant?: Variant;
+  size?: Size;
+  block?: boolean;
+  className?: string;
+}
+
+// A link that looks like a Button. Use this instead of <Link><Button/></Link>,
+// which nests a <button> inside an <a> (invalid HTML, two tab stops).
+export function ButtonLink({ variant, size, block, className, children, ...rest }: ButtonLinkProps) {
+  return (
+    <Link className={buttonClasses({ variant, size, block, className: ['no-underline', className].filter(Boolean).join(' ') })} {...rest}>
+      {children}
+    </Link>
   );
 }

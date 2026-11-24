@@ -9,7 +9,7 @@
 
 ## Frontend structure
 
-- `src/components/` — reusable UI primitives (Button, Card, Field, Tag, Avatar, EmptyState, StatBar, Dialog, Toast, AppShell) and domain components (DisciplineCard, MaterialCard, EventChip, UploadDropzone, ModerationBadge, Greeting), styled with Tailwind utility classes.
+- `src/components/` — reusable UI primitives (Button + ButtonLink — use the latter instead of wrapping a `<Button>` in a `<Link>`; Card, Field, Tag, Avatar, EmptyState, StatBar, Dialog, Toast, AppShell) and domain components (DisciplineCard, MaterialCard, EventChip, UploadDropzone, ModerationBadge, Greeting), styled with Tailwind utility classes.
 - `app/(auth)/` and `app/(shell)/` — one route folder per screen; `app/providers.tsx` composes all client-side context providers, `app/layout.tsx` is the root layout.
 - `src/data/` — `types.ts` + `mock.ts`, the fixture data standing in for the backend for screens not yet wired.
 - `src/lib/api.ts` — thin fetch client for the real backend (`NEXT_PUBLIC_API_URL`, defaults to `http://localhost:4000/api`), `credentials: 'include'` for the auth cookie. Used by Opiniões and the Catálogo detail page.
